@@ -1,107 +1,131 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:meal_app/core/theme/app_theme.dart';
 
-class SearchableDropdown<T> extends StatefulWidget {
+class SearchableDropdown<T> extends FormField<T> {
   final String label;
   final List<T> items;
   final String Function(T) itemLabel;
-  final T? value;
-  final Function(T?) onChanged;
   final String hint;
   final bool isLoading;
   final Function(String)? onSearch;
   final VoidCallback? onInteraction;
 
-  const SearchableDropdown({
+  SearchableDropdown({
     super.key,
     required this.label,
     required this.items,
     required this.itemLabel,
-    this.value,
-    required this.onChanged,
+    T? value,
+    required FormFieldSetter<T> onChanged,
+    FormFieldValidator<T>? validator,
     this.hint = 'Select an option',
     this.isLoading = false,
     this.onSearch,
     this.onInteraction,
-  });
+  }) : super(
+          initialValue: value,
+          onSaved: onChanged,
+          validator: validator,
+          builder: (FormFieldState<T> state) {
+            final isDark = Theme.of(state.context).brightness == Brightness.dark;
+            final hasError = state.hasError;
 
-  @override
-  State<SearchableDropdown<T>> createState() => _SearchableDropdownState<T>();
-}
-
-class _SearchableDropdownState<T> extends State<SearchableDropdown<T>> {
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          widget.label,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: Theme.of(context).textTheme.bodyLarge?.color,
-          ),
-        ),
-        const SizedBox(height: 8),
-        InkWell(
-          onTap: widget.isLoading ? null : () {
-            if (widget.onInteraction != null) widget.onInteraction!();
-            _showSearchDialog(context);
-          },
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-            decoration: BoxDecoration(
-              color: isDark ? AppTheme.surfaceDark : Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: isDark ? Colors.white10 : Colors.black12),
-            ),
-            child: Row(
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Text(
-                    widget.value != null ? widget.itemLabel(widget.value as T) : widget.hint,
-                    style: TextStyle(
-                      color: widget.value != null 
-                        ? (isDark ? AppTheme.textPrimaryDark : AppTheme.textPrimaryLight)
-                        : (isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondaryLight),
-                      fontSize: 16,
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? AppTheme.textPrimaryDark : AppTheme.textPrimaryLight,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                InkWell(
+                  onTap: () {
+                    FocusScope.of(state.context).unfocus();
+                    if (onInteraction != null) onInteraction();
+                    _showSearchDialog(state.context, state, items, itemLabel, onSearch, isLoading);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                    decoration: BoxDecoration(
+                      color: isDark ? AppTheme.surfaceDark : Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: hasError 
+                          ? Colors.red 
+                          : (isDark ? Colors.white10 : Colors.black12)
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            state.value != null ? itemLabel(state.value as T) : hint,
+                            style: TextStyle(
+                              color: state.value != null 
+                                ? (isDark ? AppTheme.textPrimaryDark : AppTheme.textPrimaryLight)
+                                : (isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondaryLight),
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                        if (isLoading)
+                          const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CupertinoActivityIndicator(radius: 8),
+                          )
+                        else
+                          Icon(Icons.keyboard_arrow_down_rounded, 
+                            color: isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondaryLight),
+                      ],
                     ),
                   ),
                 ),
-                if (widget.isLoading)
-                  const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                else
-                  Icon(Icons.keyboard_arrow_down_rounded, 
-                    color: isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondaryLight),
+                if (hasError)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8, left: 12),
+                    child: Text(
+                      state.errorText!,
+                      style: const TextStyle(color: Colors.red, fontSize: 12),
+                    ),
+                  ),
               ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
+            );
+          },
+        );
 
-  void _showSearchDialog(BuildContext context) {
+  static void _showSearchDialog<T>(
+    BuildContext context, 
+    FormFieldState<T> state,
+    List<T> items,
+    String Function(T) itemLabel,
+    Function(String)? onSearch,
+    bool isLoading,
+  ) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) {
-        return _SearchDialog<T>(
-          items: widget.items,
-          itemLabel: widget.itemLabel,
-          onSelected: (value) {
-            widget.onChanged(value);
-            Navigator.pop(context);
-          },
-          onSearch: widget.onSearch,
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return _SearchDialog<T>(
+              items: items,
+              itemLabel: itemLabel,
+              isLoading: isLoading,
+              onSelected: (value) {
+                state.didChange(value);
+                state.save();
+                Navigator.pop(context);
+              },
+              onSearch: onSearch,
+            );
+          }
         );
       },
     );
@@ -113,12 +137,14 @@ class _SearchDialog<T> extends StatefulWidget {
   final String Function(T) itemLabel;
   final Function(T) onSelected;
   final Function(String)? onSearch;
+  final bool isLoading;
 
   const _SearchDialog({
     required this.items,
     required this.itemLabel,
     required this.onSelected,
     this.onSearch,
+    required this.isLoading,
   });
 
   @override
@@ -135,6 +161,14 @@ class _SearchDialogState<T> extends State<_SearchDialog<T>> {
     filteredItems = widget.items;
   }
 
+  @override
+  void didUpdateWidget(_SearchDialog<T> oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.items != widget.items) {
+      _filterItems(_searchController.text);
+    }
+  }
+
   void _filterItems(String query) {
     setState(() {
       filteredItems = widget.items
@@ -147,6 +181,7 @@ class _SearchDialogState<T> extends State<_SearchDialog<T>> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final displayItems = _searchController.text.isEmpty ? widget.items : filteredItems;
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.7,
@@ -186,19 +221,42 @@ class _SearchDialogState<T> extends State<_SearchDialog<T>> {
             ),
           ),
           const SizedBox(height: 10),
-          Expanded(
-            child: ListView.builder(
-              itemCount: filteredItems.length,
-              itemBuilder: (context, index) {
-                final item = filteredItems[index];
-                return ListTile(
-                  title: Text(widget.itemLabel(item)),
-                  onTap: () => widget.onSelected(item),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
-                );
-              },
+          if (widget.isLoading && displayItems.isEmpty)
+            const Expanded(
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    CupertinoActivityIndicator(radius: 12),
+                    SizedBox(height: 16),
+                    Text('Fetching latest data...', style: TextStyle(color: Colors.grey)),
+                  ],
+                ),
+              ),
+            )
+          else if (displayItems.isEmpty)
+            const Expanded(
+              child: Center(
+                child: Text('No items found'),
+              ),
+            )
+          else
+            Expanded(
+              child: ListView.builder(
+                itemCount: displayItems.length,
+                itemBuilder: (context, index) {
+                  final item = displayItems[index];
+                  return ListTile(
+                    title: Text(widget.itemLabel(item)),
+                    onTap: () {
+                      FocusScope.of(context).unfocus();
+                      widget.onSelected(item);
+                    },
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 4),
+                  );
+                },
+              ),
             ),
-          ),
         ],
       ),
     );

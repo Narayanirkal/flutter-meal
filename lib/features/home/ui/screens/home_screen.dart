@@ -26,7 +26,10 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    // API calls moved to respective screens for better optimization
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ChildrenProvider>().fetchChildren();
+      context.read<ProfileProvider>().fetchProfiles();
+    });
   }
 
   @override

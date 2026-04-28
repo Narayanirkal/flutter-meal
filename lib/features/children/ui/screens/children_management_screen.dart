@@ -289,6 +289,9 @@ class _ChildFormState extends State<_ChildForm> {
   StandardModel? _selectedStandard;
   MealSizeModel? _selectedMealSize;
 
+  final _nameFocus = FocusNode();
+  final _rollFocus = FocusNode();
+
   @override
   void initState() {
     super.initState();
@@ -375,14 +378,18 @@ class _ChildFormState extends State<_ChildForm> {
               const SizedBox(height: 24),
               TextFormField(
                 controller: _nameController,
+                focusNode: _nameFocus,
                 decoration: const InputDecoration(labelText: 'Child Name', prefixIcon: Icon(CupertinoIcons.person)),
-                validator: (v) => v!.isEmpty ? 'Required' : null,
+                validator: (v) => v!.isEmpty ? 'Child Name is required' : null,
+                textInputAction: TextInputAction.next,
               ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _rollController,
+                focusNode: _rollFocus,
                 decoration: const InputDecoration(labelText: 'Roll Number', prefixIcon: Icon(CupertinoIcons.number)),
-                validator: (v) => v!.isEmpty ? 'Required' : null,
+                validator: (v) => v!.isEmpty ? 'Roll Number is required' : null,
+                textInputAction: TextInputAction.done,
               ),
               const SizedBox(height: 16),
               SearchableDropdown<SchoolModel>(
@@ -391,8 +398,10 @@ class _ChildFormState extends State<_ChildForm> {
                 itemLabel: (s) => s.name,
                 value: _selectedSchool,
                 isLoading: lookup.isLoading,
+                validator: (v) => v == null ? 'School is required' : null,
                 onInteraction: () {
-                  FocusScope.of(context).unfocus();
+                  _rollFocus.unfocus();
+                  _nameFocus.unfocus();
                   lookup.fetchInitialData();
                 },
                 onChanged: (v) => setState(() => _selectedSchool = v),
@@ -404,8 +413,10 @@ class _ChildFormState extends State<_ChildForm> {
                 itemLabel: (s) => s.displayName,
                 value: _selectedStandard,
                 isLoading: lookup.isLoading,
+                validator: (v) => v == null ? 'Standard is required' : null,
                 onInteraction: () {
-                  FocusScope.of(context).unfocus();
+                  _rollFocus.unfocus();
+                  _nameFocus.unfocus();
                   lookup.fetchInitialData();
                 },
                 onChanged: (v) => setState(() => _selectedStandard = v),
@@ -417,8 +428,10 @@ class _ChildFormState extends State<_ChildForm> {
                 itemLabel: (s) => s.displayName,
                 value: _selectedMealSize,
                 isLoading: lookup.isLoading,
+                validator: (v) => v == null ? 'Meal Size is required' : null,
                 onInteraction: () {
-                  FocusScope.of(context).unfocus();
+                  _rollFocus.unfocus();
+                  _nameFocus.unfocus();
                   lookup.fetchInitialData();
                 },
                 onChanged: (v) => setState(() => _selectedMealSize = v),
@@ -435,17 +448,14 @@ class _ChildFormState extends State<_ChildForm> {
                       prefixIcon: Icon(CupertinoIcons.clock),
                       suffixIcon: Icon(CupertinoIcons.chevron_down, size: 16),
                     ),
-                    validator: (v) => _timeController.text.isEmpty ? 'Required' : null,
+                    validator: (v) => _timeController.text.isEmpty ? 'Meal time is required' : null,
                   ),
                 ),
               ),
               const SizedBox(height: 32),
               ElevatedButton(
                 onPressed: () async {
-                  if (_formKey.currentState!.validate() && 
-                      _selectedSchool != null && 
-                      _selectedStandard != null && 
-                      _selectedMealSize != null) {
+                  if (_formKey.currentState!.validate()) {
                     
                     final newChild = ChildModel(
                       name: _nameController.text,

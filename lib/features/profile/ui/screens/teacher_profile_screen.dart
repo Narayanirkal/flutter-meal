@@ -70,7 +70,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                       labelText: 'Full Name',
                       prefixIcon: Icon(CupertinoIcons.person_fill),
                     ),
-                    validator: (v) => v!.isEmpty ? 'Required' : null,
+                    validator: (v) => v!.isEmpty ? 'Full Name is required' : null,
                   ),
                   const SizedBox(height: 20),
                   TextFormField(
@@ -79,7 +79,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                       labelText: 'School/College Name',
                       prefixIcon: Icon(CupertinoIcons.building_2_fill),
                     ),
-                    validator: (v) => v!.isEmpty ? 'Required' : null,
+                    validator: (v) => v!.isEmpty ? 'School/College is required' : null,
                   ),
                   const SizedBox(height: 20),
                   TextFormField(
@@ -88,7 +88,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                       labelText: 'City',
                       prefixIcon: Icon(CupertinoIcons.location_fill),
                     ),
-                    validator: (v) => v!.isEmpty ? 'Required' : null,
+                    validator: (v) => v!.isEmpty ? 'City is required' : null,
                   ),
                   const SizedBox(height: 20),
                   TextFormField(
@@ -97,7 +97,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                       labelText: 'State',
                       prefixIcon: Icon(CupertinoIcons.map_fill),
                     ),
-                    validator: (v) => v!.isEmpty ? 'Required' : null,
+                    validator: (v) => v!.isEmpty ? 'State is required' : null,
                   ),
                   const SizedBox(height: 20),
                   TextFormField(
@@ -106,7 +106,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                       labelText: 'Specific Location',
                       prefixIcon: Icon(CupertinoIcons.placemark_fill),
                     ),
-                    validator: (v) => v!.isEmpty ? 'Required' : null,
+                    validator: (v) => v!.isEmpty ? 'Location is required' : null,
                   ),
                   const SizedBox(height: 40),
                   ElevatedButton(
@@ -133,12 +133,53 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                     style: ElevatedButton.styleFrom(
                       minimumSize: const Size(double.infinity, 60),
                     ),
-                    child: const Text('Save Profile'),
+                   child: const Text('Save Profile'),
                   ),
+                  if (context.read<ProfileProvider>().teacherProfile != null) ...[
+                    const SizedBox(height: 16),
+                    TextButton(
+                      onPressed: () => _confirmDelete(context),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.red,
+                        minimumSize: const Size(double.infinity, 50),
+                      ),
+                      child: const Text('Delete Teacher Profile', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ],
                 ],
               ),
             ),
           ),
+    );
+  }
+
+  void _confirmDelete(BuildContext context) {
+    showCupertinoDialog(
+      context: context,
+      builder: (context) => CupertinoAlertDialog(
+        title: const Text('Delete Teacher Profile'),
+        content: const Text('Are you sure you want to delete your teacher profile? This action cannot be undone.'),
+        actions: [
+          CupertinoDialogAction(
+            child: const Text('Cancel'),
+            onPressed: () => Navigator.pop(context),
+          ),
+          CupertinoDialogAction(
+            isDestructiveAction: true,
+            onPressed: () async {
+              Navigator.pop(context);
+              final success = await context.read<ProfileProvider>().deleteTeacherProfile();
+              if (success && mounted) {
+                ErrorHandler.showSuccess(context, 'Teacher profile deleted successfully');
+                Navigator.pop(context);
+              } else if (mounted) {
+                ErrorHandler.showError(context, 'Failed to delete teacher profile');
+              }
+            },
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
     );
   }
 }

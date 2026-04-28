@@ -101,7 +101,7 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
                       labelText: 'Full Name',
                       prefixIcon: Icon(CupertinoIcons.person_fill),
                     ),
-                    validator: (v) => v!.isEmpty ? 'Required' : null,
+                    validator: (v) => v!.isEmpty ? 'Full Name is required' : null,
                   ),
                   const SizedBox(height: 20),
                   TextFormField(
@@ -110,7 +110,7 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
                       labelText: 'Company Name',
                       prefixIcon: Icon(CupertinoIcons.briefcase_fill),
                     ),
-                    validator: (v) => v!.isEmpty ? 'Required' : null,
+                    validator: (v) => v!.isEmpty ? 'Company Name is required' : null,
                   ),
                   const SizedBox(height: 20),
                   SearchableDropdown<CorporateLocationModel>(
@@ -118,7 +118,7 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
                     items: lookup.corporateLocations,
                     itemLabel: (l) => l.name,
                     value: _selectedLocation,
-                    isLoading: lookup.isLoading,
+                    validator: (v) => v == null ? 'Location is required' : null,
                     onInteraction: () {
                       FocusScope.of(context).unfocus();
                       lookup.fetchInitialData();
@@ -140,7 +140,7 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
                       labelText: 'City',
                       prefixIcon: Icon(CupertinoIcons.location_fill),
                     ),
-                    validator: (v) => v!.isEmpty ? 'Required' : null,
+                    validator: (v) => v!.isEmpty ? 'City is required' : null,
                   ),
                   const SizedBox(height: 20),
                   TextFormField(
@@ -149,7 +149,7 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
                       labelText: 'State',
                       prefixIcon: Icon(CupertinoIcons.map_fill),
                     ),
-                    validator: (v) => v!.isEmpty ? 'Required' : null,
+                    validator: (v) => v!.isEmpty ? 'State is required' : null,
                   ),
                   const SizedBox(height: 20),
                   InkWell(
@@ -163,7 +163,7 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
                           prefixIcon: Icon(CupertinoIcons.clock_fill),
                           suffixIcon: Icon(CupertinoIcons.chevron_down, size: 16),
                         ),
-                        validator: (v) => _timeController.text.isEmpty ? 'Required' : null,
+                        validator: (v) => v!.isEmpty ? 'Lunch time is required' : null,
                       ),
                     ),
                   ),

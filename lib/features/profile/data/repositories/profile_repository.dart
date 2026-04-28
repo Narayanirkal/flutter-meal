@@ -32,6 +32,15 @@ class ProfileRepository {
     }
   }
 
+  Future<bool> deleteTeacherProfile() async {
+    try {
+      final response = await _dioClient.dio.delete(ApiEndpoints.teacherProfile);
+      return response.data['success'] == true;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   // Professional Profile
   Future<ProfessionalProfileModel?> getProfessionalProfile() async {
     try {

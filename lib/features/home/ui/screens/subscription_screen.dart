@@ -19,7 +19,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<SubscriptionProvider>().fetchSubscriptions();
+      context.read<SubscriptionProvider>().fetchSubscriptions(force: true);
     });
   }
 
@@ -28,10 +28,15 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     final subscriptionProvider = context.watch<SubscriptionProvider>();
 
     return Scaffold(
-      body: CustomScrollView(
-        slivers: [
-          _buildAppBar(context),
-          SliverToBoxAdapter(
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await context.read<SubscriptionProvider>().fetchSubscriptions(force: true);
+        },
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            _buildAppBar(context),
+            SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(24.0),
               child: Column(
@@ -71,6 +76,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
           ),
         ],
       ),
+     ),
     );
   }
 
