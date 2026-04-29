@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:meal_app/core/theme/app_theme.dart';
 import 'package:meal_app/core/providers/theme_provider.dart';
 import 'package:meal_app/features/auth/providers/auth_provider.dart';
+import 'package:meal_app/features/subscription/ui/screens/subscription_management_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -26,6 +27,16 @@ class SettingsScreen extends StatelessWidget {
         children: [
           _buildSectionHeader('Profile Details'),
           _buildInfoTile(CupertinoIcons.phone_fill, 'Phone Number', authProvider.phoneNumber),
+          _buildNavigationTile(
+            CupertinoIcons.creditcard_fill, 
+            'Subscriptions & Payments', 
+            () {
+              Navigator.push(
+                context,
+                CupertinoPageRoute(builder: (context) => const SubscriptionManagementScreen()),
+              );
+            }
+          ),
           const SizedBox(height: 30),
           
           _buildSectionHeader('App Customization'),

@@ -6,6 +6,7 @@ class AppleCard extends StatelessWidget {
   final VoidCallback? onTap;
   final Color? color;
   final EdgeInsets? padding;
+  final EdgeInsets? margin;
   final double borderRadius;
 
   const AppleCard({
@@ -14,13 +15,14 @@ class AppleCard extends StatelessWidget {
     this.onTap,
     this.color,
     this.padding,
+    this.margin,
     this.borderRadius = 24.0,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8),
+      margin: margin ?? const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(
         color: color ?? Colors.white,
         borderRadius: BorderRadius.circular(borderRadius),

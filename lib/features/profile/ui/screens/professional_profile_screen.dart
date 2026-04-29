@@ -31,16 +31,40 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ProfileProvider>().fetchProfiles();
-    });
+    _nameController = TextEditingController();
+    _companyController = TextEditingController();
+    _cityController = TextEditingController();
+    _stateController = TextEditingController();
+    _timeController = TextEditingController(text: '13:30');
 
-    final profile = context.read<ProfileProvider>().professionalProfile;
-    _nameController = TextEditingController(text: profile?.name);
-    _companyController = TextEditingController(text: profile?.companyName);
-    _cityController = TextEditingController(text: profile?.city);
-    _stateController = TextEditingController(text: profile?.state);
-    _timeController = TextEditingController(text: profile?.lunchTime ?? '13:30');
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final lookup = context.read<LookupProvider>();
+      final profileProvider = context.read<ProfileProvider>();
+      
+      await Future.wait([
+        lookup.fetchInitialData(),
+        profileProvider.fetchProfiles(force: true),
+      ]);
+
+      final profile = profileProvider.professionalProfile;
+      if (profile != null && mounted) {
+        setState(() {
+          _nameController.text = profile.name;
+          _companyController.text = profile.companyName;
+          _cityController.text = profile.city;
+          _stateController.text = profile.state;
+          _timeController.text = profile.lunchTime;
+          
+          // Match selected location from lookup list
+          if (profile.corporateLocationId != null) {
+            _selectedLocation = lookup.corporateLocations.cast<CorporateLocationModel?>().firstWhere(
+              (l) => l?.id == profile.corporateLocationId,
+              orElse: () => null,
+            );
+          }
+        });
+      }
+    });
   }
 
   Future<void> _selectTime(BuildContext context) async {
@@ -118,6 +142,10 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
                     items: lookup.corporateLocations,
                     itemLabel: (l) => l.name,
                     value: _selectedLocation,
+                    isLoading: lookup.isLoading,
+                    listenable: lookup,
+                    itemsGetter: () => lookup.corporateLocations,
+                    loadingGetter: () => lookup.isLoading,
                     validator: (v) => v == null ? 'Location is required' : null,
                     onInteraction: () {
                       FocusScope.of(context).unfocus();

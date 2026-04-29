@@ -40,5 +40,12 @@ class ApiEndpoints {
   static const String standards = '/api/common/lookup/standards';
   static const String corporateLocations = '/api/common/corporate-locations';
   static const String subscriptions = '/api/common/subscriptions';
+
+  // Payment
+  static const String initiatePayment = '/api/client/payment/initiate';
+  static String paymentStatus(String txnId) => '/api/client/payment/status/$txnId';
+  static const String paymentHistory = '/api/client/payment/history';
+  static const String activeSubscriptions = '/api/client/payment/active-subscriptions';
+  static String get paymentStatusPage => '$baseUrl/api/client/payment/status-page';
 }
 

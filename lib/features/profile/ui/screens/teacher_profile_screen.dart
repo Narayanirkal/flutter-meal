@@ -25,17 +25,27 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ProfileProvider>().fetchProfiles();
-    });
+    _nameController = TextEditingController();
+    _schoolController = TextEditingController();
+    _cityController = TextEditingController();
+    _stateController = TextEditingController();
+    _locationController = TextEditingController();
     
-    final profile = context.read<ProfileProvider>().teacherProfile;
-    _nameController = TextEditingController(text: profile?.name);
-    _schoolController = TextEditingController(text: profile?.schoolCollegeName);
-    _cityController = TextEditingController(text: profile?.city);
-    _stateController = TextEditingController(text: profile?.state);
-    _locationController = TextEditingController(text: profile?.location);
-    _status = profile?.status ?? 'active';
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final provider = context.read<ProfileProvider>();
+      await provider.fetchProfiles(force: true);
+      final profile = provider.teacherProfile;
+      if (profile != null && mounted) {
+        setState(() {
+          _nameController.text = profile.name;
+          _schoolController.text = profile.schoolCollegeName;
+          _cityController.text = profile.city;
+          _stateController.text = profile.state;
+          _locationController.text = profile.location;
+          _status = profile.status;
+        });
+      }
+    });
   }
 
   @override

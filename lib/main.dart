@@ -19,6 +19,8 @@ import 'package:meal_app/features/profile/providers/profile_provider.dart';
 import 'package:meal_app/core/providers/theme_provider.dart';
 import 'package:meal_app/core/network/subscription_repository.dart';
 import 'package:meal_app/core/providers/subscription_provider.dart';
+import 'package:meal_app/core/network/payment_repository.dart';
+import 'package:meal_app/core/providers/payment_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -39,6 +41,7 @@ class MyApp extends StatelessWidget {
     final childrenRepository = ChildrenRepository(dioClient);
     final profileRepository = ProfileRepository(dioClient);
     final subscriptionRepository = SubscriptionRepository(dioClient);
+    final paymentRepository = PaymentRepository(dioClient);
 
     return MultiProvider(
       providers: [
@@ -48,6 +51,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ProfileProvider(profileRepository)),
         ChangeNotifierProvider(create: (_) => ThemeProvider(secureStorage)),
         ChangeNotifierProvider(create: (_) => SubscriptionProvider(subscriptionRepository)),
+        ChangeNotifierProvider(create: (_) => PaymentProvider(paymentRepository)),
       ],
       child: const MainApp(),
     );

@@ -398,6 +398,9 @@ class _ChildFormState extends State<_ChildForm> {
                 itemLabel: (s) => s.name,
                 value: _selectedSchool,
                 isLoading: lookup.isLoading,
+                listenable: lookup,
+                itemsGetter: () => lookup.schools,
+                loadingGetter: () => lookup.isLoading,
                 validator: (v) => v == null ? 'School is required' : null,
                 onInteraction: () {
                   _rollFocus.unfocus();
@@ -413,6 +416,9 @@ class _ChildFormState extends State<_ChildForm> {
                 itemLabel: (s) => s.displayName,
                 value: _selectedStandard,
                 isLoading: lookup.isLoading,
+                listenable: lookup,
+                itemsGetter: () => lookup.standards,
+                loadingGetter: () => lookup.isLoading,
                 validator: (v) => v == null ? 'Standard is required' : null,
                 onInteraction: () {
                   _rollFocus.unfocus();
@@ -428,6 +434,9 @@ class _ChildFormState extends State<_ChildForm> {
                 itemLabel: (s) => s.displayName,
                 value: _selectedMealSize,
                 isLoading: lookup.isLoading,
+                listenable: lookup,
+                itemsGetter: () => lookup.mealSizes,
+                loadingGetter: () => lookup.isLoading,
                 validator: (v) => v == null ? 'Meal Size is required' : null,
                 onInteraction: () {
                   _rollFocus.unfocus();
