@@ -90,6 +90,8 @@ class SearchableDropdown<T> extends FormField<T> {
                             state.value != null
                                 ? itemLabel(state.value as T)
                                 : hint,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               color: state.value != null
                                   ? (isDark

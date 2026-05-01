@@ -78,4 +78,43 @@ class LookupRepository {
       return [];
     }
   }
+
+  Future<List<StateModel>> getStates() async {
+    try {
+      final response = await _dioClient.dio.get(ApiEndpoints.states);
+      if (response.data['success'] == true) {
+        final List states = response.data['data'];
+        return states.map((s) => StateModel.fromJson(s)).toList();
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<List<CityModel>> getCities() async {
+    try {
+      final response = await _dioClient.dio.get(ApiEndpoints.cities);
+      if (response.data['success'] == true) {
+        final List cities = response.data['data'];
+        return cities.map((c) => CityModel.fromJson(c)).toList();
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<List<CompanyModel>> getCompanies() async {
+    try {
+      final response = await _dioClient.dio.get(ApiEndpoints.companies);
+      if (response.data['success'] == true) {
+        final List companies = response.data['data'];
+        return companies.map((c) => CompanyModel.fromJson(c)).toList();
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
 }

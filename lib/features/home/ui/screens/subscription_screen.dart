@@ -20,11 +20,18 @@ class SubscriptionScreen extends StatefulWidget {
 }
 
 class _SubscriptionScreenState extends State<SubscriptionScreen> {
+  int _step = 0;
+  String? _selectedEntityType;
+  String? _selectedEntityId;
+  int? _selectedMealSizeId;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<SubscriptionProvider>().fetchSubscriptions(force: true);
+      context.read<ChildrenProvider>().fetchChildren();
+      context.read<ProfileProvider>().fetchProfiles(force: true);
     });
   }
 
@@ -36,52 +43,125 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       body: RefreshIndicator(
         onRefresh: () async {
           await context.read<SubscriptionProvider>().fetchSubscriptions(force: true);
+          await context.read<ChildrenProvider>().fetchChildren();
+          await context.read<ProfileProvider>().fetchProfiles(force: true);
         },
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           slivers: [
             _buildAppBar(context),
             SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  const Text(
-                    'Choose Your Plan',
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -1,
-                    ),
-                  ).animate().fadeIn().slideY(begin: 0.2, end: 0),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'Unlock premium features and professional meal tracking for your family.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: AppTheme.textSecondaryLight,
-                    ),
-                  ).animate().fadeIn(delay: 200.ms),
-                  const SizedBox(height: 40),
-                  
-                  if (subscriptionProvider.isLoading)
-                    const Center(child: CircularProgressIndicator())
-                  else if (subscriptionProvider.subscriptions.isEmpty)
-                    const Text('No subscription plans available.')
-                  else
-                    ...subscriptionProvider.subscriptions.map((plan) => _buildPlanCard(context, plan)),
-                  
-                  const SizedBox(height: 40),
-                  _buildFAQSection(),
-                ],
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: _step == 0 ? _buildEntitySelectionView() : _buildPlanSelectionView(),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-     ),
+    );
+  }
+
+  Widget _buildEntitySelectionView() {
+    final childrenProvider = context.read<ChildrenProvider>();
+    final profileProvider = context.read<ProfileProvider>();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Select Profile to Upgrade',
+          style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, letterSpacing: -1),
+        ).animate().fadeIn().slideY(begin: 0.2, end: 0),
+        const SizedBox(height: 12),
+        const Text(
+          'Who are you buying this subscription for?',
+          style: TextStyle(fontSize: 16, color: AppTheme.textSecondaryLight),
+        ).animate().fadeIn(delay: 200.ms),
+        const SizedBox(height: 40),
+
+        if (childrenProvider.children.isNotEmpty) ...[
+          const Text('CHILDREN', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Colors.grey)),
+          const SizedBox(height: 12),
+          ...childrenProvider.children.map((child) => _buildSelectionItem(
+            context,
+            'child',
+            child.id!,
+            child.name,
+            'Child - ${child.rollNumber}',
+            isDark,
+            mealSizeId: child.mealSizeId,
+          )),
+          const SizedBox(height: 20),
+        ],
+
+        const Text('OTHER PROFILES', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Colors.grey)),
+        const SizedBox(height: 12),
+        if (profileProvider.teacherProfile != null)
+          _buildSelectionItem(
+            context,
+            'teacher',
+            profileProvider.teacherProfile!.id!,
+            profileProvider.teacherProfile!.name,
+            'Teacher Profile',
+            isDark,
+          ),
+        if (profileProvider.professionalProfile != null)
+          _buildSelectionItem(
+            context,
+            'professional',
+            profileProvider.professionalProfile!.id!,
+            profileProvider.professionalProfile!.name,
+            'Professional Profile',
+            isDark,
+          ),
+
+        if (childrenProvider.children.isEmpty && profileProvider.teacherProfile == null && profileProvider.professionalProfile == null)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 40),
+            child: Center(child: Text('No active profiles found to upgrade. Please create a profile first.')),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildPlanSelectionView() {
+    final subscriptionProvider = context.watch<SubscriptionProvider>();
+    
+    // Filter plans based on selected entity's meal size (if applicable)
+    final availablePlans = subscriptionProvider.subscriptions.where((plan) {
+      if (_selectedMealSizeId != null && plan.mealSizeId != null) {
+        return plan.mealSizeId == _selectedMealSizeId;
+      }
+      return true; // if no meal size specified on entity or plan, show it
+    }).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        const Text(
+          'Choose Your Plan',
+          style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, letterSpacing: -1),
+        ).animate().fadeIn().slideY(begin: 0.2, end: 0),
+        const SizedBox(height: 12),
+        const Text(
+          'Unlock premium features and professional meal tracking.',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 16, color: AppTheme.textSecondaryLight),
+        ).animate().fadeIn(delay: 200.ms),
+        const SizedBox(height: 40),
+        
+        if (subscriptionProvider.isLoading)
+          const Center(child: CircularProgressIndicator())
+        else if (availablePlans.isEmpty)
+          const Text('No subscription plans available for this profile type.')
+        else
+          ...availablePlans.map((plan) => _buildPlanCard(context, plan)),
+        
+        const SizedBox(height: 40),
+        _buildFAQSection(),
+      ],
     );
   }
 
@@ -94,12 +174,18 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       elevation: 0,
       leading: IconButton(
         icon: const Icon(CupertinoIcons.back),
-        onPressed: () => Navigator.pop(context),
+        onPressed: () {
+          if (_step == 1) {
+            setState(() => _step = 0);
+          } else {
+            Navigator.pop(context);
+          }
+        },
       ),
       flexibleSpace: FlexibleSpaceBar(
         centerTitle: true,
         title: Text(
-          'Buuttii Pro Premium',
+          'Buuttii Premium',
           style: TextStyle(
             color: Theme.of(context).textTheme.titleLarge?.color,
             fontSize: 18,
@@ -166,14 +252,14 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
           _buildFeatureRow('${plan.trialDays} Days Free Trial', isPremium),
           const SizedBox(height: 24),
           ElevatedButton(
-            onPressed: () => _showSelectionSheet(context, plan),
+            onPressed: () => _showDateSelectionSheet(context, plan.id!, _selectedEntityType!, _selectedEntityId!),
             style: ElevatedButton.styleFrom(
               backgroundColor: isPremium ? Colors.white : AppTheme.primaryColor,
               foregroundColor: isPremium ? AppTheme.primaryColor : Colors.white,
               minimumSize: const Size(double.infinity, 56),
               elevation: 0,
             ),
-            child: const Text('Subscribe Now'),
+            child: const Text('Select Start Date & Pay'),
           ),
         ],
       ),
@@ -232,105 +318,24 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     );
   }
 
-  void _showSelectionSheet(BuildContext context, SubscriptionModel plan) {
-    final childrenProvider = context.read<ChildrenProvider>();
-    final profileProvider = context.read<ProfileProvider>();
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: Theme.of(context).scaffoldBackgroundColor,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Select Profile to Upgrade',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Upgrading for ${plan.planName} (₹${plan.price})',
-                style: const TextStyle(color: AppTheme.textSecondaryLight),
-              ),
-              const SizedBox(height: 24),
-              
-              // Children List
-              if (childrenProvider.children.isNotEmpty) ...[
-                const Text('CHILDREN', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Colors.grey)),
-                const SizedBox(height: 12),
-                ...childrenProvider.children.map((child) => _buildSelectionItem(
-                  context, 
-                  'child', 
-                  child.id!, 
-                  child.name, 
-                  'Child - ${child.rollNumber}', 
-                  plan,
-                  isDark
-                )),
-                const SizedBox(height: 20),
-              ],
-
-              // Profiles
-              const Text('OTHER PROFILES', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Colors.grey)),
-              const SizedBox(height: 12),
-              if (profileProvider.teacherProfile != null)
-                _buildSelectionItem(
-                  context, 
-                  'teacher', 
-                  profileProvider.teacherProfile!.id!, 
-                  profileProvider.teacherProfile!.name, 
-                  'Teacher Profile', 
-                  plan,
-                  isDark
-                ),
-              if (profileProvider.professionalProfile != null)
-                _buildSelectionItem(
-                  context, 
-                  'professional', 
-                  profileProvider.professionalProfile!.id!, 
-                  profileProvider.professionalProfile!.name, 
-                  'Professional Profile', 
-                  plan,
-                  isDark
-                ),
-              
-              if (childrenProvider.children.isEmpty && profileProvider.teacherProfile == null && profileProvider.professionalProfile == null)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 20),
-                  child: Center(child: Text('No active profiles found to upgrade.')),
-                ),
-
-              const SizedBox(height: 40),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
   Widget _buildSelectionItem(
     BuildContext context, 
     String entityType, 
     String entityId, 
     String name, 
     String subtitle, 
-    SubscriptionModel plan,
-    bool isDark
+    bool isDark,
+    {int? mealSizeId}
   ) {
     return AppleCard(
       margin: const EdgeInsets.only(bottom: 12),
-      onTap: () async {
-        Navigator.pop(context); // Close sheet
-        _handlePayment(context, plan.id!, entityType, entityId);
+      onTap: () {
+        setState(() {
+          _selectedEntityType = entityType;
+          _selectedEntityId = entityId;
+          _selectedMealSizeId = mealSizeId;
+          _step = 1; // Move to plan selection
+        });
       },
       child: Row(
         children: [
@@ -358,11 +363,29 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     );
   }
 
+  Future<void> _showDateSelectionSheet(BuildContext context, String planId, String entityType, String entityId) async {
+    final nextDay = DateTime.now().add(const Duration(days: 1));
+    final selectedDate = await showDatePicker(
+      context: context,
+      initialDate: nextDay,
+      firstDate: nextDay,
+      lastDate: nextDay.add(const Duration(days: 60)),
+      helpText: 'Select Meal Start Date',
+      confirmText: 'PROCEED TO PAY',
+    );
+    if (selectedDate != null && context.mounted) {
+       // Format date as YYYY-MM-DD
+       final dateStr = '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
+       _handlePayment(context, planId, entityType, entityId, dateStr);
+    }
+  }
+
   Future<void> _handlePayment(
     BuildContext context,
     String planId,
     String entityType,
     String entityId,
+    String startDate,
   ) async {
     final paymentProvider = context.read<PaymentProvider>();
 
@@ -398,6 +421,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       subscriptionId: planId,
       entityType: entityType,
       entityId: entityId,
+      startDate: startDate,
       isSandbox: true, // change to false for production
     );
 

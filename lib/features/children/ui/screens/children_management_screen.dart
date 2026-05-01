@@ -288,6 +288,8 @@ class _ChildFormState extends State<_ChildForm> {
   SchoolModel? _selectedSchool;
   StandardModel? _selectedStandard;
   MealSizeModel? _selectedMealSize;
+  
+  bool _isLoading = false;
 
   final _nameFocus = FocusNode();
   final _rollFocus = FocusNode();
@@ -301,17 +303,21 @@ class _ChildFormState extends State<_ChildForm> {
     _timeController = TextEditingController(text: widget.child?.mealTime ?? '13:30');
 
     // If editing, we need to fetch lookup data to pre-fill the selections
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final lookup = context.read<LookupProvider>();
-      if (widget.child != null) {
+    if (widget.child != null) {
+      _isLoading = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        final lookup = context.read<LookupProvider>();
         await lookup.fetchInitialData();
-        setState(() {
-          _selectedSchool = lookup.schools.where((s) => s.id == widget.child!.schoolId).firstOrNull;
-          _selectedStandard = lookup.standards.where((s) => s.id == widget.child!.standardId).firstOrNull;
-          _selectedMealSize = lookup.mealSizes.where((s) => s.id == widget.child!.mealSizeId).firstOrNull;
-        });
-      }
-    });
+        if (mounted) {
+          setState(() {
+            _selectedSchool = lookup.schools.where((s) => s.id == widget.child!.schoolId).firstOrNull;
+            _selectedStandard = lookup.standards.where((s) => s.id == widget.child!.standardId).firstOrNull;
+            _selectedMealSize = lookup.mealSizes.where((s) => s.id == widget.child!.mealSizeId).firstOrNull;
+            _isLoading = false;
+          });
+        }
+      });
+    }
   }
 
   Future<void> _selectTime(BuildContext context) async {
@@ -356,8 +362,10 @@ class _ChildFormState extends State<_ChildForm> {
         top: 24, 
         bottom: MediaQuery.of(context).viewInsets.bottom + 24
       ),
-      child: Form(
-        key: _formKey,
+      child: _isLoading 
+        ? const Center(child: CircularProgressIndicator())
+        : Form(
+            key: _formKey,
         child: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,

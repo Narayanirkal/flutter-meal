@@ -14,6 +14,10 @@ import 'package:meal_app/features/profile/ui/screens/teacher_profile_screen.dart
 import 'package:meal_app/features/profile/ui/screens/professional_profile_screen.dart';
 import 'package:meal_app/features/profile/ui/screens/settings_screen.dart';
 import 'package:meal_app/features/home/ui/screens/subscription_screen.dart';
+import 'package:meal_app/features/home/providers/homepage_provider.dart';
+import 'package:meal_app/features/home/data/models/homepage_entry.dart';
+import 'package:meal_app/features/home/providers/menu_provider.dart';
+import 'package:meal_app/features/home/ui/screens/weekly_menu_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -28,7 +32,8 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<ChildrenProvider>().fetchChildren();
-      context.read<ProfileProvider>().fetchProfiles();
+      context.read<HomepageProvider>().fetchHomepageEntries();
+      context.read<MenuProvider>().fetchTodayMenu();
     });
   }
 
@@ -37,7 +42,13 @@ class _HomeScreenState extends State<HomeScreen> {
     final authProvider = context.watch<AuthProvider>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
-    return Scaffold(
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+        statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
+      ),
+      child: Scaffold(
       body: RefreshIndicator(
         onRefresh: () async {
           await context.read<ChildrenProvider>().fetchChildren();
@@ -56,7 +67,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   sliver: SliverList(
                     delegate: SliverChildListDelegate([
                       _buildWelcomeSection(authProvider, isDark),
-                      const SizedBox(height: 30),
+                      const SizedBox(height: 20),
+                      _buildMenuSection(context, isDark),
+                      const SizedBox(height: 20),
                       _buildFeatureCards(context),
                       const SizedBox(height: 30),
                       _buildQuickStatus(context),
@@ -68,6 +81,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
+      ),
     );
   }
 
@@ -78,7 +92,7 @@ class _HomeScreenState extends State<HomeScreen> {
       elevation: 0,
       centerTitle: false,
       title: const Text(
-        'Buuttii Pro',
+        'Buuttii',
         style: TextStyle(
           fontSize: 26,
           fontWeight: FontWeight.w900,
@@ -167,22 +181,27 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Welcome back,',
-            style: TextStyle(
-              fontSize: 16,
-              color: isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondaryLight,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            authProvider.phoneNumber,
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.w900,
-              color: isDark ? AppTheme.textPrimaryDark : AppTheme.textPrimaryLight,
-              letterSpacing: 0.5,
+          RichText(
+            text: TextSpan(
+              children: [
+                TextSpan(
+                  text: 'Welcome back, ',
+                  style: TextStyle(
+                    fontSize: 20,
+                    color: isDark ? Colors.white70 : AppTheme.textSecondaryLight,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                TextSpan(
+                  text: authProvider.username.isNotEmpty ? authProvider.username : 'User',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
+                    color: isDark ? Colors.white : AppTheme.textPrimaryLight,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -190,33 +209,128 @@ class _HomeScreenState extends State<HomeScreen> {
     ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.1, end: 0);
   }
 
-  Widget _buildFeatureCards(BuildContext context) {
+  Widget _buildMenuSection(BuildContext context, bool isDark) {
+    final menuProvider = context.watch<MenuProvider>();
+    
+    if (menuProvider.isLoading) return const SizedBox.shrink();
+    if (!menuProvider.isSubscribed || menuProvider.todayMenu == null) return const SizedBox.shrink();
+
+    final menu = menuProvider.todayMenu!;
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildFeatureCard(
-          context,
-          'Children & Teacher',
-          'Manage school details and profiles',
-          CupertinoIcons.group_solid,
-          Colors.indigo,
-          () => _showChildrenTeacherOptions(context),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              "Today's Menu",
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.push(context, CupertinoPageRoute(builder: (_) => const WeeklyMenuScreen()));
+              },
+              child: const Text('View One Week Meal', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
         ),
-        const SizedBox(height: 16),
-        _buildFeatureCard(
-          context,
-          'Professional Profile',
-          'Setup your corporate delivery info',
-          CupertinoIcons.briefcase_fill,
-          Colors.orange,
-          () {
-            Navigator.push(
-              context,
-              CupertinoPageRoute(builder: (context) => const ProfessionalProfileScreen()),
-            );
-          },
-        ),
+        const SizedBox(height: 12),
+        AppleCard(
+          color: isDark ? AppTheme.surfaceDark : Colors.white,
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(CupertinoIcons.flame_fill, color: AppTheme.primaryColor, size: 28),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      menu['item_name'] ?? 'Meal Item',
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      menu['description'] ?? '',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondaryLight,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ).animate().fadeIn().slideX(),
       ],
     );
+  }
+
+  Widget _buildFeatureCards(BuildContext context) {
+    final homepageProvider = context.watch<HomepageProvider>();
+    
+    if (homepageProvider.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (homepageProvider.entries.isEmpty) {
+      return const Center(child: Text('No features available'));
+    }
+
+    return Column(
+      children: homepageProvider.entries.map((entry) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 16.0),
+          child: _buildFeatureCard(
+            context,
+            entry.name,
+            entry.description,
+            _getIconForEntry(entry.name),
+            _getColorForEntry(entry.name),
+            () => _handleCardTap(context, entry),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  IconData _getIconForEntry(String name) {
+    final lower = name.toLowerCase();
+    if (lower.contains('child')) return CupertinoIcons.person_2_fill;
+    if (lower.contains('teacher')) return CupertinoIcons.book_fill;
+    if (lower.contains('professional')) return CupertinoIcons.briefcase_fill;
+    if (lower.contains('bulk')) return CupertinoIcons.cube_box_fill;
+    return CupertinoIcons.star_fill;
+  }
+
+  Color _getColorForEntry(String name) {
+    final lower = name.toLowerCase();
+    if (lower.contains('child')) return Colors.blue;
+    if (lower.contains('teacher')) return Colors.green;
+    if (lower.contains('professional')) return Colors.orange;
+    if (lower.contains('bulk')) return Colors.purple;
+    return Colors.indigo;
+  }
+
+  void _handleCardTap(BuildContext context, HomepageEntry entry) {
+    final name = entry.name.toLowerCase();
+    if (entry.entityId == 'ENT-3' || name.contains('child')) {
+      Navigator.push(context, CupertinoPageRoute(builder: (context) => const ChildrenManagementScreen()));
+    } else if (entry.entityId == 'ENT-4' || name.contains('teacher')) {
+      Navigator.push(context, CupertinoPageRoute(builder: (context) => const TeacherProfileScreen()));
+    } else if (name.contains('professional')) {
+      Navigator.push(context, CupertinoPageRoute(builder: (context) => const ProfessionalProfileScreen()));
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Coming soon!')));
+    }
   }
 
   Widget _buildFeatureCard(BuildContext context, String title, String subtitle, IconData icon, Color color, VoidCallback onTap) {
@@ -352,56 +466,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _showChildrenTeacherOptions(BuildContext context) {
-    showCupertinoModalPopup(
-      context: context,
-      builder: (context) => CupertinoActionSheet(
-        title: const Text('Management Options'),
-        message: const Text('Select a profile type to manage your delivery details.'),
-        actions: [
-          CupertinoActionSheetAction(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                CupertinoPageRoute(builder: (context) => const ChildrenManagementScreen()),
-              );
-            },
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
-                Icon(CupertinoIcons.person_2_fill, size: 20),
-                SizedBox(width: 12),
-                Text('Children Management'),
-              ],
-            ),
-          ),
-          CupertinoActionSheetAction(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                CupertinoPageRoute(builder: (context) => const TeacherProfileScreen()),
-              );
-            },
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
-                Icon(CupertinoIcons.book_fill, size: 20),
-                SizedBox(width: 12),
-                Text('Teacher Profile'),
-              ],
-            ),
-          ),
-        ],
-        cancelButton: CupertinoActionSheetAction(
-          isDefaultAction: true,
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
-        ),
-      ),
-    );
-  }
+  // Removed _showChildrenTeacherOptions as it's now handled by _handleCardTap
 }
 
 

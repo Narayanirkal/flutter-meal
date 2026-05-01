@@ -27,6 +27,9 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
   late TextEditingController _timeController;
   
   CorporateLocationModel? _selectedLocation;
+  CompanyModel? _selectedCompany;
+  StateModel? _selectedState;
+  CityModel? _selectedCity;
 
   @override
   void initState() {
@@ -41,13 +44,11 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
       final lookup = context.read<LookupProvider>();
       final profileProvider = context.read<ProfileProvider>();
       
-      await Future.wait([
-        lookup.fetchInitialData(),
-        profileProvider.fetchProfiles(force: true),
-      ]);
+      await profileProvider.fetchProfiles(force: true);
 
       final profile = profileProvider.professionalProfile;
       if (profile != null && mounted) {
+        await lookup.fetchInitialData();
         setState(() {
           _nameController.text = profile.name;
           _companyController.text = profile.companyName;
@@ -62,6 +63,9 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
               orElse: () => null,
             );
           }
+          _selectedCompany = lookup.companies.where((c) => c.name == profile.companyName).firstOrNull;
+          _selectedCity = lookup.cities.where((c) => c.name == profile.city).firstOrNull;
+          _selectedState = lookup.states.where((s) => s.name == profile.state).firstOrNull;
         });
       }
     });
@@ -128,13 +132,26 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
                     validator: (v) => v!.isEmpty ? 'Full Name is required' : null,
                   ),
                   const SizedBox(height: 20),
-                  TextFormField(
-                    controller: _companyController,
-                    decoration: const InputDecoration(
-                      labelText: 'Company Name',
-                      prefixIcon: Icon(CupertinoIcons.briefcase_fill),
-                    ),
-                    validator: (v) => v!.isEmpty ? 'Company Name is required' : null,
+                  SearchableDropdown<CompanyModel>(
+                    label: 'Company Name',
+                    items: lookup.companies,
+                    itemLabel: (c) => c.name,
+                    value: _selectedCompany,
+                    isLoading: lookup.isLoading,
+                    listenable: lookup,
+                    itemsGetter: () => lookup.companies,
+                    loadingGetter: () => lookup.isLoading,
+                    validator: (v) => v == null ? 'Company Name is required' : null,
+                    onInteraction: () {
+                      FocusScope.of(context).unfocus();
+                      lookup.fetchInitialData();
+                    },
+                    onChanged: (v) {
+                      setState(() {
+                        _selectedCompany = v;
+                        _companyController.text = v?.name ?? '';
+                      });
+                    },
                   ),
                   const SizedBox(height: 20),
                   SearchableDropdown<CorporateLocationModel>(
@@ -162,22 +179,48 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
                     },
                   ),
                   const SizedBox(height: 20),
-                  TextFormField(
-                    controller: _cityController,
-                    decoration: const InputDecoration(
-                      labelText: 'City',
-                      prefixIcon: Icon(CupertinoIcons.location_fill),
-                    ),
-                    validator: (v) => v!.isEmpty ? 'City is required' : null,
+                  SearchableDropdown<CityModel>(
+                    label: 'City',
+                    items: lookup.cities,
+                    itemLabel: (c) => c.name,
+                    value: _selectedCity,
+                    isLoading: lookup.isLoading,
+                    listenable: lookup,
+                    itemsGetter: () => lookup.cities,
+                    loadingGetter: () => lookup.isLoading,
+                    validator: (v) => v == null ? 'City is required' : null,
+                    onInteraction: () {
+                      FocusScope.of(context).unfocus();
+                      lookup.fetchInitialData();
+                    },
+                    onChanged: (v) {
+                      setState(() {
+                        _selectedCity = v;
+                        _cityController.text = v?.name ?? '';
+                      });
+                    },
                   ),
                   const SizedBox(height: 20),
-                  TextFormField(
-                    controller: _stateController,
-                    decoration: const InputDecoration(
-                      labelText: 'State',
-                      prefixIcon: Icon(CupertinoIcons.map_fill),
-                    ),
-                    validator: (v) => v!.isEmpty ? 'State is required' : null,
+                  SearchableDropdown<StateModel>(
+                    label: 'State',
+                    items: lookup.states,
+                    itemLabel: (s) => s.name,
+                    value: _selectedState,
+                    isLoading: lookup.isLoading,
+                    listenable: lookup,
+                    itemsGetter: () => lookup.states,
+                    loadingGetter: () => lookup.isLoading,
+                    validator: (v) => v == null ? 'State is required' : null,
+                    onInteraction: () {
+                      FocusScope.of(context).unfocus();
+                      lookup.fetchInitialData();
+                    },
+                    onChanged: (v) {
+                      setState(() {
+                        _selectedState = v;
+                        _stateController.text = v?.name ?? '';
+                      });
+                    },
                   ),
                   const SizedBox(height: 20),
                   InkWell(

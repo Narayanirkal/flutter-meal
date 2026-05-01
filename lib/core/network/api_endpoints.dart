@@ -20,6 +20,7 @@ class ApiEndpoints {
 
   // Auth
   static const String sendOtp = '/api/client/auth/send-otp';
+  static const String loginSendOtp = '/api/client/auth/login/send-otp';
   static const String verifyOtp = '/api/client/auth/verify-otp';
   static const String logout = '/api/client/auth/logout';
   static const String refresh = '/api/client/auth/refresh';
@@ -40,6 +41,10 @@ class ApiEndpoints {
   static const String standards = '/api/common/lookup/standards';
   static const String corporateLocations = '/api/common/corporate-locations';
   static const String subscriptions = '/api/common/subscriptions';
+  static const String homepage = '/api/common/homepage';
+  static const String states = '/api/common/lookup/states';
+  static const String cities = '/api/common/lookup/cities';
+  static const String companies = '/api/common/lookup/companies';
 
   // Payment
   static const String initiatePayment = '/api/client/payment/initiate';

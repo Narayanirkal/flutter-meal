@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'package:meal_app/core/network/dio_client.dart';
+import 'package:meal_app/features/home/providers/menu_provider.dart';
 import 'package:meal_app/core/storage/secure_storage.dart';
 import 'package:meal_app/features/auth/data/repositories/auth_repository.dart';
 import 'package:meal_app/features/auth/providers/auth_provider.dart';
@@ -21,7 +22,8 @@ import 'package:meal_app/core/network/subscription_repository.dart';
 import 'package:meal_app/core/providers/subscription_provider.dart';
 import 'package:meal_app/core/network/payment_repository.dart';
 import 'package:meal_app/core/providers/payment_provider.dart';
-
+import 'package:meal_app/features/home/data/repositories/homepage_repository.dart';
+import 'package:meal_app/features/home/providers/homepage_provider.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
@@ -40,8 +42,8 @@ class MyApp extends StatelessWidget {
     final lookupRepository = LookupRepository(dioClient);
     final childrenRepository = ChildrenRepository(dioClient);
     final profileRepository = ProfileRepository(dioClient);
-    final subscriptionRepository = SubscriptionRepository(dioClient);
     final paymentRepository = PaymentRepository(dioClient);
+    final homepageRepository = HomepageRepository(dioClient);
 
     return MultiProvider(
       providers: [
@@ -50,8 +52,10 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ChildrenProvider(childrenRepository)),
         ChangeNotifierProvider(create: (_) => ProfileProvider(profileRepository)),
         ChangeNotifierProvider(create: (_) => ThemeProvider(secureStorage)),
-        ChangeNotifierProvider(create: (_) => SubscriptionProvider(subscriptionRepository)),
+        ChangeNotifierProvider(create: (_) => SubscriptionProvider(SubscriptionRepository(dioClient))),
+        ChangeNotifierProvider(create: (_) => MenuProvider(dioClient)),
         ChangeNotifierProvider(create: (_) => PaymentProvider(paymentRepository)),
+        ChangeNotifierProvider(create: (_) => HomepageProvider(homepageRepository)),
       ],
       child: const MainApp(),
     );
@@ -64,7 +68,7 @@ class MainApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Buuttii Pro',
+      title: 'Buuttii',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
@@ -84,9 +88,14 @@ class AuthWrapper extends StatelessWidget {
 
     switch (authState) {
       case AuthState.initial:
-        return const Scaffold(
+        return Scaffold(
           body: Center(
-            child: CircularProgressIndicator(),
+            child: Image.asset(
+              'lib/core/image/buuttii_splash.png',
+              width: 200,
+              height: 200,
+              fit: BoxFit.contain,
+            ),
           ),
         );
       case AuthState.authenticated:

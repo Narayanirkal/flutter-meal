@@ -99,3 +99,49 @@ class CorporateLocationModel {
     );
   }
 }
+
+class StateModel {
+  final int id;
+  final String name;
+
+  StateModel({required this.id, required this.name});
+
+  factory StateModel.fromJson(Map<String, dynamic> json) {
+    return StateModel(
+      id: json['id'],
+      name: json['name'],
+    );
+  }
+}
+
+class CityModel {
+  final int id;
+  final int stateId;
+  final String name;
+
+  CityModel({required this.id, required this.stateId, required this.name});
+
+  factory CityModel.fromJson(Map<String, dynamic> json) {
+    return CityModel(
+      id: json['id'],
+      stateId: json['state_id'],
+      name: json['name'],
+    );
+  }
+}
+
+class CompanyModel {
+  final int id;
+  final int cityId;
+  final String name;
+
+  CompanyModel({required this.id, required this.cityId, required this.name});
+
+  factory CompanyModel.fromJson(Map<String, dynamic> json) {
+    return CompanyModel(
+      id: json['id'],
+      cityId: json['city_id'],
+      name: json['name'],
+    );
+  }
+}

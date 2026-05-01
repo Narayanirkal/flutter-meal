@@ -81,7 +81,8 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
       itemCount: provider.activeSubscriptions.length,
       itemBuilder: (context, index) {
         final sub = provider.activeSubscriptions[index];
-        final expiry = DateTime.parse(sub['expiry_date']);
+        final expiryStr = sub['end_date'] ?? sub['expiry_date'];
+        final expiry = expiryStr != null ? DateTime.tryParse(expiryStr.toString()) ?? DateTime.now() : DateTime.now();
         
         return AppleCard(
           margin: const EdgeInsets.only(bottom: 16),
@@ -121,7 +122,7 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
                 children: [
                   const Text('Status', style: TextStyle(fontWeight: FontWeight.w600)),
                   Text(
-                    sub['status']?.toUpperCase() ?? 'ACTIVE',
+                    (sub['status'] ?? 'ACTIVE').toString().toUpperCase(),
                     style: const TextStyle(color: Colors.green, fontWeight: FontWeight.w800),
                   ),
                 ],
@@ -144,8 +145,10 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
       itemCount: provider.paymentHistory.length,
       itemBuilder: (context, index) {
         final payment = provider.paymentHistory[index];
-        final date = DateTime.parse(payment['created_at']);
-        final isSuccess = payment['status'] == 'COMPLETED' || payment['status'] == 'SUCCESS';
+        final dateStr = payment['created_at'] ?? payment['payment_date'];
+        final date = dateStr != null ? DateTime.tryParse(dateStr.toString()) ?? DateTime.now() : DateTime.now();
+        final pStatus = (payment['payment_status'] ?? payment['order_status'] ?? payment['status'] ?? 'PENDING').toString().toUpperCase();
+        final isSuccess = pStatus == 'COMPLETED' || pStatus == 'SUCCESS';
 
         return AppleCard(
           margin: const EdgeInsets.only(bottom: 12),
@@ -187,7 +190,7 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
                     style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)
                   ),
                   Text(
-                    payment['status'] ?? 'PENDING',
+                    pStatus,
                     style: TextStyle(
                       color: isSuccess ? Colors.green : Colors.orange,
                       fontWeight: FontWeight.w700,

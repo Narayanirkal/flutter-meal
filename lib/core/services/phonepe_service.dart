@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:developer' as dev;
 import 'package:phonepe_payment_sdk/phonepe_payment_sdk.dart';
 
@@ -13,7 +14,7 @@ class PhonePeService {
   PhonePeService._();
 
   // iOS app URL scheme for return-to-app deep link (must match Info.plist CFBundleURLSchemes)
-  static const String _appSchema = 'buuttiipro';
+  static const String _appSchema = 'buuttii';
 
   /// Extracts the JWT token from the paymentUrl query parameter.
   static String _extractToken(String paymentUrl) {
@@ -49,16 +50,18 @@ class PhonePeService {
   /// Throws if [paymentUrl] or [orderId] are invalid.
   static Future<Map<String, dynamic>> pay({
     required String orderId,
-    required String paymentUrl,
+    String? paymentUrl,
+    String? backendToken,
+    String? backendMerchantId,
     required bool isSandbox,
   }) async {
-    final token = _extractToken(paymentUrl);
+    final token = backendToken ?? (paymentUrl != null ? _extractToken(paymentUrl) : '');
     if (token.isEmpty) {
-      throw Exception('Invalid paymentUrl: token not found');
+      throw Exception('Invalid payment configuration: token not found');
     }
 
     final jwtPayload = _decodeJwt(token);
-    final merchantId = (jwtPayload['merchantId'] as String?) ?? '';
+    final merchantId = backendMerchantId ?? (jwtPayload['merchantId'] as String?) ?? '';
     if (merchantId.isEmpty) {
       throw Exception('Could not extract merchantId from payment token');
     }
@@ -90,9 +93,14 @@ class PhonePeService {
 
     dev.log('PhonePe startTransaction: $request');
 
+    String schema = '';
+    if (Platform.isIOS) {
+      schema = _appSchema;
+    }
+    
     // Step 3: Start transaction — SDK opens PhonePe app or web page
     final Map<dynamic, dynamic>? response =
-        await PhonePePaymentSdk.startTransaction(request, _appSchema);
+        await PhonePePaymentSdk.startTransaction(request, schema);
 
     dev.log('PhonePe response: $response');
 

@@ -5,6 +5,9 @@ import 'package:meal_app/core/theme/app_theme.dart';
 import 'package:meal_app/features/profile/providers/profile_provider.dart';
 import 'package:meal_app/features/profile/data/models/profile_models.dart';
 import 'package:meal_app/core/utils/error_handler.dart';
+import 'package:meal_app/core/providers/lookup_provider.dart';
+import 'package:meal_app/core/widgets/searchable_dropdown.dart';
+import 'package:meal_app/core/models/lookup_models.dart';
 
 class TeacherProfileScreen extends StatefulWidget {
   const TeacherProfileScreen({super.key});
@@ -19,7 +22,11 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
   late TextEditingController _schoolController;
   late TextEditingController _cityController;
   late TextEditingController _stateController;
-  late TextEditingController _locationController;
+  
+  SchoolModel? _selectedSchool;
+  StateModel? _selectedState;
+  CityModel? _selectedCity;
+  
   String _status = 'active';
 
   @override
@@ -29,19 +36,26 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
     _schoolController = TextEditingController();
     _cityController = TextEditingController();
     _stateController = TextEditingController();
-    _locationController = TextEditingController();
     
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final provider = context.read<ProfileProvider>();
+      final lookupProvider = context.read<LookupProvider>();
       await provider.fetchProfiles(force: true);
       final profile = provider.teacherProfile;
       if (profile != null && mounted) {
+        // Fetch lookup data to prefill the dropdowns
+        await lookupProvider.fetchInitialData();
+
+        // Find existing selections
+        _selectedSchool = lookupProvider.schools.where((s) => s.name == profile.schoolCollegeName).firstOrNull;
+        _selectedState = lookupProvider.states.where((s) => s.name == profile.state).firstOrNull;
+        _selectedCity = lookupProvider.cities.where((s) => s.name == profile.city).firstOrNull;
+
         setState(() {
           _nameController.text = profile.name;
           _schoolController.text = profile.schoolCollegeName;
           _cityController.text = profile.city;
           _stateController.text = profile.state;
-          _locationController.text = profile.location;
           _status = profile.status;
         });
       }
@@ -51,6 +65,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final profileProvider = context.watch<ProfileProvider>();
+    final lookupProvider = context.watch<LookupProvider>();
 
     return Scaffold(
       appBar: AppBar(
@@ -83,40 +98,69 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                     validator: (v) => v!.isEmpty ? 'Full Name is required' : null,
                   ),
                   const SizedBox(height: 20),
-                  TextFormField(
-                    controller: _schoolController,
-                    decoration: const InputDecoration(
-                      labelText: 'School/College Name',
-                      prefixIcon: Icon(CupertinoIcons.building_2_fill),
-                    ),
-                    validator: (v) => v!.isEmpty ? 'School/College is required' : null,
+                  SearchableDropdown<SchoolModel>(
+                    label: 'School/College Name',
+                    items: lookupProvider.schools,
+                    itemLabel: (s) => s.name,
+                    value: _selectedSchool,
+                    isLoading: lookupProvider.isLoading,
+                    listenable: lookupProvider,
+                    itemsGetter: () => lookupProvider.schools,
+                    loadingGetter: () => lookupProvider.isLoading,
+                    validator: (v) => v == null ? 'School/College is required' : null,
+                    onInteraction: () {
+                      FocusScope.of(context).unfocus();
+                      lookupProvider.fetchInitialData();
+                    },
+                    onChanged: (v) {
+                      setState(() {
+                        _selectedSchool = v;
+                        _schoolController.text = v?.name ?? '';
+                      });
+                    },
+                  ),
+                  SearchableDropdown<CityModel>(
+                    label: 'City',
+                    items: lookupProvider.cities,
+                    itemLabel: (s) => s.name,
+                    value: _selectedCity,
+                    isLoading: lookupProvider.isLoading,
+                    listenable: lookupProvider,
+                    itemsGetter: () => lookupProvider.cities,
+                    loadingGetter: () => lookupProvider.isLoading,
+                    validator: (v) => v == null ? 'City is required' : null,
+                    onInteraction: () {
+                      FocusScope.of(context).unfocus();
+                      lookupProvider.fetchInitialData();
+                    },
+                    onChanged: (v) {
+                      setState(() {
+                        _selectedCity = v;
+                        _cityController.text = v?.name ?? '';
+                      });
+                    },
                   ),
                   const SizedBox(height: 20),
-                  TextFormField(
-                    controller: _cityController,
-                    decoration: const InputDecoration(
-                      labelText: 'City',
-                      prefixIcon: Icon(CupertinoIcons.location_fill),
-                    ),
-                    validator: (v) => v!.isEmpty ? 'City is required' : null,
-                  ),
-                  const SizedBox(height: 20),
-                  TextFormField(
-                    controller: _stateController,
-                    decoration: const InputDecoration(
-                      labelText: 'State',
-                      prefixIcon: Icon(CupertinoIcons.map_fill),
-                    ),
-                    validator: (v) => v!.isEmpty ? 'State is required' : null,
-                  ),
-                  const SizedBox(height: 20),
-                  TextFormField(
-                    controller: _locationController,
-                    decoration: const InputDecoration(
-                      labelText: 'Specific Location',
-                      prefixIcon: Icon(CupertinoIcons.placemark_fill),
-                    ),
-                    validator: (v) => v!.isEmpty ? 'Location is required' : null,
+                  SearchableDropdown<StateModel>(
+                    label: 'State',
+                    items: lookupProvider.states,
+                    itemLabel: (s) => s.name,
+                    value: _selectedState,
+                    isLoading: lookupProvider.isLoading,
+                    listenable: lookupProvider,
+                    itemsGetter: () => lookupProvider.states,
+                    loadingGetter: () => lookupProvider.isLoading,
+                    validator: (v) => v == null ? 'State is required' : null,
+                    onInteraction: () {
+                      FocusScope.of(context).unfocus();
+                      lookupProvider.fetchInitialData();
+                    },
+                    onChanged: (v) {
+                      setState(() {
+                        _selectedState = v;
+                        _stateController.text = v?.name ?? '';
+                      });
+                    },
                   ),
                   const SizedBox(height: 40),
                   ElevatedButton(
@@ -127,7 +171,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                           schoolCollegeName: _schoolController.text,
                           city: _cityController.text,
                           state: _stateController.text,
-                          location: _locationController.text,
+                          location: '', // Location removed as per request
                           status: _status,
                         );
                         

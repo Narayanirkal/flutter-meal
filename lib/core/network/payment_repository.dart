@@ -10,6 +10,7 @@ class PaymentRepository {
     required String subscriptionId,
     required String entityType,
     required String entityId,
+    String? startDate,
     String? customRedirectUrl,
   }) async {
     try {
@@ -19,7 +20,9 @@ class PaymentRepository {
           'subscriptionId': subscriptionId,
           'entityType': entityType,
           'entityId': entityId,
+          if (startDate != null) 'startDate': startDate,
           if (customRedirectUrl != null) 'customRedirectUrl': customRedirectUrl,
+          if (customRedirectUrl != null) 'redirectUrl': customRedirectUrl,
         },
       );
 

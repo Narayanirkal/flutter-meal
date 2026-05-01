@@ -71,6 +71,7 @@ class PaymentProvider with ChangeNotifier {
     required String subscriptionId,
     required String entityType,
     required String entityId,
+    String? startDate,
     bool isSandbox = true, // set false for production
   }) async {
     _isLoading = true;
@@ -84,15 +85,18 @@ class PaymentProvider with ChangeNotifier {
         subscriptionId: subscriptionId,
         entityType: entityType,
         entityId: entityId,
+        startDate: startDate,
         customRedirectUrl: ApiEndpoints.paymentStatusPage,
       );
 
       final String? paymentUrl = paymentData['paymentUrl'];
       final String orderId = paymentData['orderId'] ?? '';
       final String txnId = paymentData['merchantTransactionId'] ?? '';
+      final String? backendToken = paymentData['token'] ?? paymentData['orderToken'];
+      final String? backendMerchantId = paymentData['merchantId'];
 
-      if (paymentUrl == null || paymentUrl.isEmpty) {
-        throw Exception('Payment URL not received from gateway');
+      if ((paymentUrl == null || paymentUrl.isEmpty) && backendToken == null) {
+        throw Exception('Payment information not received from gateway');
       }
 
       _lastTxnId = txnId;
@@ -101,6 +105,8 @@ class PaymentProvider with ChangeNotifier {
       final sdkResult = await PhonePeService.pay(
         orderId: orderId,
         paymentUrl: paymentUrl,
+        backendToken: backendToken,
+        backendMerchantId: backendMerchantId,
         isSandbox: isSandbox,
       );
 

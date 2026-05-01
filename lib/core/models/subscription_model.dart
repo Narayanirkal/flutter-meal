@@ -6,6 +6,7 @@ class SubscriptionModel {
   final int trialDays;
   final int displayOrder;
   final bool? isActive;
+  final int? mealSizeId;
 
   SubscriptionModel({
     required this.id,
@@ -15,6 +16,7 @@ class SubscriptionModel {
     required this.trialDays,
     required this.displayOrder,
     this.isActive,
+    this.mealSizeId,
   });
 
   factory SubscriptionModel.fromJson(Map<String, dynamic> json) {
@@ -26,6 +28,7 @@ class SubscriptionModel {
       trialDays: json['trial_days'],
       displayOrder: json['display_order'],
       isActive: json['is_active'],
+      mealSizeId: json['meal_size_id'],
     );
   }
 }

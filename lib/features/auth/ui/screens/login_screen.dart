@@ -16,11 +16,13 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _phoneController = TextEditingController();
+  final _usernameController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
   @override
   void dispose() {
     _phoneController.dispose();
+    _usernameController.dispose();
     super.dispose();
   }
 
@@ -30,7 +32,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
       final provider = Provider.of<AuthProvider>(context, listen: false);
       final completePhoneNumber = '+91${_phoneController.text.trim()}';
-      final success = await provider.sendOtp(completePhoneNumber);
+      final username = _usernameController.text.trim();
+      final success = await provider.sendOtp(completePhoneNumber, username);
 
       if (success && mounted) {
         Navigator.push(
@@ -83,7 +86,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   
                   // App Branding
                   Text(
-                    'Buuttii Pro',
+                    'Buuttii',
                     style: Theme.of(context).textTheme.displayLarge?.copyWith(
                       color: AppTheme.primaryColor,
                       fontSize: 40,
@@ -109,6 +112,32 @@ class _LoginScreenState extends State<LoginScreen> {
                   
                   const SizedBox(height: 32),
                   
+                  TextFormField(
+                    controller: _usernameController,
+                    keyboardType: TextInputType.name,
+                    textInputAction: TextInputAction.next,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    decoration: InputDecoration(
+                      labelText: 'Username',
+                      prefixIcon: const Icon(Icons.person_outline),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return 'Please enter your username';
+                      }
+                      return null;
+                    },
+                  ).animate().fadeIn(delay: 350.ms, duration: 500.ms).slideX(begin: 0.1, end: 0),
+                  
+                  const SizedBox(height: 20),
+
                   TextFormField(
                     controller: _phoneController,
                     keyboardType: TextInputType.phone,

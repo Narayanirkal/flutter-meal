@@ -9,6 +9,7 @@ class AuthProvider with ChangeNotifier {
   AuthState _state = AuthState.initial;
   String _errorMessage = '';
   String _phoneNumber = '';
+  String _username = '';
 
   AuthProvider(this._authRepository) {
     _checkAuthStatus();
@@ -17,6 +18,7 @@ class AuthProvider with ChangeNotifier {
   AuthState get state => _state;
   String get errorMessage => _errorMessage;
   String get phoneNumber => _phoneNumber;
+  String get username => _username;
 
   Future<void> _checkAuthStatus() async {
     _state = AuthState.loading;
@@ -25,6 +27,7 @@ class AuthProvider with ChangeNotifier {
     final isAuthenticated = await _authRepository.isAuthenticated();
     if (isAuthenticated) {
       _phoneNumber = await _authRepository.getPhoneNumber() ?? '';
+      _username = await _authRepository.getUsername() ?? '';
       _state = AuthState.authenticated;
     } else {
       _state = AuthState.unauthenticated;
@@ -32,14 +35,14 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<bool> sendOtp(String phone) async {
+  Future<bool> sendOtp(String phone, String username) async {
     _state = AuthState.loading;
     _errorMessage = '';
     _phoneNumber = phone;
     notifyListeners();
 
     try {
-      final success = await _authRepository.sendOtp(phone);
+      final success = await _authRepository.sendOtp(phone, username);
       if (success) {
         _state = AuthState.unauthenticated; // Still unauth, but ready for OTP
         notifyListeners();
@@ -66,6 +69,7 @@ class AuthProvider with ChangeNotifier {
     try {
       final success = await _authRepository.verifyOtp(_phoneNumber, code);
       if (success) {
+        _username = await _authRepository.getUsername() ?? '';
         _state = AuthState.authenticated;
         notifyListeners();
         return true;
@@ -91,6 +95,7 @@ class AuthProvider with ChangeNotifier {
     
     _state = AuthState.unauthenticated;
     _phoneNumber = '';
+    _username = '';
     notifyListeners();
   }
 }

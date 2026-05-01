@@ -26,7 +26,11 @@ class SettingsScreen extends StatelessWidget {
         padding: const EdgeInsets.all(20),
         children: [
           _buildSectionHeader('Profile Details'),
-          _buildInfoTile(CupertinoIcons.phone_fill, 'Phone Number', authProvider.phoneNumber),
+          _buildNavigationTile(
+            CupertinoIcons.person_crop_circle_fill,
+            'My Details',
+            () => _showDetailsSheet(context, authProvider),
+          ),
           _buildNavigationTile(
             CupertinoIcons.creditcard_fill, 
             'Subscriptions & Payments', 
@@ -46,15 +50,15 @@ class SettingsScreen extends StatelessWidget {
           _buildSectionHeader('About'),
           _buildNavigationTile(
             CupertinoIcons.info_circle_fill, 
-            'About Buuttii Pro', 
+            'About Buuttii', 
             () {
               showAboutDialog(
                 context: context,
-                applicationName: 'Buuttii Pro',
+                applicationName: 'Buuttii',
                 applicationVersion: '1.0.0',
                 applicationIcon: const Icon(CupertinoIcons.layers_alt_fill, color: AppTheme.primaryColor, size: 50),
                 children: [
-                  const Text('Buuttii Pro is a professional meal management application designed for parents, teachers, and professionals.'),
+                  const Text('Buuttii is a professional meal management application designed for parents, teachers, and professionals.'),
                 ],
               );
             }
@@ -77,6 +81,40 @@ class SettingsScreen extends StatelessWidget {
           fontWeight: FontWeight.w800,
           color: AppTheme.primaryColor,
           letterSpacing: 1.2,
+        ),
+      ),
+    );
+  }
+
+  void _showDetailsSheet(BuildContext context, AuthProvider authProvider) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'My Details',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 24),
+            _buildInfoTile(CupertinoIcons.person_fill, 'Username', authProvider.username.isNotEmpty ? authProvider.username : 'User'),
+            _buildInfoTile(CupertinoIcons.phone_fill, 'Phone Number', authProvider.phoneNumber),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context),
+              style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 50)),
+              child: const Text('Close'),
+            ),
+            const SizedBox(height: 20),
+          ],
         ),
       ),
     );

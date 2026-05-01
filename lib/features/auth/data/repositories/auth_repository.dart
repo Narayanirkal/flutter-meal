@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:meal_app/core/network/api_endpoints.dart';
 import 'package:meal_app/core/network/dio_client.dart';
@@ -9,11 +10,11 @@ class AuthRepository {
 
   AuthRepository(this._dioClient, this._secureStorage);
 
-  Future<bool> sendOtp(String phoneNumber) async {
+  Future<bool> sendOtp(String phoneNumber, String username) async {
     try {
       final response = await _dioClient.dio.post(
-        ApiEndpoints.sendOtp,
-        data: {'phoneNumber': phoneNumber},
+        ApiEndpoints.loginSendOtp,
+        data: {'phoneNumber': phoneNumber, 'username': username},
       );
       
       if (response.statusCode == 200) {
@@ -67,6 +68,20 @@ class AuthRepository {
 
   Future<String?> getPhoneNumber() async {
     return await _secureStorage.getPhoneNumber();
+  }
+
+  Future<String?> getUsername() async {
+    final token = await _secureStorage.getAccessToken();
+    if (token == null) return null;
+    try {
+      final parts = token.split('.');
+      if (parts.length != 3) return null;
+      final payload = utf8.decode(base64Url.decode(base64Url.normalize(parts[1])));
+      final data = jsonDecode(payload);
+      return data['username'];
+    } catch (e) {
+      return null;
+    }
   }
 
   String _handleError(DioException error) {
