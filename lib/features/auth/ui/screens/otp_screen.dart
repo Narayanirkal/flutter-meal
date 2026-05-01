@@ -28,7 +28,14 @@ class _OtpScreenState extends State<OtpScreen> {
       FocusScope.of(context).unfocus();
 
       final provider = Provider.of<AuthProvider>(context, listen: false);
-      final success = await provider.verifyOtp(_otpController.text.trim());
+      final code = _otpController.text.trim();
+
+      bool success;
+      if (provider.authMode == AuthMode.register) {
+        success = await provider.registerVerifyOtp(code);
+      } else {
+        success = await provider.loginVerifyOtp(code);
+      }
 
       if (success && mounted) {
         Navigator.of(context).popUntil((route) => route.isFirst);
@@ -43,6 +50,7 @@ class _OtpScreenState extends State<OtpScreen> {
     final provider = context.watch<AuthProvider>();
     final isLoading = provider.state == AuthState.loading;
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isRegister = provider.authMode == AuthMode.register;
 
     return Scaffold(
       appBar: AppBar(
@@ -104,6 +112,7 @@ class _OtpScreenState extends State<OtpScreen> {
                       textInputAction: TextInputAction.done,
                       onFieldSubmitted: (_) => _submit(),
                       textAlign: TextAlign.center,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                       style: const TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
@@ -141,7 +150,7 @@ class _OtpScreenState extends State<OtpScreen> {
                                 valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                               ),
                             )
-                          : const Text('Verify & Login'),
+                          : Text(isRegister ? 'Verify & Register' : 'Verify & Login'),
                     ).animate().fadeIn(delay: 600.ms, duration: 500.ms).slideY(begin: 0.2, end: 0),
                   ],
                 ),
@@ -153,4 +162,3 @@ class _OtpScreenState extends State<OtpScreen> {
     );
   }
 }
-

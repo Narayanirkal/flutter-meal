@@ -28,6 +28,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
   CityModel? _selectedCity;
   
   String _status = 'active';
+  bool _isInitializing = true;
 
   @override
   void initState() {
@@ -40,13 +41,14 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final provider = context.read<ProfileProvider>();
       final lookupProvider = context.read<LookupProvider>();
+      
+      // Fetch lookup data first so dropdowns are ready
+      await lookupProvider.fetchInitialData();
       await provider.fetchProfiles(force: true);
+      
       final profile = provider.teacherProfile;
       if (profile != null && mounted) {
-        // Fetch lookup data to prefill the dropdowns
-        await lookupProvider.fetchInitialData();
-
-        // Find existing selections
+        // Match existing selections from lookup data
         _selectedSchool = lookupProvider.schools.where((s) => s.name == profile.schoolCollegeName).firstOrNull;
         _selectedState = lookupProvider.states.where((s) => s.name == profile.state).firstOrNull;
         _selectedCity = lookupProvider.cities.where((s) => s.name == profile.city).firstOrNull;
@@ -57,7 +59,10 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
           _cityController.text = profile.city;
           _stateController.text = profile.state;
           _status = profile.status;
+          _isInitializing = false;
         });
+      } else if (mounted) {
+        setState(() => _isInitializing = false);
       }
     });
   }
@@ -66,16 +71,20 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
   Widget build(BuildContext context) {
     final profileProvider = context.watch<ProfileProvider>();
     final lookupProvider = context.watch<LookupProvider>();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Teacher Profile'),
+        title: Text(
+          'Teacher Profile',
+          style: TextStyle(color: isDark ? Colors.white : AppTheme.textPrimaryLight),
+        ),
         leading: IconButton(
           icon: const Icon(CupertinoIcons.back),
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: profileProvider.isLoading 
+      body: (profileProvider.isLoading || _isInitializing)
         ? const Center(child: CircularProgressIndicator())
         : SingleChildScrollView(
             padding: const EdgeInsets.all(24),
@@ -86,9 +95,13 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                 children: [
                    Text(
                     'Update your teacher profile details below.',
-                    style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color),
+                    style: TextStyle(
+                      color: isDark ? Colors.white70 : Theme.of(context).textTheme.bodyMedium?.color,
+                    ),
                   ),
                   const SizedBox(height: 30),
+
+                  // 1. Full Name
                   TextFormField(
                     controller: _nameController,
                     decoration: const InputDecoration(
@@ -98,6 +111,8 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                     validator: (v) => v!.isEmpty ? 'Full Name is required' : null,
                   ),
                   const SizedBox(height: 20),
+
+                  // 2. School/College Name
                   SearchableDropdown<SchoolModel>(
                     label: 'School/College Name',
                     items: lookupProvider.schools,
@@ -119,6 +134,9 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                       });
                     },
                   ),
+                  const SizedBox(height: 20),
+
+                  // 3. City
                   SearchableDropdown<CityModel>(
                     label: 'City',
                     items: lookupProvider.cities,
@@ -141,6 +159,8 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                     },
                   ),
                   const SizedBox(height: 20),
+
+                  // 4. State
                   SearchableDropdown<StateModel>(
                     label: 'State',
                     items: lookupProvider.states,
@@ -162,6 +182,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                       });
                     },
                   ),
+
                   const SizedBox(height: 40),
                   ElevatedButton(
                     onPressed: () async {

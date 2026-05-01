@@ -104,14 +104,14 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
       children: [
         const CupertinoActivityIndicator(radius: 20),
         const SizedBox(height: 24),
-        const Text(
+        Text(
           'Verifying Payment Status',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Theme.of(context).brightness == Brightness.dark ? Colors.white : AppTheme.textPrimaryLight),
         ),
         const SizedBox(height: 8),
-        const Text(
+        Text(
           'Please do not close the app or press back.',
-          style: TextStyle(color: Colors.grey),
+          style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? Colors.white54 : Colors.grey),
         ),
       ],
     ).animate().fadeIn();
@@ -129,23 +129,23 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
           child: const Icon(CupertinoIcons.checkmark, color: Colors.white, size: 40),
         ).animate().scale(duration: 400.ms, curve: Curves.elasticOut),
         const SizedBox(height: 24),
-        const Text(
+        Text(
           'Payment Successful!',
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900),
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: isDark ? Colors.white : AppTheme.textPrimaryLight),
         ),
         const SizedBox(height: 12),
         Text(
-          'Your subscription for ${_statusData?['plan_name'] ?? 'Plan'} is now active.',
+          'Your subscription for ${_statusData?['plan_name']?.toString() ?? 'Plan'} is now active.',
           textAlign: TextAlign.center,
-          style: const TextStyle(color: Colors.grey, fontSize: 16),
+          style: TextStyle(color: isDark ? Colors.white54 : Colors.grey, fontSize: 16),
         ),
         const SizedBox(height: 32),
         AppleCard(
           child: Column(
             children: [
-              _buildStatusRow('Order ID', widget.orderId),
-              _buildStatusRow('Amount', '₹${_statusData?['amount']}'),
-              _buildStatusRow('Transaction ID', widget.txnId),
+              _buildStatusRow('Order ID', widget.orderId, isDark),
+              _buildStatusRow('Amount', '₹${_statusData?['amount']?.toString() ?? '0'}', isDark),
+              _buildStatusRow('Transaction ID', widget.txnId, isDark),
             ],
           ),
         ),
@@ -165,15 +165,15 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
           child: const Icon(CupertinoIcons.xmark, color: Colors.white, size: 40),
         ).animate().scale(duration: 400.ms, curve: Curves.elasticOut),
         const SizedBox(height: 24),
-        const Text(
+        Text(
           'Payment Failed',
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900),
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: isDark ? Colors.white : AppTheme.textPrimaryLight),
         ),
         const SizedBox(height: 12),
-        const Text(
+        Text(
           'Something went wrong with your transaction. Please try again.',
           textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.grey, fontSize: 16),
+          style: TextStyle(color: isDark ? Colors.white54 : Colors.grey, fontSize: 16),
         ),
       ],
     ).animate().fadeIn();
@@ -191,28 +191,28 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
           child: const Icon(CupertinoIcons.clock, color: Colors.white, size: 40),
         ),
         const SizedBox(height: 24),
-        const Text(
+        Text(
           'Payment is Pending',
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900),
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: isDark ? Colors.white : AppTheme.textPrimaryLight),
         ),
         const SizedBox(height: 12),
-        const Text(
+        Text(
           'We are still waiting for confirmation from your bank. It should update shortly.',
           textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.grey, fontSize: 16),
+          style: TextStyle(color: isDark ? Colors.white54 : Colors.grey, fontSize: 16),
         ),
       ],
     );
   }
 
-  Widget _buildStatusRow(String label, String value) {
+  Widget _buildStatusRow(String label, String value, bool isDark) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.w500)),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w700)),
+          Text(label, style: TextStyle(color: isDark ? Colors.white54 : Colors.grey, fontWeight: FontWeight.w500)),
+          Text(value, style: TextStyle(fontWeight: FontWeight.w700, color: isDark ? Colors.white : AppTheme.textPrimaryLight)),
         ],
       ),
     );

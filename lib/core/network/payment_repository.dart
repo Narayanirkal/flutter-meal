@@ -21,7 +21,6 @@ class PaymentRepository {
           'entityType': entityType,
           'entityId': entityId,
           if (startDate != null) 'startDate': startDate,
-          if (customRedirectUrl != null) 'customRedirectUrl': customRedirectUrl,
           if (customRedirectUrl != null) 'redirectUrl': customRedirectUrl,
         },
       );
@@ -29,7 +28,26 @@ class PaymentRepository {
       if (response.data['success'] == true) {
         return response.data['data'];
       } else {
-        throw response.data['message'] ?? 'Failed to initiate payment';
+        throw response.data['message']?.toString() ?? 'Failed to initiate payment';
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> checkoutCart({String? redirectUrl}) async {
+    try {
+      final response = await _dioClient.dio.post(
+        ApiEndpoints.checkoutCart,
+        data: {
+          if (redirectUrl != null) 'redirectUrl': redirectUrl,
+        },
+      );
+
+      if (response.data['success'] == true) {
+        return response.data['data'];
+      } else {
+        throw response.data['message']?.toString() ?? 'Failed to checkout cart';
       }
     } catch (e) {
       rethrow;
@@ -42,7 +60,7 @@ class PaymentRepository {
       if (response.data['success'] == true) {
         return response.data['data'];
       } else {
-        throw response.data['message'] ?? 'Failed to get payment status';
+        throw response.data['message']?.toString() ?? 'Failed to get payment status';
       }
     } catch (e) {
       rethrow;
@@ -55,7 +73,7 @@ class PaymentRepository {
       if (response.data['success'] == true) {
         return response.data['data'] ?? [];
       } else {
-        throw response.data['message'] ?? 'Failed to fetch payment history';
+        throw response.data['message']?.toString() ?? 'Failed to fetch payment history';
       }
     } catch (e) {
       rethrow;
@@ -68,8 +86,42 @@ class PaymentRepository {
       if (response.data['success'] == true) {
         return response.data['data'] ?? [];
       } else {
-        throw response.data['message'] ?? 'Failed to fetch active subscriptions';
+        throw response.data['message']?.toString() ?? 'Failed to fetch active subscriptions';
       }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> forceSync(String txnId) async {
+    try {
+      final response = await _dioClient.dio.post(ApiEndpoints.forceSync(txnId));
+      if (response.data['success'] == true) {
+        return response.data;
+      } else {
+        throw response.data['message']?.toString() ?? 'Failed to sync payment';
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> getSubscriptionStatus() async {
+    try {
+      final response = await _dioClient.dio.get(ApiEndpoints.subscriptionStatus);
+      return response.data;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<List<dynamic>> getSubscriptionAlerts() async {
+    try {
+      final response = await _dioClient.dio.get(ApiEndpoints.subscriptionAlerts);
+      if (response.data['success'] == true) {
+        return response.data['alerts'] ?? [];
+      }
+      return [];
     } catch (e) {
       rethrow;
     }

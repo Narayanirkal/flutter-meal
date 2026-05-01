@@ -10,33 +10,31 @@ class AuthRepository {
 
   AuthRepository(this._dioClient, this._secureStorage);
 
-  Future<bool> sendOtp(String phoneNumber, String username) async {
+  // ─── LOGIN FLOW (existing user) ────────────────────────────────────────────
+
+  Future<bool> loginSendOtp(String phoneNumber) async {
     try {
       final response = await _dioClient.dio.post(
         ApiEndpoints.loginSendOtp,
-        data: {'phoneNumber': phoneNumber, 'username': username},
+        data: {'phoneNumber': phoneNumber},
       );
-      
-      if (response.statusCode == 200) {
-        return true;
-      }
-      return false;
+      return response.statusCode == 200 && response.data['success'] == true;
     } on DioException catch (e) {
       throw _handleError(e);
     }
   }
 
-  Future<bool> verifyOtp(String phoneNumber, String code) async {
+  Future<bool> loginVerifyOtp(String phoneNumber, String code) async {
     try {
       final response = await _dioClient.dio.post(
-        ApiEndpoints.verifyOtp,
+        ApiEndpoints.loginVerifyOtp,
         data: {
           'phoneNumber': phoneNumber,
           'code': code,
         },
       );
 
-      if (response.statusCode == 200 && response.data['success'] == true) {
+      if ((response.statusCode == 200 || response.statusCode == 201) && response.data['success'] == true) {
         final data = response.data['data'];
         final accessToken = data['accessToken'];
         final refreshToken = data['refreshToken'];
@@ -50,6 +48,51 @@ class AuthRepository {
       throw _handleError(e);
     }
   }
+
+  // ─── REGISTER FLOW (new user) ──────────────────────────────────────────────
+
+  Future<bool> registerSendOtp(String phoneNumber, String username) async {
+    try {
+      final response = await _dioClient.dio.post(
+        ApiEndpoints.registerSendOtp,
+        data: {
+          'phoneNumber': phoneNumber,
+          'username': username,
+        },
+      );
+      return response.statusCode == 200 && response.data['success'] == true;
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  Future<bool> registerVerifyOtp(String phoneNumber, String username, String code) async {
+    try {
+      final response = await _dioClient.dio.post(
+        ApiEndpoints.registerVerifyOtp,
+        data: {
+          'phoneNumber': phoneNumber,
+          'username': username,
+          'code': code,
+        },
+      );
+
+      if ((response.statusCode == 200 || response.statusCode == 201) && response.data['success'] == true) {
+        final data = response.data['data'];
+        final accessToken = data['accessToken'];
+        final refreshToken = data['refreshToken'];
+        
+        await _secureStorage.saveTokens(accessToken, refreshToken);
+        await _secureStorage.savePhoneNumber(phoneNumber);
+        return true;
+      }
+      return false;
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  // ─── COMMON ────────────────────────────────────────────────────────────────
 
   Future<void> logout() async {
     try {
@@ -86,14 +129,19 @@ class AuthRepository {
 
   String _handleError(DioException error) {
     if (error.response != null) {
-      // The request was made and the server responded with a status code
-      // that falls out of the range of 2xx
-      if (error.response?.data != null && error.response?.data['message'] != null) {
-         return error.response?.data['message'];
+      final data = error.response?.data;
+      if (data != null && data is Map) {
+        // Check for 'message' field first
+        if (data['message'] != null) {
+          return data['message'].toString();
+        }
+        // Check for 'errors' array
+        if (data['errors'] != null && data['errors'] is List && (data['errors'] as List).isNotEmpty) {
+          return (data['errors'] as List).join(', ');
+        }
       }
       return 'Server error: ${error.response?.statusCode}';
     } else {
-      // Something happened in setting up or sending the request that triggered an Error
       return 'Network error: Please check your connection.';
     }
   }

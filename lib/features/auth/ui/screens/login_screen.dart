@@ -26,14 +26,42 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _submit() async {
+  void _submitLogin() async {
+    if (_formKey.currentState!.validate()) {
+      FocusScope.of(context).unfocus();
+
+      final provider = Provider.of<AuthProvider>(context, listen: false);
+      final completePhoneNumber = '+91${_phoneController.text.trim()}';
+      final success = await provider.loginSendOtp(completePhoneNumber);
+
+      if (success && mounted) {
+        Navigator.push(
+          context,
+          PageRouteBuilder(
+            pageBuilder: (context, animation, secondaryAnimation) => const OtpScreen(),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              const begin = Offset(1.0, 0.0);
+              const end = Offset.zero;
+              const curve = Curves.easeInOut;
+              var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+              return SlideTransition(position: animation.drive(tween), child: child);
+            },
+          ),
+        );
+      } else if (mounted) {
+        ErrorHandler.showError(context, provider.errorMessage);
+      }
+    }
+  }
+
+  void _submitRegister() async {
     if (_formKey.currentState!.validate()) {
       FocusScope.of(context).unfocus();
 
       final provider = Provider.of<AuthProvider>(context, listen: false);
       final completePhoneNumber = '+91${_phoneController.text.trim()}';
       final username = _usernameController.text.trim();
-      final success = await provider.sendOtp(completePhoneNumber, username);
+      final success = await provider.registerSendOtp(completePhoneNumber, username);
 
       if (success && mounted) {
         Navigator.push(
@@ -57,8 +85,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isLoading = context.watch<AuthProvider>().state == AuthState.loading;
-
+    final authProvider = context.watch<AuthProvider>();
+    final isLoading = authProvider.state == AuthState.loading;
+    final isRegisterMode = authProvider.authMode == AuthMode.register;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
@@ -94,10 +123,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     textAlign: TextAlign.center,
                   ).animate().fadeIn(duration: 500.ms).slideY(begin: -0.2, end: 0),
                   
-                  // Removed the icon as requested
+                  const SizedBox(height: 8),
                   
                   Text(
-                    'Welcome',
+                    isRegisterMode ? 'Create Account' : 'Welcome Back',
                     style: Theme.of(context).textTheme.displayMedium,
                     textAlign: TextAlign.center,
                   ).animate().fadeIn(delay: 200.ms, duration: 500.ms).slideY(begin: 0.2, end: 0),
@@ -105,45 +134,51 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 12),
                   
                   Text(
-                    'Enter your phone number to continue',
+                    isRegisterMode
+                        ? 'Register with your phone number to get started'
+                        : 'Enter your phone number to login',
                     style: Theme.of(context).textTheme.bodyMedium,
                     textAlign: TextAlign.center,
                   ).animate().fadeIn(delay: 300.ms, duration: 500.ms).slideY(begin: 0.2, end: 0),
                   
                   const SizedBox(height: 32),
                   
-                  TextFormField(
-                    controller: _usernameController,
-                    keyboardType: TextInputType.name,
-                    textInputAction: TextInputAction.next,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    decoration: InputDecoration(
-                      labelText: 'Username',
-                      prefixIcon: const Icon(Icons.person_outline),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide.none,
+                  // Username field — only shown in Register mode
+                  if (isRegisterMode) ...[
+                    TextFormField(
+                      controller: _usernameController,
+                      keyboardType: TextInputType.name,
+                      textInputAction: TextInputAction.next,
+                      textCapitalization: TextCapitalization.words,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
                       ),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Please enter your username';
-                      }
-                      return null;
-                    },
-                  ).animate().fadeIn(delay: 350.ms, duration: 500.ms).slideX(begin: 0.1, end: 0),
-                  
-                  const SizedBox(height: 20),
+                      decoration: InputDecoration(
+                        labelText: 'Username',
+                        prefixIcon: const Icon(Icons.person_outline),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                      validator: (value) {
+                        if (isRegisterMode && (value == null || value.trim().isEmpty)) {
+                          return 'Please enter your username';
+                        }
+                        return null;
+                      },
+                    ).animate().fadeIn(delay: 350.ms, duration: 500.ms).slideX(begin: 0.1, end: 0),
+                    const SizedBox(height: 20),
+                  ],
 
                   TextFormField(
                     controller: _phoneController,
                     keyboardType: TextInputType.phone,
                     textInputAction: TextInputAction.done,
-                    onFieldSubmitted: (_) => _submit(),
+                    onFieldSubmitted: (_) => isRegisterMode ? _submitRegister() : _submitLogin(),
                     maxLength: 10,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
@@ -157,11 +192,11 @@ class _LoginScreenState extends State<LoginScreen> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Text(
+                            const Text(
                               '🇮🇳',
                               style: TextStyle(fontSize: 24),
                             ),
-                            SizedBox(width: 8),
+                            const SizedBox(width: 8),
                             Text(
                               '+91',
                               style: TextStyle(
@@ -170,13 +205,13 @@ class _LoginScreenState extends State<LoginScreen> {
                                 color: Theme.of(context).textTheme.bodyLarge?.color,
                               ),
                             ),
-                            SizedBox(width: 8),
+                            const SizedBox(width: 8),
                             Container(
                               height: 24,
                               width: 1,
                               color: Colors.grey,
                             ),
-                            SizedBox(width: 8),
+                            const SizedBox(width: 8),
                           ],
                         ),
                       ),
@@ -199,7 +234,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 32),
                   
                   ElevatedButton(
-                    onPressed: isLoading ? null : _submit,
+                    onPressed: isLoading ? null : (isRegisterMode ? _submitRegister : _submitLogin),
                     child: isLoading
                         ? const SizedBox(
                             height: 24,
@@ -209,8 +244,40 @@ class _LoginScreenState extends State<LoginScreen> {
                               valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                             ),
                           )
-                        : const Text('Login or Register'),
+                        : Text(isRegisterMode ? 'Register' : 'Login'),
                   ).animate().fadeIn(delay: 600.ms, duration: 500.ms).slideY(begin: 0.2, end: 0),
+                  
+                  const SizedBox(height: 24),
+
+                  // Toggle between Login and Register
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        isRegisterMode
+                            ? 'Already have an account? '
+                            : "Don't have an account? ",
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                      GestureDetector(
+                        onTap: () {
+                          final provider = context.read<AuthProvider>();
+                          provider.setAuthMode(
+                            isRegisterMode ? AuthMode.login : AuthMode.register,
+                          );
+                          _formKey.currentState?.reset();
+                        },
+                        child: Text(
+                          isRegisterMode ? 'Login' : 'Register',
+                          style: const TextStyle(
+                            color: AppTheme.primaryColor,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ).animate().fadeIn(delay: 700.ms, duration: 500.ms),
                 ],
               ),
             ),

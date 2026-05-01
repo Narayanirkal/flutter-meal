@@ -168,6 +168,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildWelcomeSection(AuthProvider authProvider, bool isDark) {
+    final displayName = authProvider.username.isNotEmpty ? authProvider.username : 'User';
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -178,30 +179,32 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         borderRadius: BorderRadius.circular(24),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          RichText(
-            text: TextSpan(
-              children: [
-                TextSpan(
-                  text: 'Welcome back, ',
-                  style: TextStyle(
-                    fontSize: 20,
-                    color: isDark ? Colors.white70 : AppTheme.textSecondaryLight,
-                    fontWeight: FontWeight.w500,
+          Expanded(
+            child: RichText(
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              text: TextSpan(
+                children: [
+                  TextSpan(
+                    text: 'Welcome back, ',
+                    style: TextStyle(
+                      fontSize: 22,
+                      color: isDark ? Colors.white : AppTheme.textSecondaryLight,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
-                ),
-                TextSpan(
-                  text: authProvider.username.isNotEmpty ? authProvider.username : 'User',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w900,
-                    color: isDark ? Colors.white : AppTheme.textPrimaryLight,
-                    letterSpacing: 0.5,
+                  TextSpan(
+                    text: displayName,
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w900,
+                      color: isDark ? Colors.white : AppTheme.textPrimaryLight,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],
@@ -222,9 +225,9 @@ class _HomeScreenState extends State<HomeScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
+            Text(
               "Today's Menu",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: isDark ? Colors.white : AppTheme.textPrimaryLight),
             ),
             TextButton(
               onPressed: () {
@@ -382,13 +385,17 @@ class _HomeScreenState extends State<HomeScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Your Activity',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
+        Builder(builder: (context) {
+          final isDark = Theme.of(context).brightness == Brightness.dark;
+          return Text(
+            'Your Activity',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+              color: isDark ? Colors.white : AppTheme.textPrimaryLight,
+            ),
+          );
+        }),
         const SizedBox(height: 16),
         Row(
           children: [

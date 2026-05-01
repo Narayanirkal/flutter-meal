@@ -14,11 +14,11 @@ class AppTheme {
   static const Color textSecondaryLight = Color(0xFF475569); // Slate 600
   static const Color borderLight = Color(0xFFE2E8F0); // Slate 200
 
-  // Dark Theme Colors
+  // Dark Theme Colors — PURE WHITE text for readability
   static const Color backgroundDark = Color(0xFF020617); // Obsidian / Slate 950
   static const Color surfaceDark = Color(0xFF0F172A); // Slate 900
-  static const Color textPrimaryDark = Color(0xFFF8FAFC); // Slate 50
-  static const Color textSecondaryDark = Color(0xFF94A3B8); // Slate 400
+  static const Color textPrimaryDark = Color(0xFFFFFFFF); // Pure White
+  static const Color textSecondaryDark = Color(0xFFCBD5E1); // Slate 300 — brighter secondary
   static const Color borderDark = Color(0xFF1E293B); // Slate 800
 
   static ThemeData get lightTheme => _createTheme(
@@ -60,7 +60,6 @@ class AppTheme {
         primary: primaryColor,
         secondary: accentColor,
         surface: surface,
-        background: background,
       ),
       appBarTheme: AppBarTheme(
         backgroundColor: background,
@@ -117,4 +116,3 @@ class AppTheme {
     );
   }
 }
-

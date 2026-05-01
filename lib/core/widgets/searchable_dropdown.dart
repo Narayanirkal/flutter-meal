@@ -7,144 +7,143 @@ import 'package:meal_app/core/theme/app_theme.dart';
 /// Pass [listenable], [itemsGetter], and [loadingGetter] so the
 /// open bottom sheet auto-rebuilds when the provider notifies
 /// (spinner shows while loading, list appears instantly when ready).
-class SearchableDropdown<T> extends FormField<T> {
+class SearchableDropdown<T> extends StatefulWidget {
   final String label;
   final List<T> items;
   final String Function(T) itemLabel;
+  final T? value;
   final String hint;
   final bool isLoading;
   final VoidCallback? onInteraction;
   final Listenable? listenable;
   final List<T> Function()? itemsGetter;
   final bool Function()? loadingGetter;
+  final FormFieldSetter<T> onChanged;
+  final FormFieldValidator<T>? validator;
 
-  SearchableDropdown({
+  const SearchableDropdown({
     super.key,
     required this.label,
     required this.items,
     required this.itemLabel,
-    T? value,
-    required FormFieldSetter<T> onChanged,
-    FormFieldValidator<T>? validator,
+    this.value,
+    required this.onChanged,
+    this.validator,
     this.hint = 'Select an option',
     this.isLoading = false,
     this.onInteraction,
     this.listenable,
     this.itemsGetter,
     this.loadingGetter,
-  }) : super(
-          initialValue: value,
-          onSaved: onChanged,
-          validator: validator,
-          builder: (FormFieldState<T> state) {
-            final isDark =
-                Theme.of(state.context).brightness == Brightness.dark;
-            final hasError = state.hasError;
+  });
 
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: isDark
-                        ? AppTheme.textPrimaryDark
-                        : AppTheme.textPrimaryLight,
+  @override
+  State<SearchableDropdown<T>> createState() => _SearchableDropdownState<T>();
+}
+
+class _SearchableDropdownState<T> extends State<SearchableDropdown<T>> {
+  final _fieldKey = GlobalKey<FormFieldState<T>>();
+
+  @override
+  void didUpdateWidget(covariant SearchableDropdown<T> oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // When the external value changes (e.g. after async fetch), update the FormFieldState
+    if (widget.value != oldWidget.value) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _fieldKey.currentState?.didChange(widget.value);
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FormField<T>(
+      key: _fieldKey,
+      initialValue: widget.value,
+      validator: widget.validator,
+      builder: (FormFieldState<T> state) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        final hasError = state.hasError;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              widget.label,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: isDark ? AppTheme.textPrimaryDark : AppTheme.textPrimaryLight,
+              ),
+            ),
+            const SizedBox(height: 8),
+            GestureDetector(
+              onTap: () {
+                FocusScope.of(context).unfocus();
+                if (widget.onInteraction != null) widget.onInteraction!();
+                _openSheet(
+                  context: context,
+                  state: state,
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                decoration: BoxDecoration(
+                  color: isDark ? AppTheme.surfaceDark : Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: hasError ? Colors.red : (isDark ? Colors.white10 : Colors.black12),
                   ),
                 ),
-                const SizedBox(height: 8),
-                GestureDetector(
-                  onTap: () {
-                    FocusScope.of(state.context).unfocus();
-                    if (onInteraction != null) onInteraction!();
-                    // Use static method — safe to call from builder
-                    _openSheet<T>(
-                      context: state.context,
-                      state: state,
-                      staticItems: items,
-                      itemLabel: itemLabel,
-                      staticIsLoading: isLoading,
-                      listenable: listenable,
-                      itemsGetter: itemsGetter,
-                      loadingGetter: loadingGetter,
-                    );
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 16),
-                    decoration: BoxDecoration(
-                      color: isDark ? AppTheme.surfaceDark : Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: hasError
-                            ? Colors.red
-                            : (isDark ? Colors.white10 : Colors.black12),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        state.value != null
+                            ? widget.itemLabel(state.value as T)
+                            : widget.hint,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: state.value != null
+                              ? (isDark ? AppTheme.textPrimaryDark : AppTheme.textPrimaryLight)
+                              : (isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondaryLight),
+                          fontSize: 16,
+                        ),
                       ),
                     ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            state.value != null
-                                ? itemLabel(state.value as T)
-                                : hint,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              color: state.value != null
-                                  ? (isDark
-                                      ? AppTheme.textPrimaryDark
-                                      : AppTheme.textPrimaryLight)
-                                  : (isDark
-                                      ? AppTheme.textSecondaryDark
-                                      : AppTheme.textSecondaryLight),
-                              fontSize: 16,
-                            ),
-                          ),
-                        ),
-                        if (isLoading)
-                          const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CupertinoActivityIndicator(radius: 8),
-                          )
-                        else
-                          Icon(
-                            Icons.keyboard_arrow_down_rounded,
-                            color: isDark
-                                ? AppTheme.textSecondaryDark
-                                : AppTheme.textSecondaryLight,
-                          ),
-                      ],
-                    ),
-                  ),
+                    if (widget.isLoading)
+                      const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CupertinoActivityIndicator(radius: 8),
+                      )
+                    else
+                      Icon(
+                        Icons.keyboard_arrow_down_rounded,
+                        color: isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondaryLight,
+                      ),
+                  ],
                 ),
-                if (hasError)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8, left: 12),
-                    child: Text(
-                      state.errorText!,
-                      style:
-                          const TextStyle(color: Colors.red, fontSize: 12),
-                    ),
-                  ),
-              ],
-            );
-          },
+              ),
+            ),
+            if (hasError)
+              Padding(
+                padding: const EdgeInsets.only(top: 8, left: 12),
+                child: Text(
+                  state.errorText!,
+                  style: const TextStyle(color: Colors.red, fontSize: 12),
+                ),
+              ),
+          ],
         );
+      },
+    );
+  }
 
-  /// Static so it can be safely called inside the FormField builder.
-  static void _openSheet<T>({
+  void _openSheet({
     required BuildContext context,
     required FormFieldState<T> state,
-    required List<T> staticItems,
-    required String Function(T) itemLabel,
-    required bool staticIsLoading,
-    Listenable? listenable,
-    List<T> Function()? itemsGetter,
-    bool Function()? loadingGetter,
   }) {
     showModalBottomSheet(
       context: context,
@@ -152,15 +151,15 @@ class SearchableDropdown<T> extends FormField<T> {
       backgroundColor: Colors.transparent,
       builder: (sheetContext) {
         return _ReactiveSearchSheet<T>(
-          staticItems: staticItems,
-          itemLabel: itemLabel,
-          staticIsLoading: staticIsLoading,
-          listenable: listenable,
-          itemsGetter: itemsGetter,
-          loadingGetter: loadingGetter,
+          staticItems: widget.items,
+          itemLabel: widget.itemLabel,
+          staticIsLoading: widget.isLoading,
+          listenable: widget.listenable,
+          itemsGetter: widget.itemsGetter,
+          loadingGetter: widget.loadingGetter,
           onSelected: (value) {
             state.didChange(value);
-            state.save();
+            widget.onChanged(value);
             Navigator.of(sheetContext).pop();
           },
         );
@@ -345,9 +344,11 @@ class _ReactiveSearchSheetState<T>
                           return ListTile(
                             title: Text(
                               widget.itemLabel(item),
-                              style: const TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w500),
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
+                                color: isDark ? Colors.white : AppTheme.textPrimaryLight,
+                              ),
                             ),
                             trailing: const Icon(
                                 CupertinoIcons.chevron_right,

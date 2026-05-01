@@ -18,13 +18,22 @@ class ApiEndpoints {
     return domain;
   }
 
-  // Auth
-  static const String sendOtp = '/api/client/auth/send-otp';
+  // Auth - Login (existing user)
   static const String loginSendOtp = '/api/client/auth/login/send-otp';
-  static const String verifyOtp = '/api/client/auth/verify-otp';
+  static const String loginVerifyOtp = '/api/client/auth/login/verify-otp';
+
+  // Auth - Register (new user)
+  static const String registerSendOtp = '/api/client/auth/register/send-otp';
+  static const String registerVerifyOtp = '/api/client/auth/register/verify-otp';
+
+  // Auth - Common
   static const String logout = '/api/client/auth/logout';
   static const String refresh = '/api/client/auth/refresh';
   static const String me = '/api/client/auth/me';
+
+  // Legacy (kept for backward compat — remove later)
+  static const String sendOtp = '/api/client/auth/send-otp';
+  static const String verifyOtp = '/api/client/auth/verify-otp';
 
   // Children
   static const String children = '/api/client/children';
@@ -48,9 +57,23 @@ class ApiEndpoints {
 
   // Payment
   static const String initiatePayment = '/api/client/payment/initiate';
+  static const String checkoutCart = '/api/client/payment/checkout-cart';
   static String paymentStatus(String txnId) => '/api/client/payment/status/$txnId';
   static const String paymentHistory = '/api/client/payment/history';
   static const String activeSubscriptions = '/api/client/payment/active-subscriptions';
+  static String forceSync(String txnId) => '/api/client/payment/force-sync/$txnId';
   static String get paymentStatusPage => '$baseUrl/api/client/payment/status-page';
-}
 
+  // Client Subscriptions
+  static const String subscriptionStatus = '/api/client/subscriptions/status';
+  static const String subscriptionAlerts = '/api/client/subscriptions/alerts';
+  static const String updateStartDate = '/api/client/subscriptions/update-start-date';
+
+  // Meals
+  static const String todayMeal = '/api/client/meals/today';
+  static const String weeklyMeal = '/api/client/meals/weekly';
+  static const String mealStatus = '/api/client/meals/status';
+  static const String skipMeal = '/api/client/meals/skip';
+  static const String mealSkips = '/api/client/meals/skips';
+  static String cancelSkip(int skipId) => '/api/client/meals/skip/$skipId';
+}

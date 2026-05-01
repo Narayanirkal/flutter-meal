@@ -70,14 +70,14 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Select Profile to Upgrade',
-          style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, letterSpacing: -1),
+          style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, letterSpacing: -1, color: isDark ? Colors.white : AppTheme.textPrimaryLight),
         ).animate().fadeIn().slideY(begin: 0.2, end: 0),
         const SizedBox(height: 12),
-        const Text(
+        Text(
           'Who are you buying this subscription for?',
-          style: TextStyle(fontSize: 16, color: AppTheme.textSecondaryLight),
+          style: TextStyle(fontSize: 16, color: isDark ? Colors.white54 : AppTheme.textSecondaryLight),
         ).animate().fadeIn(delay: 200.ms),
         const SizedBox(height: 40),
 
@@ -137,18 +137,19 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       return true; // if no meal size specified on entity or plan, show it
     }).toList();
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        const Text(
+        Text(
           'Choose Your Plan',
-          style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, letterSpacing: -1),
+          style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, letterSpacing: -1, color: isDark ? Colors.white : AppTheme.textPrimaryLight),
         ).animate().fadeIn().slideY(begin: 0.2, end: 0),
         const SizedBox(height: 12),
-        const Text(
+        Text(
           'Unlock premium features and professional meal tracking.',
           textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 16, color: AppTheme.textSecondaryLight),
+          style: TextStyle(fontSize: 16, color: isDark ? Colors.white54 : AppTheme.textSecondaryLight),
         ).animate().fadeIn(delay: 200.ms),
         const SizedBox(height: 40),
         
@@ -226,7 +227,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w800,
-                  color: isPremium ? Colors.white : AppTheme.textPrimaryLight,
+                  color: isPremium ? Colors.white : (Theme.of(context).brightness == Brightness.dark ? Colors.white : AppTheme.textPrimaryLight),
                 ),
               ),
               Text(
@@ -243,7 +244,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
             plan.billingCycle,
             style: TextStyle(
               fontSize: 14,
-              color: isPremium ? Colors.white70 : AppTheme.textSecondaryLight,
+              color: isPremium ? Colors.white70 : (Theme.of(context).brightness == Brightness.dark ? Colors.white54 : AppTheme.textSecondaryLight),
             ),
           ),
           const SizedBox(height: 20),
@@ -280,7 +281,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
           Text(
             text,
             style: TextStyle(
-              color: isPremium ? Colors.white : AppTheme.textPrimaryLight,
+              color: isPremium ? Colors.white : (Theme.of(context).brightness == Brightness.dark ? Colors.white : AppTheme.textPrimaryLight),
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -310,9 +311,9 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(question, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+          Text(question, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: Theme.of(context).brightness == Brightness.dark ? Colors.white : AppTheme.textPrimaryLight)),
           const SizedBox(height: 4),
-          Text(answer, style: const TextStyle(color: AppTheme.textSecondaryLight)),
+          Text(answer, style: TextStyle(color: Theme.of(context).brightness == Brightness.dark ? Colors.white54 : AppTheme.textSecondaryLight)),
         ],
       ),
     );
@@ -352,8 +353,8 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(name, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-                Text(subtitle, style: const TextStyle(color: AppTheme.textSecondaryLight, fontSize: 12)),
+                Text(name, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: isDark ? Colors.white : AppTheme.textPrimaryLight)),
+                Text(subtitle, style: TextStyle(color: isDark ? Colors.white54 : AppTheme.textSecondaryLight, fontSize: 12)),
               ],
             ),
           ),

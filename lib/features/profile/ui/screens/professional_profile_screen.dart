@@ -30,6 +30,8 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
   CompanyModel? _selectedCompany;
   StateModel? _selectedState;
   CityModel? _selectedCity;
+  
+  bool _isInitializing = true;
 
   @override
   void initState() {
@@ -44,11 +46,12 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
       final lookup = context.read<LookupProvider>();
       final profileProvider = context.read<ProfileProvider>();
       
+      // Fetch lookup data FIRST so dropdowns can be pre-filled
+      await lookup.fetchInitialData();
       await profileProvider.fetchProfiles(force: true);
 
       final profile = profileProvider.professionalProfile;
       if (profile != null && mounted) {
-        await lookup.fetchInitialData();
         setState(() {
           _nameController.text = profile.name;
           _companyController.text = profile.companyName;
@@ -57,16 +60,18 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
           _timeController.text = profile.lunchTime;
           
           // Match selected location from lookup list
-          if (profile.corporateLocationId != null) {
-            _selectedLocation = lookup.corporateLocations.cast<CorporateLocationModel?>().firstWhere(
-              (l) => l?.id == profile.corporateLocationId,
-              orElse: () => null,
-            );
+          if (profile.corporateLocationId.isNotEmpty) {
+            _selectedLocation = lookup.corporateLocations.where(
+              (l) => l.id == profile.corporateLocationId,
+            ).firstOrNull;
           }
           _selectedCompany = lookup.companies.where((c) => c.name == profile.companyName).firstOrNull;
           _selectedCity = lookup.cities.where((c) => c.name == profile.city).firstOrNull;
           _selectedState = lookup.states.where((s) => s.name == profile.state).firstOrNull;
+          _isInitializing = false;
         });
+      } else if (mounted) {
+        setState(() => _isInitializing = false);
       }
     });
   }
@@ -103,13 +108,16 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Professional Profile'),
+        title: Text(
+          'Professional Profile',
+          style: TextStyle(color: isDark ? Colors.white : AppTheme.textPrimaryLight),
+        ),
         leading: IconButton(
           icon: const Icon(CupertinoIcons.back),
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: profileProvider.isLoading 
+      body: (profileProvider.isLoading || _isInitializing)
         ? const Center(child: CircularProgressIndicator())
         : SingleChildScrollView(
             padding: const EdgeInsets.all(24),
@@ -120,7 +128,9 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
                 children: [
                   Text(
                     'Setup your corporate profile for lunch deliveries.',
-                    style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color),
+                    style: TextStyle(
+                      color: isDark ? Colors.white70 : Theme.of(context).textTheme.bodyMedium?.color,
+                    ),
                   ),
                   const SizedBox(height: 30),
                   TextFormField(
@@ -174,6 +184,9 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
                         if (v != null) {
                           _cityController.text = v.city;
                           _stateController.text = v.state;
+                          // Auto-select city and state from location
+                          _selectedCity = lookup.cities.where((c) => c.name == v.city).firstOrNull;
+                          _selectedState = lookup.states.where((s) => s.name == v.state).firstOrNull;
                         }
                       });
                     },
@@ -282,4 +295,3 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
     );
   }
 }
-

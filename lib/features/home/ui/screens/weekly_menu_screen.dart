@@ -68,14 +68,15 @@ class _WeeklyMenuScreenState extends State<WeeklyMenuScreen> {
                                   const SizedBox(height: 12),
                                   Text(
                                     menu['item_name'] ?? 'Meal Item',
-                                    style: const TextStyle(
-                                        fontSize: 18, fontWeight: FontWeight.w800),
+                                    style: TextStyle(
+                                        fontSize: 18, fontWeight: FontWeight.w800,
+                                        color: isDark ? Colors.white : AppTheme.textPrimaryLight),
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
                                     menu['description'] ?? '',
-                                    style: const TextStyle(
-                                        color: AppTheme.textSecondaryLight, fontSize: 14),
+                                    style: TextStyle(
+                                        color: isDark ? Colors.white54 : AppTheme.textSecondaryLight, fontSize: 14),
                                   ),
                                 ],
                               ),

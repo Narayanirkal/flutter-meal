@@ -13,10 +13,14 @@ class SettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final themeProvider = context.watch<ThemeProvider>();
     final authProvider = context.read<AuthProvider>();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Settings'),
+        title: Text(
+          'Settings',
+          style: TextStyle(color: isDark ? Colors.white : AppTheme.textPrimaryLight),
+        ),
         leading: IconButton(
           icon: const Icon(CupertinoIcons.back),
           onPressed: () => Navigator.pop(context),
@@ -25,15 +29,20 @@ class SettingsScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          _buildSectionHeader('Profile Details'),
+          _buildSectionHeader('Profile Details', isDark),
           _buildNavigationTile(
+            context,
             CupertinoIcons.person_crop_circle_fill,
             'My Details',
-            () => _showDetailsSheet(context, authProvider),
+            isDark,
+            () => _showDetailsSheet(context, authProvider, isDark),
           ),
+          const SizedBox(height: 8),
           _buildNavigationTile(
+            context,
             CupertinoIcons.creditcard_fill, 
             'Subscriptions & Payments', 
+            isDark,
             () {
               Navigator.push(
                 context,
@@ -43,14 +52,16 @@ class SettingsScreen extends StatelessWidget {
           ),
           const SizedBox(height: 30),
           
-          _buildSectionHeader('App Customization'),
-          _buildThemeTile(context, themeProvider),
+          _buildSectionHeader('App Customization', isDark),
+          _buildThemeTile(context, themeProvider, isDark),
           const SizedBox(height: 30),
           
-          _buildSectionHeader('About'),
+          _buildSectionHeader('About', isDark),
           _buildNavigationTile(
+            context,
             CupertinoIcons.info_circle_fill, 
-            'About Buuttii', 
+            'About Buuttii',
+            isDark,
             () {
               showAboutDialog(
                 context: context,
@@ -71,7 +82,7 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSectionHeader(String title) {
+  Widget _buildSectionHeader(String title, bool isDark) {
     return Padding(
       padding: const EdgeInsets.only(left: 4, bottom: 12),
       child: Text(
@@ -86,7 +97,7 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  void _showDetailsSheet(BuildContext context, AuthProvider authProvider) {
+  void _showDetailsSheet(BuildContext context, AuthProvider authProvider, bool isDark) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -100,13 +111,17 @@ class SettingsScreen extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'My Details',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w800,
+                color: isDark ? Colors.white : AppTheme.textPrimaryLight,
+              ),
             ),
             const SizedBox(height: 24),
-            _buildInfoTile(CupertinoIcons.person_fill, 'Username', authProvider.username.isNotEmpty ? authProvider.username : 'User'),
-            _buildInfoTile(CupertinoIcons.phone_fill, 'Phone Number', authProvider.phoneNumber),
+            _buildInfoTile(CupertinoIcons.person_fill, 'Username', authProvider.username.isNotEmpty ? authProvider.username : 'User', isDark),
+            _buildInfoTile(CupertinoIcons.phone_fill, 'Phone Number', authProvider.phoneNumber, isDark),
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () => Navigator.pop(context),
@@ -120,14 +135,14 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildInfoTile(IconData icon, String title, String value) {
+  Widget _buildInfoTile(IconData icon, String title, String value, bool isDark) {
     return Container(
       padding: const EdgeInsets.all(16),
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: isDark ? AppTheme.surfaceDark : Colors.grey.withOpacity(0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.withOpacity(0.1)),
+        border: Border.all(color: isDark ? Colors.white10 : Colors.grey.withOpacity(0.1)),
       ),
       child: Row(
         children: [
@@ -137,8 +152,21 @@ class SettingsScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(title, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-                Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark ? Colors.white54 : Colors.grey,
+                  ),
+                ),
+                Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? Colors.white : AppTheme.textPrimaryLight,
+                  ),
+                ),
               ],
             ),
           ),
@@ -147,13 +175,13 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildThemeTile(BuildContext context, ThemeProvider themeProvider) {
+  Widget _buildThemeTile(BuildContext context, ThemeProvider themeProvider, bool isDark) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
+        color: isDark ? AppTheme.surfaceDark : Colors.grey.withOpacity(0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.withOpacity(0.1)),
+        border: Border.all(color: isDark ? Colors.white10 : Colors.grey.withOpacity(0.1)),
       ),
       child: Row(
         children: [
@@ -163,10 +191,14 @@ class SettingsScreen extends StatelessWidget {
             size: 20
           ),
           const SizedBox(width: 16),
-          const Expanded(
+          Expanded(
             child: Text(
               'Dark Mode',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: isDark ? Colors.white : AppTheme.textPrimaryLight,
+              ),
             ),
           ),
           CupertinoSwitch(
@@ -179,16 +211,23 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildNavigationTile(IconData icon, String title, VoidCallback onTap) {
+  Widget _buildNavigationTile(BuildContext context, IconData icon, String title, bool isDark, VoidCallback onTap) {
     return ListTile(
       onTap: onTap,
       leading: Icon(icon, color: AppTheme.primaryColor, size: 20),
-      title: Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+      title: Text(
+        title,
+        style: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+          color: isDark ? Colors.white : AppTheme.textPrimaryLight,
+        ),
+      ),
       trailing: const Icon(CupertinoIcons.chevron_right, size: 16, color: Colors.grey),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Colors.grey.withOpacity(0.1)),
+        side: BorderSide(color: isDark ? Colors.white10 : Colors.grey.withOpacity(0.1)),
       ),
     );
   }
