@@ -5,6 +5,8 @@ import 'package:meal_app/core/theme/app_theme.dart';
 import 'package:meal_app/core/providers/theme_provider.dart';
 import 'package:meal_app/features/auth/providers/auth_provider.dart';
 import 'package:meal_app/features/subscription/ui/screens/subscription_management_screen.dart';
+import 'package:meal_app/features/subscription/ui/screens/meal_skip_screen.dart';
+import 'package:meal_app/features/subscription/ui/screens/cart_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -52,6 +54,26 @@ class SettingsScreen extends StatelessWidget {
           ),
           const SizedBox(height: 30),
           
+          const SizedBox(height: 30),
+
+          _buildSectionHeader('Meal Management', isDark),
+          _buildNavigationTile(
+            context,
+            CupertinoIcons.calendar_badge_minus,
+            'Meal Skips',
+            isDark,
+            () => Navigator.push(context, CupertinoPageRoute(builder: (_) => const MealSkipScreen())),
+          ),
+          const SizedBox(height: 8),
+          _buildNavigationTile(
+            context,
+            CupertinoIcons.cart_fill,
+            'Cart',
+            isDark,
+            () => Navigator.push(context, CupertinoPageRoute(builder: (_) => const CartScreen())),
+          ),
+          const SizedBox(height: 30),
+
           _buildSectionHeader('App Customization', isDark),
           _buildThemeTile(context, themeProvider, isDark),
           const SizedBox(height: 30),

@@ -24,6 +24,11 @@ import 'package:meal_app/core/network/payment_repository.dart';
 import 'package:meal_app/core/providers/payment_provider.dart';
 import 'package:meal_app/features/home/data/repositories/homepage_repository.dart';
 import 'package:meal_app/features/home/providers/homepage_provider.dart';
+import 'package:meal_app/core/network/cart_repository.dart';
+import 'package:meal_app/core/providers/cart_provider.dart';
+import 'package:meal_app/core/network/meal_repository.dart';
+import 'package:meal_app/core/providers/meal_provider.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
@@ -44,6 +49,8 @@ class MyApp extends StatelessWidget {
     final profileRepository = ProfileRepository(dioClient);
     final paymentRepository = PaymentRepository(dioClient);
     final homepageRepository = HomepageRepository(dioClient);
+    final cartRepository = CartRepository(dioClient);
+    final mealRepository = MealRepository(dioClient);
 
     return MultiProvider(
       providers: [
@@ -56,6 +63,8 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => MenuProvider(dioClient)),
         ChangeNotifierProvider(create: (_) => PaymentProvider(paymentRepository)),
         ChangeNotifierProvider(create: (_) => HomepageProvider(homepageRepository)),
+        ChangeNotifierProvider(create: (_) => CartProvider(cartRepository)),
+        ChangeNotifierProvider(create: (_) => MealProvider(mealRepository)),
       ],
       child: const MainApp(),
     );

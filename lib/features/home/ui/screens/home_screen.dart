@@ -18,6 +18,10 @@ import 'package:meal_app/features/home/providers/homepage_provider.dart';
 import 'package:meal_app/features/home/data/models/homepage_entry.dart';
 import 'package:meal_app/features/home/providers/menu_provider.dart';
 import 'package:meal_app/features/home/ui/screens/weekly_menu_screen.dart';
+import 'package:meal_app/core/providers/meal_provider.dart';
+import 'package:meal_app/core/providers/cart_provider.dart';
+import 'package:meal_app/features/subscription/ui/screens/meal_skip_screen.dart';
+import 'package:meal_app/features/subscription/ui/screens/cart_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -34,6 +38,8 @@ class _HomeScreenState extends State<HomeScreen> {
       context.read<ChildrenProvider>().fetchChildren();
       context.read<HomepageProvider>().fetchHomepageEntries();
       context.read<MenuProvider>().fetchTodayMenu();
+      context.read<MealProvider>().fetchAlerts();
+      context.read<MealProvider>().fetchMealStatus();
     });
   }
 
@@ -67,8 +73,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   sliver: SliverList(
                     delegate: SliverChildListDelegate([
                       _buildWelcomeSection(authProvider, isDark),
+                      const SizedBox(height: 16),
+                      _buildAlertsBanner(context, isDark),
                       const SizedBox(height: 20),
                       _buildMenuSection(context, isDark),
+                      const SizedBox(height: 20),
+                      _buildQuickActions(context, isDark),
                       const SizedBox(height: 20),
                       _buildFeatureCards(context),
                       const SizedBox(height: 30),
@@ -210,6 +220,131 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
     ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.1, end: 0);
+  }
+
+  Widget _buildAlertsBanner(BuildContext context, bool isDark) {
+    final mealProvider = context.watch<MealProvider>();
+    final alerts = mealProvider.alerts;
+    
+    if (alerts.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      children: alerts.map<Widget>((alert) {
+        final message = alert['message']?.toString() ?? 'Subscription expiring soon';
+        final remainingDays = alert['remaining_days'];
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.orange.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+          ),
+          child: Row(
+            children: [
+              const Icon(CupertinoIcons.exclamationmark_triangle_fill, color: Colors.orange, size: 20),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      message,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white : AppTheme.textPrimaryLight,
+                      ),
+                    ),
+                    if (remainingDays != null)
+                      Text(
+                        '$remainingDays day(s) remaining',
+                        style: TextStyle(fontSize: 11, color: isDark ? Colors.white54 : AppTheme.textSecondaryLight),
+                      ),
+                  ],
+                ),
+              ),
+              TextButton(
+                onPressed: () => Navigator.push(context, CupertinoPageRoute(builder: (_) => const SubscriptionScreen())),
+                child: const Text('Renew', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
+              ),
+            ],
+          ),
+        ).animate().fadeIn().slideX(begin: -0.1, end: 0);
+      }).toList(),
+    );
+  }
+
+  Widget _buildQuickActions(BuildContext context, bool isDark) {
+    final cartProvider = context.watch<CartProvider>();
+    final cartCount = cartProvider.itemCount;
+
+    return Row(
+      children: [
+        Expanded(
+          child: _buildQuickActionTile(
+            context,
+            'Meal Skips',
+            CupertinoIcons.calendar_badge_minus,
+            Colors.orange,
+            isDark,
+            () => Navigator.push(context, CupertinoPageRoute(builder: (_) => const MealSkipScreen())),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _buildQuickActionTile(
+            context,
+            cartCount > 0 ? 'Cart ($cartCount)' : 'Cart',
+            CupertinoIcons.cart_fill,
+            AppTheme.primaryColor,
+            isDark,
+            () => Navigator.push(context, CupertinoPageRoute(builder: (_) => const CartScreen())),
+            badge: cartCount > 0 ? cartCount : null,
+          ),
+        ),
+      ],
+    ).animate().fadeIn(delay: 200.ms);
+  }
+
+  Widget _buildQuickActionTile(BuildContext context, String label, IconData icon, Color color, bool isDark, VoidCallback onTap, {int? badge}) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+        decoration: BoxDecoration(
+          color: isDark ? AppTheme.surfaceDark : Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: isDark ? Colors.white10 : Colors.grey.withValues(alpha: 0.1)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: color, size: 18),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                  color: isDark ? Colors.white : AppTheme.textPrimaryLight,
+                ),
+              ),
+            ),
+            Icon(CupertinoIcons.chevron_right, size: 14, color: isDark ? Colors.white38 : Colors.grey),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildMenuSection(BuildContext context, bool isDark) {

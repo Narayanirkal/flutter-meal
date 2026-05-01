@@ -7,10 +7,12 @@ import 'package:meal_app/core/providers/subscription_provider.dart';
 import 'package:meal_app/core/models/subscription_model.dart';
 import 'package:meal_app/core/widgets/apple_card.dart';
 import 'package:meal_app/core/providers/payment_provider.dart';
+import 'package:meal_app/core/providers/cart_provider.dart';
 import 'package:meal_app/features/children/providers/children_provider.dart';
 import 'package:meal_app/features/profile/providers/profile_provider.dart';
-import 'package:meal_app/core/utils/error_handler.dart';
 import 'package:meal_app/features/subscription/ui/screens/payment_status_screen.dart';
+import 'package:meal_app/features/subscription/ui/screens/cart_screen.dart';
+import 'package:meal_app/core/utils/error_handler.dart';
 
 class SubscriptionScreen extends StatefulWidget {
   const SubscriptionScreen({super.key});
@@ -23,6 +25,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   int _step = 0;
   String? _selectedEntityType;
   String? _selectedEntityId;
+  String? _selectedEntityName;
   int? _selectedMealSizeId;
 
   @override
@@ -40,6 +43,17 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     final subscriptionProvider = context.watch<SubscriptionProvider>();
 
     return Scaffold(
+      floatingActionButton: context.watch<CartProvider>().itemCount > 0
+          ? FloatingActionButton.extended(
+              onPressed: () => Navigator.push(context, CupertinoPageRoute(builder: (_) => const CartScreen())),
+              backgroundColor: AppTheme.primaryColor,
+              icon: const Icon(CupertinoIcons.cart_fill, color: Colors.white),
+              label: Text(
+                'Cart (${context.watch<CartProvider>().itemCount})',
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700),
+              ),
+            )
+          : null,
       body: RefreshIndicator(
         onRefresh: () async {
           await context.read<SubscriptionProvider>().fetchSubscriptions(force: true);
@@ -252,15 +266,41 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
           _buildFeatureRow('Priority Support', isPremium),
           _buildFeatureRow('${plan.trialDays} Days Free Trial', isPremium),
           const SizedBox(height: 24),
+          // Buy Now button
           ElevatedButton(
-            onPressed: () => _showDateSelectionSheet(context, plan.id!, _selectedEntityType!, _selectedEntityId!),
+            onPressed: () => _showDateSelectionSheet(context, plan, 'buy'),
             style: ElevatedButton.styleFrom(
               backgroundColor: isPremium ? Colors.white : AppTheme.primaryColor,
               foregroundColor: isPremium ? AppTheme.primaryColor : Colors.white,
               minimumSize: const Size(double.infinity, 56),
               elevation: 0,
             ),
-            child: const Text('Select Start Date & Pay'),
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(CupertinoIcons.creditcard, size: 18),
+                SizedBox(width: 8),
+                Text('Buy Now', style: TextStyle(fontWeight: FontWeight.w800)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          // Add to Cart button
+          OutlinedButton(
+            onPressed: () => _showDateSelectionSheet(context, plan, 'cart'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: isPremium ? Colors.white : AppTheme.primaryColor,
+              side: BorderSide(color: isPremium ? Colors.white54 : AppTheme.primaryColor),
+              minimumSize: const Size(double.infinity, 50),
+            ),
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(CupertinoIcons.cart_badge_plus, size: 18),
+                SizedBox(width: 8),
+                Text('Add to Cart', style: TextStyle(fontWeight: FontWeight.w700)),
+              ],
+            ),
           ),
         ],
       ),
@@ -334,6 +374,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
         setState(() {
           _selectedEntityType = entityType;
           _selectedEntityId = entityId;
+          _selectedEntityName = name;
           _selectedMealSizeId = mealSizeId;
           _step = 1; // Move to plan selection
         });
@@ -364,7 +405,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     );
   }
 
-  Future<void> _showDateSelectionSheet(BuildContext context, String planId, String entityType, String entityId) async {
+  Future<void> _showDateSelectionSheet(BuildContext context, SubscriptionModel plan, String action) async {
     final nextDay = DateTime.now().add(const Duration(days: 1));
     final selectedDate = await showDatePicker(
       context: context,
@@ -372,12 +413,30 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       firstDate: nextDay,
       lastDate: nextDay.add(const Duration(days: 60)),
       helpText: 'Select Meal Start Date',
-      confirmText: 'PROCEED TO PAY',
+      confirmText: action == 'cart' ? 'ADD TO CART' : 'PROCEED TO PAY',
     );
     if (selectedDate != null && context.mounted) {
-       // Format date as YYYY-MM-DD
        final dateStr = '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
-       _handlePayment(context, planId, entityType, entityId, dateStr);
+       
+       if (action == 'cart') {
+         // Add to local cart
+         context.read<CartProvider>().addItem(CartItem(
+           entityType: _selectedEntityType!,
+           entityId: _selectedEntityId!,
+           entityName: _selectedEntityName ?? 'Profile',
+           subscriptionId: plan.id,
+           planName: plan.planName,
+           price: plan.price,
+           billingCycle: plan.billingCycle,
+           startDate: dateStr,
+           mealSizeId: plan.mealSizeId,
+         ));
+         if (context.mounted) {
+           ErrorHandler.showSuccess(context, '${plan.planName} added to cart for ${_selectedEntityName ?? 'profile'}');
+         }
+       } else {
+         _handlePayment(context, plan.id, _selectedEntityType!, _selectedEntityId!, dateStr);
+       }
     }
   }
 
