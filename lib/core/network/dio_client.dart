@@ -35,7 +35,7 @@ class DioClient {
         return handler.next(options);
       },
       onError: (DioException e, handler) async {
-        if (e.response?.statusCode == 401 || e.response?.statusCode == 403) {
+        if (e.response?.statusCode == 401) {
           // Token might be expired, try to refresh
           final newAccessToken = await _refreshToken();
           if (newAccessToken != null) {
@@ -58,7 +58,23 @@ class DioClient {
     ));
   }
 
+  Future<String?>? _refreshFuture;
+
   Future<String?> _refreshToken() async {
+    if (_refreshFuture != null) {
+      return _refreshFuture;
+    }
+
+    _refreshFuture = _performRefresh();
+    try {
+      final token = await _refreshFuture;
+      return token;
+    } finally {
+      _refreshFuture = null;
+    }
+  }
+
+  Future<String?> _performRefresh() async {
     try {
       final refreshToken = await _secureStorage.getRefreshToken();
       if (refreshToken == null) return null;

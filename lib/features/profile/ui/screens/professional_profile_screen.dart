@@ -21,25 +21,21 @@ class ProfessionalProfileScreen extends StatefulWidget {
 class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameController;
-  late TextEditingController _companyController;
-  late TextEditingController _cityController;
-  late TextEditingController _stateController;
   late TextEditingController _timeController;
   
-  CorporateLocationModel? _selectedLocation;
-  CompanyModel? _selectedCompany;
+  CorporateLocationModel? _selectedCorporateLocation;
   StateModel? _selectedState;
   CityModel? _selectedCity;
   
   bool _isInitializing = true;
 
+  // Track per-field errors for clearing on interaction
+  String? _nameError;
+
   @override
   void initState() {
     super.initState();
     _nameController = TextEditingController();
-    _companyController = TextEditingController();
-    _cityController = TextEditingController();
-    _stateController = TextEditingController();
     _timeController = TextEditingController(text: '13:30');
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -48,26 +44,34 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
       
       // Fetch lookup data FIRST so dropdowns can be pre-filled
       await lookup.fetchInitialData();
+      // Also fetch corporate locations
+      await lookup.fetchCorporateLocations();
       await profileProvider.fetchProfiles(force: true);
 
       final profile = profileProvider.professionalProfile;
       if (profile != null && mounted) {
         setState(() {
           _nameController.text = profile.name;
-          _companyController.text = profile.companyName;
-          _cityController.text = profile.city;
-          _stateController.text = profile.state;
           _timeController.text = profile.lunchTime;
           
-          // Match selected location from lookup list
-          if (profile.corporateLocationId.isNotEmpty) {
-            _selectedLocation = lookup.corporateLocations.where(
-              (l) => l.id == profile.corporateLocationId,
-            ).firstOrNull;
-          }
-          _selectedCompany = lookup.companies.where((c) => c.name == profile.companyName).firstOrNull;
-          _selectedCity = lookup.cities.where((c) => c.name == profile.city).firstOrNull;
+          // Match corporate location by name
+          _selectedCorporateLocation = lookup.corporateLocations
+              .where((c) => c.name == profile.companyName || c.id == profile.corporateLocationId)
+              .firstOrNull;
+          
           _selectedState = lookup.states.where((s) => s.name == profile.state).firstOrNull;
+          
+          // Trigger dependent fetch for cities
+          if (_selectedState != null) {
+            lookup.fetchCitiesByState(_selectedState!.id).then((_) {
+              if (mounted) {
+                setState(() {
+                  _selectedCity = lookup.cities.where((c) => c.name == profile.city).firstOrNull;
+                });
+              }
+            });
+          }
+          
           _isInitializing = false;
         });
       } else if (mounted) {
@@ -133,87 +137,64 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
                     ),
                   ),
                   const SizedBox(height: 30),
+                  // 1. Full Name
                   TextFormField(
                     controller: _nameController,
-                    decoration: const InputDecoration(
+                    autofocus: false,
+                    decoration: InputDecoration(
                       labelText: 'Full Name',
-                      prefixIcon: Icon(CupertinoIcons.person_fill),
+                      prefixIcon: const Icon(CupertinoIcons.person_fill),
+                      errorText: _nameError,
                     ),
-                    validator: (v) => v!.isEmpty ? 'Full Name is required' : null,
-                  ),
-                  const SizedBox(height: 20),
-                  SearchableDropdown<CompanyModel>(
-                    label: 'Company Name',
-                    items: lookup.companies,
-                    itemLabel: (c) => c.name,
-                    value: _selectedCompany,
-                    isLoading: lookup.isLoading,
-                    listenable: lookup,
-                    itemsGetter: () => lookup.companies,
-                    loadingGetter: () => lookup.isLoading,
-                    validator: (v) => v == null ? 'Company Name is required' : null,
-                    onInteraction: () {
-                      FocusScope.of(context).unfocus();
-                      lookup.fetchInitialData();
+                    onTap: () {
+                      if (_nameError != null) setState(() => _nameError = null);
                     },
-                    onChanged: (v) {
-                      setState(() {
-                        _selectedCompany = v;
-                        _companyController.text = v?.name ?? '';
-                      });
+                    onChanged: (_) {
+                      if (_nameError != null) setState(() => _nameError = null);
+                    },
+                    validator: (v) {
+                      if (v == null || v.isEmpty) return 'Full Name is required';
+                      if (RegExp(r'^\d+$').hasMatch(v)) return 'Name cannot be just a number';
+                      return null;
                     },
                   ),
                   const SizedBox(height: 20),
+                  // 2. Company Name (from Corporate Locations API)
                   SearchableDropdown<CorporateLocationModel>(
-                    label: 'Corporate Location',
+                    label: 'Company Name',
                     items: lookup.corporateLocations,
-                    itemLabel: (l) => l.name,
-                    value: _selectedLocation,
+                    itemLabel: (c) => c.name,
+                    value: _selectedCorporateLocation,
                     isLoading: lookup.isLoading,
                     listenable: lookup,
                     itemsGetter: () => lookup.corporateLocations,
                     loadingGetter: () => lookup.isLoading,
-                    validator: (v) => v == null ? 'Location is required' : null,
+                    validator: (v) => v == null ? 'Company Name is required' : null,
                     onInteraction: () {
                       FocusScope.of(context).unfocus();
-                      lookup.fetchInitialData();
+                      lookup.fetchCorporateLocations();
                     },
                     onChanged: (v) {
                       setState(() {
-                        _selectedLocation = v;
+                        _selectedCorporateLocation = v;
+                        // Auto-fill state and city from corporate location
                         if (v != null) {
-                          _cityController.text = v.city;
-                          _stateController.text = v.state;
-                          // Auto-select city and state from location
-                          _selectedCity = lookup.cities.where((c) => c.name == v.city).firstOrNull;
                           _selectedState = lookup.states.where((s) => s.name == v.state).firstOrNull;
+                          if (_selectedState != null) {
+                            lookup.fetchCitiesByState(_selectedState!.id).then((_) {
+                              if (mounted) {
+                                setState(() {
+                                  _selectedCity = lookup.cities.where((c) => c.name == v.city).firstOrNull;
+                                });
+                              }
+                            });
+                          }
                         }
                       });
                     },
                   ),
                   const SizedBox(height: 20),
-                  SearchableDropdown<CityModel>(
-                    label: 'City',
-                    items: lookup.cities,
-                    itemLabel: (c) => c.name,
-                    value: _selectedCity,
-                    isLoading: lookup.isLoading,
-                    listenable: lookup,
-                    itemsGetter: () => lookup.cities,
-                    loadingGetter: () => lookup.isLoading,
-                    validator: (v) => v == null ? 'City is required' : null,
-                    onInteraction: () {
-                      FocusScope.of(context).unfocus();
-                      lookup.fetchInitialData();
-                    },
-                    onChanged: (v) {
-                      setState(() {
-                        _selectedCity = v;
-                        _cityController.text = v?.name ?? '';
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 20),
+                  // 3. State
                   SearchableDropdown<StateModel>(
                     label: 'State',
                     items: lookup.states,
@@ -230,12 +211,43 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
                     },
                     onChanged: (v) {
                       setState(() {
-                        _selectedState = v;
-                        _stateController.text = v?.name ?? '';
+                        if (_selectedState?.id != v?.id) {
+                          _selectedState = v;
+                          _selectedCity = null;
+                          if (v != null) {
+                            lookup.fetchCitiesByState(v.id);
+                          }
+                        }
                       });
                     },
                   ),
                   const SizedBox(height: 20),
+                  // 4. City
+                  SearchableDropdown<CityModel>(
+                    label: 'City',
+                    items: lookup.cities,
+                    itemLabel: (c) => c.name,
+                    value: _selectedCity,
+                    isLoading: lookup.isLoading,
+                    listenable: lookup,
+                    itemsGetter: () => lookup.cities,
+                    loadingGetter: () => lookup.isLoading,
+                    validator: (v) => v == null ? 'City is required' : null,
+                    onInteraction: () {
+                      FocusScope.of(context).unfocus();
+                      if (_selectedState == null) {
+                        ErrorHandler.showError(context, 'Please select a state first');
+                        return;
+                      }
+                    },
+                    onChanged: (v) {
+                      setState(() {
+                        _selectedCity = v;
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 20),
+                  // 5. Lunch Time
                   InkWell(
                     onTap: () => _selectTime(context),
                     child: IgnorePointer(
@@ -262,13 +274,13 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
                         return;
                       }
 
-                      if (_formKey.currentState!.validate() && _selectedLocation != null) {
+                      if (_formKey.currentState!.validate() && _selectedCorporateLocation != null) {
                         final profile = ProfessionalProfileModel(
                           name: _nameController.text,
-                          companyName: _companyController.text,
-                          corporateLocationId: _selectedLocation!.id,
-                          city: _cityController.text,
-                          state: _stateController.text,
+                          companyName: _selectedCorporateLocation!.name,
+                          corporateLocationId: _selectedCorporateLocation!.id.toString(),
+                          city: _selectedCity?.name ?? _selectedCorporateLocation!.city,
+                          state: _selectedState?.name ?? _selectedCorporateLocation!.state,
                           lunchTime: _timeController.text,
                         );
                         
@@ -280,7 +292,7 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
                           ErrorHandler.showError(context, profileProvider.error);
                         }
                       } else {
-                        ErrorHandler.showError(context, 'Please fill all fields and select a location');
+                        ErrorHandler.showError(context, 'Please fill all fields and select a company');
                       }
                     },
                     style: ElevatedButton.styleFrom(
@@ -288,10 +300,51 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
                     ),
                     child: const Text('Save Professional Profile'),
                   ),
+                  if (context.read<ProfileProvider>().professionalProfile != null) ...[
+                    const SizedBox(height: 16),
+                    TextButton(
+                      onPressed: () => _confirmDelete(context),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.red,
+                        minimumSize: const Size(double.infinity, 50),
+                      ),
+                      child: const Text('Delete Professional Profile', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                  ],
                 ],
               ),
             ),
           ),
+    );
+  }
+
+  void _confirmDelete(BuildContext context) {
+    showCupertinoDialog(
+      context: context,
+      builder: (context) => CupertinoAlertDialog(
+        title: const Text('Delete Professional Profile'),
+        content: const Text('Are you sure you want to delete your professional profile? This action cannot be undone.'),
+        actions: [
+          CupertinoDialogAction(
+            child: const Text('Cancel'),
+            onPressed: () => Navigator.pop(context),
+          ),
+          CupertinoDialogAction(
+            isDestructiveAction: true,
+            onPressed: () async {
+              Navigator.pop(context);
+              final success = await context.read<ProfileProvider>().deleteProfessionalProfile();
+              if (success && mounted) {
+                ErrorHandler.showSuccess(context, 'Professional profile deleted successfully');
+                Navigator.pop(context);
+              } else if (mounted) {
+                ErrorHandler.showError(context, 'Failed to delete professional profile');
+              }
+            },
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
     );
   }
 }

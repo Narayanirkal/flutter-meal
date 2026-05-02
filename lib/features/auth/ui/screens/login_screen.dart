@@ -90,7 +90,13 @@ class _LoginScreenState extends State<LoginScreen> {
     final isRegisterMode = authProvider.authMode == AuthMode.register;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+        statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
+      ),
+      child: Scaffold(
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
@@ -283,6 +289,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ),
         ),
+      ),
       ),
     );
   }

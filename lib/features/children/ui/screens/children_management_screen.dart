@@ -288,11 +288,14 @@ class _ChildFormState extends State<_ChildForm> {
   SchoolModel? _selectedSchool;
   StandardModel? _selectedStandard;
   MealSizeModel? _selectedMealSize;
+  StateModel? _selectedState;
+  CityModel? _selectedCity;
   
   bool _isLoading = false;
 
-  final _nameFocus = FocusNode();
-  final _rollFocus = FocusNode();
+  // Track per-field errors for clearing on interaction
+  String? _nameError;
+  String? _rollError;
 
   @override
   void initState() {
@@ -302,7 +305,7 @@ class _ChildFormState extends State<_ChildForm> {
     _rollController = TextEditingController(text: widget.child?.rollNumber);
     _timeController = TextEditingController(text: widget.child?.mealTime ?? '13:30');
 
-    // If editing, we need to fetch lookup data to pre-fill the selections
+    // If editing, fetch lookup data to pre-fill selections
     if (widget.child != null) {
       _isLoading = true;
       WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -313,6 +316,20 @@ class _ChildFormState extends State<_ChildForm> {
             _selectedSchool = lookup.schools.where((s) => s.id == widget.child!.schoolId).firstOrNull;
             _selectedStandard = lookup.standards.where((s) => s.id == widget.child!.standardId).firstOrNull;
             _selectedMealSize = lookup.mealSizes.where((s) => s.id == widget.child!.mealSizeId).firstOrNull;
+            
+            if (_selectedSchool != null) {
+              _selectedState = lookup.states.where((s) => s.name.toLowerCase() == _selectedSchool!.state.toLowerCase()).firstOrNull;
+              if (_selectedState != null) {
+                lookup.fetchCitiesByState(_selectedState!.id).then((_) {
+                  if (mounted) {
+                    setState(() {
+                      _selectedCity = lookup.cities.where((c) => c.name.toLowerCase() == _selectedSchool!.city.toLowerCase()).firstOrNull;
+                    });
+                  }
+                });
+              }
+            }
+            
             _isLoading = false;
           });
         }
@@ -321,7 +338,7 @@ class _ChildFormState extends State<_ChildForm> {
   }
 
   Future<void> _selectTime(BuildContext context) async {
-    FocusScope.of(context).unfocus(); // Prevent focus jumping
+    FocusScope.of(context).unfocus();
     final TimeOfDay? picked = await showTimePicker(
       context: context,
       initialTime: const TimeOfDay(hour: 13, minute: 30),
@@ -384,26 +401,57 @@ class _ChildFormState extends State<_ChildForm> {
                 ],
               ),
               const SizedBox(height: 24),
+              // 1. Child Name
               TextFormField(
                 controller: _nameController,
-                focusNode: _nameFocus,
-                decoration: const InputDecoration(labelText: 'Child Name', prefixIcon: Icon(CupertinoIcons.person)),
-                validator: (v) => v!.isEmpty ? 'Child Name is required' : null,
+                autofocus: false,
+                decoration: InputDecoration(
+                  labelText: 'Child Name',
+                  prefixIcon: const Icon(CupertinoIcons.person),
+                  errorText: _nameError,
+                ),
+                onTap: () {
+                  if (_nameError != null) setState(() => _nameError = null);
+                },
+                onChanged: (_) {
+                  if (_nameError != null) setState(() => _nameError = null);
+                },
+                validator: (v) {
+                  if (v == null || v.isEmpty) return 'Child Name is required';
+                  if (RegExp(r'^\d+$').hasMatch(v)) return 'Name cannot be just a number';
+                  return null;
+                },
                 textInputAction: TextInputAction.next,
               ),
               const SizedBox(height: 16),
+              // 2. Roll Number
               TextFormField(
                 controller: _rollController,
-                focusNode: _rollFocus,
-                decoration: const InputDecoration(labelText: 'Roll Number', prefixIcon: Icon(CupertinoIcons.number)),
-                validator: (v) => v!.isEmpty ? 'Roll Number is required' : null,
+                autofocus: false,
+                decoration: InputDecoration(
+                  labelText: 'Roll Number',
+                  prefixIcon: const Icon(CupertinoIcons.number),
+                  errorText: _rollError,
+                ),
+                onTap: () {
+                  if (_rollError != null) setState(() => _rollError = null);
+                },
+                onChanged: (_) {
+                  if (_rollError != null) setState(() => _rollError = null);
+                },
+                validator: (v) {
+                  if (v == null || v.isEmpty) return 'Roll Number is required';
+                  if (!RegExp(r'\d').hasMatch(v)) return 'Roll Number must contain at least one digit';
+                  return null;
+                },
                 textInputAction: TextInputAction.done,
               ),
               const SizedBox(height: 16),
+              // 3. School — shows ALL active schools from GET /api/client/schools
               SearchableDropdown<SchoolModel>(
                 label: 'School',
                 items: lookup.schools,
-                itemLabel: (s) => s.name,
+                itemLabel: (s) => '${s.name} (${s.city})',
                 value: _selectedSchool,
                 isLoading: lookup.isLoading,
                 listenable: lookup,
@@ -411,13 +459,30 @@ class _ChildFormState extends State<_ChildForm> {
                 loadingGetter: () => lookup.isLoading,
                 validator: (v) => v == null ? 'School is required' : null,
                 onInteraction: () {
-                  _rollFocus.unfocus();
-                  _nameFocus.unfocus();
+                  FocusScope.of(context).unfocus();
                   lookup.fetchInitialData();
                 },
-                onChanged: (v) => setState(() => _selectedSchool = v),
+                onChanged: (v) {
+                  setState(() {
+                    _selectedSchool = v;
+                    // Auto-fill state and city from school data
+                    if (v != null) {
+                      _selectedState = lookup.states.where((s) => s.name.toLowerCase() == v.state.toLowerCase()).firstOrNull;
+                      if (_selectedState != null) {
+                        lookup.fetchCitiesByState(_selectedState!.id).then((_) {
+                          if (mounted) {
+                            setState(() {
+                              _selectedCity = lookup.cities.where((c) => c.name.toLowerCase() == v.city.toLowerCase()).firstOrNull;
+                            });
+                          }
+                        });
+                      }
+                    }
+                  });
+                },
               ),
               const SizedBox(height: 16),
+              // 4. Standard
               SearchableDropdown<StandardModel>(
                 label: 'Standard',
                 items: lookup.standards,
@@ -429,13 +494,66 @@ class _ChildFormState extends State<_ChildForm> {
                 loadingGetter: () => lookup.isLoading,
                 validator: (v) => v == null ? 'Standard is required' : null,
                 onInteraction: () {
-                  _rollFocus.unfocus();
-                  _nameFocus.unfocus();
+                  FocusScope.of(context).unfocus();
                   lookup.fetchInitialData();
                 },
                 onChanged: (v) => setState(() => _selectedStandard = v),
               ),
               const SizedBox(height: 16),
+              // 5. State (auto-filled from school, but user can also select)
+              SearchableDropdown<StateModel>(
+                label: 'State',
+                items: lookup.states,
+                itemLabel: (s) => s.name,
+                value: _selectedState,
+                isLoading: lookup.isLoading,
+                listenable: lookup,
+                itemsGetter: () => lookup.states,
+                loadingGetter: () => lookup.isLoading,
+                validator: (v) => v == null ? 'State is required' : null,
+                onInteraction: () {
+                  FocusScope.of(context).unfocus();
+                  lookup.fetchInitialData();
+                },
+                onChanged: (v) {
+                  setState(() {
+                    if (_selectedState?.id != v?.id) {
+                      _selectedState = v;
+                      _selectedCity = null;
+                      if (v != null) {
+                        lookup.fetchCitiesByState(v.id);
+                      }
+                    }
+                  });
+                },
+              ),
+              const SizedBox(height: 16),
+              // 6. City (auto-filled from school, but user can also select)
+              SearchableDropdown<CityModel>(
+                label: 'City',
+                items: lookup.cities,
+                itemLabel: (c) => c.name,
+                value: _selectedCity,
+                isLoading: lookup.isLoading,
+                listenable: lookup,
+                itemsGetter: () => lookup.cities,
+                loadingGetter: () => lookup.isLoading,
+                validator: (v) => v == null ? 'City is required' : null,
+                onInteraction: () {
+                  FocusScope.of(context).unfocus();
+                  if (_selectedState == null) {
+                    ErrorHandler.showError(context, 'Please select a state first');
+                    return;
+                  }
+                },
+                onChanged: (v) {
+                  setState(() {
+                    _selectedCity = v;
+                  });
+                },
+              ),
+              const SizedBox(height: 16),
+              // 7. Meal Size
               SearchableDropdown<MealSizeModel>(
                 label: 'Meal Size',
                 items: lookup.mealSizes,
@@ -447,13 +565,13 @@ class _ChildFormState extends State<_ChildForm> {
                 loadingGetter: () => lookup.isLoading,
                 validator: (v) => v == null ? 'Meal Size is required' : null,
                 onInteraction: () {
-                  _rollFocus.unfocus();
-                  _nameFocus.unfocus();
+                  FocusScope.of(context).unfocus();
                   lookup.fetchInitialData();
                 },
                 onChanged: (v) => setState(() => _selectedMealSize = v),
               ),
               const SizedBox(height: 16),
+              // 8. Meal Time
               InkWell(
                 onTap: () => _selectTime(context),
                 child: IgnorePointer(
@@ -510,4 +628,3 @@ class _ChildFormState extends State<_ChildForm> {
     );
   }
 }
-

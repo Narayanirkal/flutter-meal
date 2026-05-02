@@ -112,4 +112,25 @@ class ProfileProvider with ChangeNotifier {
       notifyListeners();
     }
   }
+
+  Future<bool> deleteProfessionalProfile() async {
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final success = await _repository.deleteProfessionalProfile();
+      if (success) {
+        _professionalProfile = null;
+        await fetchProfiles(force: true);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      _error = e.toString();
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
 }

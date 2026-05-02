@@ -52,7 +52,13 @@ class _OtpScreenState extends State<OtpScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isRegister = provider.authMode == AuthMode.register;
 
-    return Scaffold(
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+        statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
+      ),
+      child: Scaffold(
       appBar: AppBar(
         leading: IconButton(
           icon: Icon(Icons.arrow_back_ios_new_rounded, color: Theme.of(context).iconTheme.color),
@@ -158,6 +164,7 @@ class _OtpScreenState extends State<OtpScreen> {
             ),
           ),
         ),
+      ),
       ),
     );
   }

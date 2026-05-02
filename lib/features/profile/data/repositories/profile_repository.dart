@@ -65,6 +65,15 @@ class ProfileRepository {
     }
   }
 
+  Future<bool> deleteProfessionalProfile() async {
+    try {
+      final response = await _dioClient.dio.delete(ApiEndpoints.professionalProfile);
+      return response.data['success'] == true;
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   Future<Map<String, dynamic>?> getProfileStatus() async {
     try {
       final response = await _dioClient.dio.get(ApiEndpoints.me);

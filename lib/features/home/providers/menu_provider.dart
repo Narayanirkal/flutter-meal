@@ -18,6 +18,9 @@ class MenuProvider with ChangeNotifier {
   List<dynamic> _weeklyMenu = [];
   List<dynamic> get weeklyMenu => _weeklyMenu;
 
+  List<dynamic> _subscriptionSummary = [];
+  List<dynamic> get subscriptionSummary => _subscriptionSummary;
+
   String? _error;
   String? get error => _error;
 
@@ -28,13 +31,19 @@ class MenuProvider with ChangeNotifier {
 
     try {
       final response = await _dioClient.dio.get('/api/client/meals/today');
-      _isSubscribed = response.data['is_subscribed'] ?? false;
+      final data = response.data;
+      _isSubscribed = data['is_subscribed'] ?? false;
       if (_isSubscribed) {
-        _todayMenu = response.data['menu'];
+        _todayMenu = data['menu'] is Map<String, dynamic> ? data['menu'] : null;
+        _subscriptionSummary = data['subscription_summary'] ?? [];
+      } else {
+        _todayMenu = null;
+        _subscriptionSummary = [];
       }
     } catch (e) {
       if (e.toString().contains('403')) {
         _isSubscribed = false;
+        _todayMenu = null;
       } else {
         _error = e.toString();
       }
@@ -51,13 +60,18 @@ class MenuProvider with ChangeNotifier {
 
     try {
       final response = await _dioClient.dio.get('/api/client/meals/weekly');
-      _isSubscribed = response.data['is_subscribed'] ?? false;
+      final data = response.data;
+      _isSubscribed = data['is_subscribed'] ?? false;
       if (_isSubscribed) {
-        _weeklyMenu = response.data['menu'] ?? [];
+        _weeklyMenu = data['menu'] ?? [];
+        _subscriptionSummary = data['subscription_summary'] ?? [];
+      } else {
+        _weeklyMenu = [];
       }
     } catch (e) {
       if (e.toString().contains('403')) {
         _isSubscribed = false;
+        _weeklyMenu = [];
       } else {
         _error = e.toString();
       }

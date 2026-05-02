@@ -92,9 +92,14 @@ class LookupRepository {
     }
   }
 
-  Future<List<CityModel>> getCities() async {
+  Future<List<CityModel>> getCities({int? stateId}) async {
     try {
-      final response = await _dioClient.dio.get(ApiEndpoints.cities);
+      final response = await _dioClient.dio.get(
+        ApiEndpoints.cities,
+        queryParameters: {
+          if (stateId != null) 'stateId': stateId,
+        },
+      );
       if (response.data['success'] == true) {
         final List cities = response.data['data'];
         return cities.map((c) => CityModel.fromJson(c)).toList();
@@ -105,9 +110,14 @@ class LookupRepository {
     }
   }
 
-  Future<List<CompanyModel>> getCompanies() async {
+  Future<List<CompanyModel>> getCompanies({int? cityId}) async {
     try {
-      final response = await _dioClient.dio.get(ApiEndpoints.companies);
+      final response = await _dioClient.dio.get(
+        ApiEndpoints.companies,
+        queryParameters: {
+          if (cityId != null) 'cityId': cityId,
+        },
+      );
       if (response.data['success'] == true) {
         final List companies = response.data['data'];
         return companies.map((c) => CompanyModel.fromJson(c)).toList();

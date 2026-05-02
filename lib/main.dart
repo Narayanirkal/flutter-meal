@@ -101,9 +101,10 @@ class AuthWrapper extends StatelessWidget {
           body: Center(
             child: Image.asset(
               'lib/core/image/buuttii_splash.png',
-              width: 200,
-              height: 200,
+              width: 180,
+              height: 180,
               fit: BoxFit.contain,
+              filterQuality: FilterQuality.high,
             ),
           ),
         );

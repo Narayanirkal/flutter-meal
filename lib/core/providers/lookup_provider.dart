@@ -43,8 +43,6 @@ class LookupProvider with ChangeNotifier {
         _repository.getCorporateLocations(),
         _repository.getSubscriptions(),
         _repository.getStates(),
-        _repository.getCities(),
-        _repository.getCompanies(),
       ]);
 
       _schools = results[0] as List<SchoolModel>;
@@ -53,10 +51,35 @@ class LookupProvider with ChangeNotifier {
       _corporateLocations = results[3] as List<CorporateLocationModel>;
       _subscriptions = results[4] as List<Map<String, dynamic>>;
       _states = results[5] as List<StateModel>;
-      _cities = results[6] as List<CityModel>;
-      _companies = results[7] as List<CompanyModel>;
+      
+      // Clear cities and companies initially as they depend on state/city selection
+      _cities = [];
+      _companies = [];
     } catch (e) {
       // Handle error
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchCitiesByState(int stateId) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      _cities = await _repository.getCities(stateId: stateId);
+      _companies = []; // Reset companies when state/city changes
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchCompaniesByCity(int cityId) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      _companies = await _repository.getCompanies(cityId: cityId);
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -69,6 +92,15 @@ class LookupProvider with ChangeNotifier {
       notifyListeners();
     } catch (e) {
       // Handle error
+    }
+  }
+
+  Future<void> fetchCorporateLocations() async {
+    try {
+      _corporateLocations = await _repository.getCorporateLocations();
+      notifyListeners();
+    } catch (e) {
+      // Handle error silently
     }
   }
 }

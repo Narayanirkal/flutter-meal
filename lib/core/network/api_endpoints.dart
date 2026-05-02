@@ -45,7 +45,7 @@ class ApiEndpoints {
   static const String teacherProfile = '/api/client/teacher/profile';
 
   // Lookup
-  static const String schools = '/api/common/schools';
+  static const String schools = '/api/client/schools';
   static const String mealSizes = '/api/common/lookup/meal-sizes';
   static const String standards = '/api/common/lookup/standards';
   static const String corporateLocations = '/api/common/corporate-locations';
@@ -54,6 +54,18 @@ class ApiEndpoints {
   static const String states = '/api/common/lookup/states';
   static const String cities = '/api/common/lookup/cities';
   static const String companies = '/api/common/lookup/companies';
+
+  // Common Menu
+  static const String commonMenuToday = '/api/common/menu/today';
+  static const String commonMenuWeekly = '/api/common/menu/weekly/all';
+  static String commonMenuByDate(String date) => '/api/common/menu/$date';
+  static const String commonMenuHistory = '/api/common/menu/history/all';
+
+  // Cart
+  static const String viewCart = '/api/client/cart';
+  static const String addToCart = '/api/client/cart/add';
+  static String removeCartItem(int itemId) => '/api/client/cart/item/$itemId';
+  static const String clearCart = '/api/client/cart/clear';
 
   // Payment
   static const String initiatePayment = '/api/client/payment/initiate';

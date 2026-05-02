@@ -30,6 +30,9 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
   String _status = 'active';
   bool _isInitializing = true;
 
+  // Track per-field errors for clearing on interaction
+  String? _nameError;
+
   @override
   void initState() {
     super.initState();
@@ -50,17 +53,26 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
       if (profile != null && mounted) {
         // Match existing selections from lookup data
         _selectedSchool = lookupProvider.schools.where((s) => s.name == profile.schoolCollegeName).firstOrNull;
-        _selectedState = lookupProvider.states.where((s) => s.name == profile.state).firstOrNull;
-        _selectedCity = lookupProvider.cities.where((s) => s.name == profile.city).firstOrNull;
+        _selectedState = lookupProvider.states.where((s) => s.name.toLowerCase() == profile.state.toLowerCase()).firstOrNull;
 
-        setState(() {
-          _nameController.text = profile.name;
-          _schoolController.text = profile.schoolCollegeName;
-          _cityController.text = profile.city;
-          _stateController.text = profile.state;
-          _status = profile.status;
-          _isInitializing = false;
-        });
+        // Trigger dependent fetches if values exist
+        if (_selectedState != null) {
+          await lookupProvider.fetchCitiesByState(_selectedState!.id);
+          if (mounted) {
+            _selectedCity = lookupProvider.cities.where((s) => s.name.toLowerCase() == profile.city.toLowerCase()).firstOrNull;
+          }
+        }
+
+        if (mounted) {
+          setState(() {
+            _nameController.text = profile.name;
+            _schoolController.text = profile.schoolCollegeName;
+            _cityController.text = profile.city;
+            _stateController.text = profile.state;
+            _status = profile.status;
+            _isInitializing = false;
+          });
+        }
       } else if (mounted) {
         setState(() => _isInitializing = false);
       }
@@ -104,19 +116,31 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                   // 1. Full Name
                   TextFormField(
                     controller: _nameController,
-                    decoration: const InputDecoration(
+                    autofocus: false,
+                    decoration: InputDecoration(
                       labelText: 'Full Name',
-                      prefixIcon: Icon(CupertinoIcons.person_fill),
+                      prefixIcon: const Icon(CupertinoIcons.person_fill),
+                      errorText: _nameError,
                     ),
-                    validator: (v) => v!.isEmpty ? 'Full Name is required' : null,
+                    onTap: () {
+                      if (_nameError != null) setState(() => _nameError = null);
+                    },
+                    onChanged: (_) {
+                      if (_nameError != null) setState(() => _nameError = null);
+                    },
+                    validator: (v) {
+                      if (v == null || v.isEmpty) return 'Full Name is required';
+                      if (RegExp(r'^\d+$').hasMatch(v)) return 'Name cannot be just a number';
+                      return null;
+                    },
                   ),
                   const SizedBox(height: 20),
 
-                  // 2. School/College Name
+                  // 2. School/College — ALL active schools from GET /api/client/schools
                   SearchableDropdown<SchoolModel>(
                     label: 'School/College Name',
                     items: lookupProvider.schools,
-                    itemLabel: (s) => s.name,
+                    itemLabel: (s) => '${s.name} (${s.city})',
                     value: _selectedSchool,
                     isLoading: lookupProvider.isLoading,
                     listenable: lookupProvider,
@@ -131,36 +155,27 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                       setState(() {
                         _selectedSchool = v;
                         _schoolController.text = v?.name ?? '';
+                        // Auto-fill state and city from school data
+                        if (v != null) {
+                          _selectedState = lookupProvider.states.where((s) => s.name.toLowerCase() == v.state.toLowerCase()).firstOrNull;
+                          _stateController.text = v.state;
+                          if (_selectedState != null) {
+                            lookupProvider.fetchCitiesByState(_selectedState!.id).then((_) {
+                              if (mounted) {
+                                setState(() {
+                                  _selectedCity = lookupProvider.cities.where((c) => c.name.toLowerCase() == v.city.toLowerCase()).firstOrNull;
+                                  _cityController.text = v.city;
+                                });
+                              }
+                            });
+                          }
+                        }
                       });
                     },
                   ),
                   const SizedBox(height: 20),
 
-                  // 3. City
-                  SearchableDropdown<CityModel>(
-                    label: 'City',
-                    items: lookupProvider.cities,
-                    itemLabel: (s) => s.name,
-                    value: _selectedCity,
-                    isLoading: lookupProvider.isLoading,
-                    listenable: lookupProvider,
-                    itemsGetter: () => lookupProvider.cities,
-                    loadingGetter: () => lookupProvider.isLoading,
-                    validator: (v) => v == null ? 'City is required' : null,
-                    onInteraction: () {
-                      FocusScope.of(context).unfocus();
-                      lookupProvider.fetchInitialData();
-                    },
-                    onChanged: (v) {
-                      setState(() {
-                        _selectedCity = v;
-                        _cityController.text = v?.name ?? '';
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 20),
-
-                  // 4. State
+                  // 3. State (auto-filled from school, but can be manually changed)
                   SearchableDropdown<StateModel>(
                     label: 'State',
                     items: lookupProvider.states,
@@ -177,8 +192,42 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                     },
                     onChanged: (v) {
                       setState(() {
-                        _selectedState = v;
-                        _stateController.text = v?.name ?? '';
+                        if (_selectedState?.id != v?.id) {
+                          _selectedState = v;
+                          _stateController.text = v?.name ?? '';
+                          _selectedCity = null;
+                          _cityController.text = '';
+                          if (v != null) {
+                            lookupProvider.fetchCitiesByState(v.id);
+                          }
+                        }
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 20),
+
+                  // 4. City
+                  SearchableDropdown<CityModel>(
+                    label: 'City',
+                    items: lookupProvider.cities,
+                    itemLabel: (s) => s.name,
+                    value: _selectedCity,
+                    isLoading: lookupProvider.isLoading,
+                    listenable: lookupProvider,
+                    itemsGetter: () => lookupProvider.cities,
+                    loadingGetter: () => lookupProvider.isLoading,
+                    validator: (v) => v == null ? 'City is required' : null,
+                    onInteraction: () {
+                      FocusScope.of(context).unfocus();
+                      if (_selectedState == null) {
+                        ErrorHandler.showError(context, 'Please select a state first');
+                        return;
+                      }
+                    },
+                    onChanged: (v) {
+                      setState(() {
+                        _selectedCity = v;
+                        _cityController.text = v?.name ?? '';
                       });
                     },
                   ),
@@ -192,7 +241,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                           schoolCollegeName: _schoolController.text,
                           city: _cityController.text,
                           state: _stateController.text,
-                          location: '', // Location removed as per request
+                          location: '',
                           status: _status,
                         );
                         

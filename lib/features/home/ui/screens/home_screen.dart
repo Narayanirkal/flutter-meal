@@ -31,21 +31,59 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  String _displayName = '';
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ChildrenProvider>().fetchChildren();
-      context.read<HomepageProvider>().fetchHomepageEntries();
-      context.read<MenuProvider>().fetchTodayMenu();
-      context.read<MealProvider>().fetchAlerts();
-      context.read<MealProvider>().fetchMealStatus();
+      _loadAllData();
+      _fetchUserName();
     });
+  }
+
+  Future<void> _loadAllData() async {
+    if (!mounted) return;
+    final futures = <Future>[];
+    futures.add(context.read<ChildrenProvider>().fetchChildren());
+    futures.add(context.read<HomepageProvider>().fetchHomepageEntries());
+    futures.add(context.read<MenuProvider>().fetchTodayMenu());
+    futures.add(context.read<MealProvider>().fetchAlerts());
+    futures.add(context.read<MealProvider>().fetchMealStatus());
+    futures.add(context.read<MealProvider>().fetchSubscriptionStatus());
+    futures.add(context.read<CartProvider>().fetchCart());
+    await Future.wait(futures);
+  }
+
+  /// Fetch the username from /api/client/auth/me endpoint
+  Future<void> _fetchUserName() async {
+    if (!mounted) return;
+    try {
+      final profileProvider = context.read<ProfileProvider>();
+      await profileProvider.fetchProfiles(force: true);
+      final profileStatus = profileProvider.profileStatus;
+      if (profileStatus != null && mounted) {
+        final user = profileStatus['user'];
+        if (user != null && user['username'] != null) {
+          setState(() {
+            _displayName = user['username'].toString();
+          });
+          return;
+        }
+      }
+    } catch (_) {}
+    
+    // Fallback to auth provider username
+    if (mounted) {
+      final authProvider = context.read<AuthProvider>();
+      setState(() {
+        _displayName = authProvider.username.isNotEmpty ? authProvider.username : 'User';
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final authProvider = context.watch<AuthProvider>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
     return AnnotatedRegion<SystemUiOverlayStyle>(
@@ -57,7 +95,11 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Scaffold(
       body: RefreshIndicator(
         onRefresh: () async {
-          await context.read<ChildrenProvider>().fetchChildren();
+          // Fix: Refresh ALL providers on pull-to-refresh to avoid stale data
+          await Future.wait([
+            _loadAllData(),
+            _fetchUserName(),
+          ]);
         },
         child: Container(
           decoration: BoxDecoration(
@@ -72,17 +114,18 @@ class _HomeScreenState extends State<HomeScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                   sliver: SliverList(
                     delegate: SliverChildListDelegate([
-                      _buildWelcomeSection(authProvider, isDark),
+                      _buildWelcomeSection(isDark),
+                      // Today's meal section — only visible for subscribed users
+                      _buildTodayMealCard(context, isDark),
                       const SizedBox(height: 16),
                       _buildAlertsBanner(context, isDark),
-                      const SizedBox(height: 20),
-                      _buildMenuSection(context, isDark),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 12),
                       _buildQuickActions(context, isDark),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 16),
                       _buildFeatureCards(context),
-                      const SizedBox(height: 30),
+                      const SizedBox(height: 20),
                       _buildQuickStatus(context),
+                      const SizedBox(height: 30),
                     ]),
                   ),
                 ),
@@ -177,8 +220,8 @@ class _HomeScreenState extends State<HomeScreen> {
     .scale(duration: 2000.ms, begin: const Offset(1, 1), end: const Offset(1.02, 1.02), curve: Curves.easeInOut);
   }
 
-  Widget _buildWelcomeSection(AuthProvider authProvider, bool isDark) {
-    final displayName = authProvider.username.isNotEmpty ? authProvider.username : 'User';
+  Widget _buildWelcomeSection(bool isDark) {
+    final name = _displayName.isNotEmpty ? _displayName : 'User';
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -206,7 +249,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                   TextSpan(
-                    text: displayName,
+                    text: name,
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.w900,
@@ -220,6 +263,187 @@ class _HomeScreenState extends State<HomeScreen> {
         ],
       ),
     ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.1, end: 0);
+  }
+
+  /// Today's meal card — ONLY shown when user has active subscription.
+  /// Shows today's meal image and a "One Week Meal" button.
+  /// If not subscribed, returns SizedBox.shrink() (no gap).
+  Widget _buildTodayMealCard(BuildContext context, bool isDark) {
+    final menuProvider = context.watch<MenuProvider>();
+
+    // If loading or not subscribed or no menu, show nothing (no gap)
+    if (menuProvider.isLoading) return const SizedBox.shrink();
+    if (!menuProvider.isSubscribed) return const SizedBox.shrink();
+    if (menuProvider.todayMenu == null) return const SizedBox.shrink();
+
+    final menu = menuProvider.todayMenu!;
+    final imageUrl = menu['image_url']?.toString();
+    final items = menu['items']?.toString() ?? menu['item_name']?.toString() ?? 'Today\'s Meal';
+    final menuDate = menu['menu_date']?.toString() ?? '';
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          gradient: LinearGradient(
+            colors: isDark
+                ? [const Color(0xFF1E293B), const Color(0xFF0F172A)]
+                : [Colors.white, const Color(0xFFF8FAFC)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: AppTheme.primaryColor.withOpacity(0.08),
+              blurRadius: 24,
+              offset: const Offset(0, 8),
+            ),
+          ],
+          border: Border.all(
+            color: isDark ? Colors.white.withOpacity(0.06) : Colors.grey.withOpacity(0.1),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Meal image
+            if (imageUrl != null && imageUrl.isNotEmpty)
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                child: Image.network(
+                  imageUrl,
+                  height: 180,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    height: 180,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          AppTheme.primaryColor.withOpacity(0.15),
+                          AppTheme.primaryColor.withOpacity(0.05),
+                        ],
+                      ),
+                    ),
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(CupertinoIcons.flame_fill, size: 48, color: AppTheme.primaryColor.withOpacity(0.5)),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Today\'s Meal',
+                            style: TextStyle(
+                              color: AppTheme.primaryColor.withOpacity(0.6),
+                              fontWeight: FontWeight.w700,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              )
+            else
+              Container(
+                height: 140,
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                  gradient: LinearGradient(
+                    colors: [
+                      AppTheme.primaryColor.withOpacity(0.15),
+                      AppTheme.primaryColor.withOpacity(0.05),
+                    ],
+                  ),
+                ),
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(CupertinoIcons.flame_fill, size: 48, color: AppTheme.primaryColor.withOpacity(0.5)),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Today\'s Meal',
+                        style: TextStyle(
+                          color: AppTheme.primaryColor.withOpacity(0.6),
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+            // Meal info and button
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          menuDate.isNotEmpty ? 'TODAY' : 'MEAL',
+                          style: const TextStyle(
+                            color: AppTheme.primaryColor,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 10,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    items,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: isDark ? Colors.white : AppTheme.textPrimaryLight,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          CupertinoPageRoute(builder: (_) => const WeeklyMenuScreen()),
+                        );
+                      },
+                      icon: const Icon(CupertinoIcons.calendar, size: 18),
+                      label: const Text(
+                        'One Week Meal',
+                        style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ).animate().fadeIn(duration: 500.ms).slideY(begin: 0.05, end: 0),
+    );
   }
 
   Widget _buildAlertsBanner(BuildContext context, bool isDark) {
@@ -237,9 +461,9 @@ class _HomeScreenState extends State<HomeScreen> {
           margin: const EdgeInsets.only(bottom: 8),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.orange.withValues(alpha: 0.1),
+            color: Colors.orange.withOpacity(0.1),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+            border: Border.all(color: Colors.orange.withOpacity(0.3)),
           ),
           child: Row(
             children: [
@@ -276,12 +500,22 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  /// Quick actions — conditionally shown:
+  /// - Meal Skips: only when user has active subscription
+  /// - Cart: only when user has items in cart
   Widget _buildQuickActions(BuildContext context, bool isDark) {
+    final mealProvider = context.watch<MealProvider>();
     final cartProvider = context.watch<CartProvider>();
+    final isSubscribed = mealProvider.isSubscribed;
     final cartCount = cartProvider.itemCount;
 
-    return Row(
-      children: [
+    // If neither condition is met, don't show the section at all
+    if (!isSubscribed && cartCount == 0) return const SizedBox.shrink();
+
+    final List<Widget> actionWidgets = [];
+
+    if (isSubscribed) {
+      actionWidgets.add(
         Expanded(
           child: _buildQuickActionTile(
             context,
@@ -292,7 +526,14 @@ class _HomeScreenState extends State<HomeScreen> {
             () => Navigator.push(context, CupertinoPageRoute(builder: (_) => const MealSkipScreen())),
           ),
         ),
-        const SizedBox(width: 12),
+      );
+    }
+
+    if (cartCount > 0) {
+      if (actionWidgets.isNotEmpty) {
+        actionWidgets.add(const SizedBox(width: 12));
+      }
+      actionWidgets.add(
         Expanded(
           child: _buildQuickActionTile(
             context,
@@ -304,7 +545,11 @@ class _HomeScreenState extends State<HomeScreen> {
             badge: cartCount > 0 ? cartCount : null,
           ),
         ),
-      ],
+      );
+    }
+
+    return Row(
+      children: actionWidgets,
     ).animate().fadeIn(delay: 200.ms);
   }
 
@@ -317,14 +562,14 @@ class _HomeScreenState extends State<HomeScreen> {
         decoration: BoxDecoration(
           color: isDark ? AppTheme.surfaceDark : Colors.white,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: isDark ? Colors.white10 : Colors.grey.withValues(alpha: 0.1)),
+          border: Border.all(color: isDark ? Colors.white10 : Colors.grey.withOpacity(0.1)),
         ),
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
+                color: color.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(icon, color: color, size: 18),
@@ -347,71 +592,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildMenuSection(BuildContext context, bool isDark) {
-    final menuProvider = context.watch<MenuProvider>();
-    
-    if (menuProvider.isLoading) return const SizedBox.shrink();
-    if (!menuProvider.isSubscribed || menuProvider.todayMenu == null) return const SizedBox.shrink();
-
-    final menu = menuProvider.todayMenu!;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              "Today's Menu",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: isDark ? Colors.white : AppTheme.textPrimaryLight),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.push(context, CupertinoPageRoute(builder: (_) => const WeeklyMenuScreen()));
-              },
-              child: const Text('View One Week Meal', style: TextStyle(fontWeight: FontWeight.bold)),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        AppleCard(
-          color: isDark ? AppTheme.surfaceDark : Colors.white,
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Icon(CupertinoIcons.flame_fill, color: AppTheme.primaryColor, size: 28),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      menu['item_name'] ?? 'Meal Item',
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      menu['description'] ?? '',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondaryLight,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ).animate().fadeIn().slideX(),
-      ],
-    );
-  }
-
   Widget _buildFeatureCards(BuildContext context) {
     final homepageProvider = context.watch<HomepageProvider>();
     
@@ -426,7 +606,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Column(
       children: homepageProvider.entries.map((entry) {
         return Padding(
-          padding: const EdgeInsets.only(bottom: 16.0),
+          padding: const EdgeInsets.only(bottom: 8.0), // Reduced gap between cards
           child: _buildFeatureCard(
             context,
             entry.name,
@@ -442,11 +622,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
   IconData _getIconForEntry(String name) {
     final lower = name.toLowerCase();
-    if (lower.contains('child')) return CupertinoIcons.person_2_fill;
+    // Use child-friendly icon for children instead of star
+    if (lower.contains('child')) return CupertinoIcons.person_3_fill;
     if (lower.contains('teacher')) return CupertinoIcons.book_fill;
     if (lower.contains('professional')) return CupertinoIcons.briefcase_fill;
     if (lower.contains('bulk')) return CupertinoIcons.cube_box_fill;
-    return CupertinoIcons.star_fill;
+    return CupertinoIcons.square_grid_2x2_fill;
   }
 
   Color _getColorForEntry(String name) {
@@ -476,6 +657,7 @@ class _HomeScreenState extends State<HomeScreen> {
     
     return AppleCard(
       onTap: onTap,
+      margin: const EdgeInsets.symmetric(vertical: 2), // Tighter margin
       color: isDark ? AppTheme.surfaceDark : Colors.white,
       child: Row(
         children: [
@@ -517,6 +699,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildQuickStatus(BuildContext context) {
+    final mealProvider = context.watch<MealProvider>();
+    final isSubscribed = mealProvider.isSubscribed;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -539,7 +724,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 context,
                 'Children', 
                 context.watch<ChildrenProvider>().children.length.toString(), 
-                CupertinoIcons.person_2_fill, 
+                CupertinoIcons.person_3_fill, 
                 Colors.blue
               ),
             ),
@@ -547,10 +732,10 @@ class _HomeScreenState extends State<HomeScreen> {
             Expanded(
               child: _buildStatusMiniCard(
                 context,
-                'Meal Status', 
-                'Pending', 
-                CupertinoIcons.clock_fill, 
-                Colors.amber
+                'Status',
+                isSubscribed ? 'Active' : 'Inactive',
+                isSubscribed ? CupertinoIcons.checkmark_seal_fill : CupertinoIcons.xmark_seal_fill,
+                isSubscribed ? Colors.green : Colors.red,
               ),
             ),
           ],
@@ -607,8 +792,4 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-
-  // Removed _showChildrenTeacherOptions as it's now handled by _handleCardTap
 }
-
-

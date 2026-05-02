@@ -3,8 +3,11 @@ flutter_native_splash:
   color_dark: "#121212"
   image: "lib/core/image/buuttii_splash.png"
   image_dark: "lib/core/image/buuttii_splash.png"
+  fullscreen: true
   android_12:
     color: "#FFFFFF"
     color_dark: "#121212"
     image: "lib/core/image/buuttii_splash.png"
     image_dark: "lib/core/image/buuttii_splash.png"
+    icon_background_color: "#FFFFFF"
+    icon_background_color_dark: "#121212"

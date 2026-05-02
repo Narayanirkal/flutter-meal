@@ -1,55 +1,74 @@
 import 'package:meal_app/core/network/dio_client.dart';
 import 'package:meal_app/core/network/api_endpoints.dart';
 
-/// Repository for cart operations — add items, view cart, checkout.
+/// Repository for server-side cart operations.
+/// All cart data lives on the backend — the client never stores cart locally.
 class CartRepository {
   final DioClient _dioClient;
 
   CartRepository(this._dioClient);
 
-  /// Initiate a single entity payment (adds to order).
-  Future<Map<String, dynamic>> initiateSinglePayment({
+  /// GET /api/client/cart — Fetch the current active cart from the server.
+  Future<Map<String, dynamic>> getCart() async {
+    try {
+      final response = await _dioClient.dio.get(ApiEndpoints.viewCart);
+      if (response.data['success'] == true) {
+        return response.data['data'] ?? {};
+      }
+      return {};
+    } catch (e) {
+      // If 404 (no cart), return empty
+      return {};
+    }
+  }
+
+  /// POST /api/client/cart/add — Add an entity to the server cart.
+  Future<Map<String, dynamic>> addToCart({
     required String subscriptionId,
     required String entityType,
     required String entityId,
     required String startDate,
-    String? redirectUrl,
   }) async {
-    try {
-      final response = await _dioClient.dio.post(
-        ApiEndpoints.initiatePayment,
-        data: {
-          'subscriptionId': subscriptionId,
-          'entityType': entityType,
-          'entityId': entityId,
-          'startDate': startDate,
-          if (redirectUrl != null) 'redirectUrl': redirectUrl,
-        },
-      );
-      if (response.data['success'] == true) {
-        return response.data['data'] ?? response.data;
-      }
-      throw response.data['message']?.toString() ?? 'Payment initiation failed';
-    } catch (e) {
-      rethrow;
+    final response = await _dioClient.dio.post(
+      ApiEndpoints.addToCart,
+      data: {
+        'subscriptionId': subscriptionId,
+        'entityType': entityType,
+        'entityId': entityId,
+        'startDate': startDate,
+      },
+    );
+    if (response.data['success'] == true) {
+      return response.data;
     }
+    throw response.data['message']?.toString() ?? 'Failed to add item to cart';
   }
 
-  /// Checkout entire cart — pay total for all entities in one transaction.
+  /// DELETE /api/client/cart/item/{itemId} — Remove one item from server cart.
+  Future<bool> removeCartItem(int itemId) async {
+    final response = await _dioClient.dio.delete(
+      ApiEndpoints.removeCartItem(itemId),
+    );
+    return response.data['success'] == true;
+  }
+
+  /// DELETE /api/client/cart/clear — Clear all items from the active cart.
+  Future<bool> clearCart() async {
+    final response = await _dioClient.dio.delete(ApiEndpoints.clearCart);
+    return response.data['success'] == true;
+  }
+
+  /// POST /api/client/payment/checkout-cart — Checkout entire cart.
   Future<Map<String, dynamic>> checkoutCart({String? redirectUrl}) async {
-    try {
-      final response = await _dioClient.dio.post(
-        ApiEndpoints.checkoutCart,
-        data: {
-          if (redirectUrl != null) 'redirectUrl': redirectUrl,
-        },
-      );
-      if (response.data['success'] == true) {
-        return response.data['data'] ?? response.data;
-      }
-      throw response.data['message']?.toString() ?? 'Cart checkout failed';
-    } catch (e) {
-      rethrow;
+    final response = await _dioClient.dio.post(
+      ApiEndpoints.checkoutCart,
+      data: {
+        if (redirectUrl != null) 'redirectUrl': redirectUrl,
+      },
+    );
+    if (response.data['success'] == true) {
+      return response.data['data'] ?? response.data;
     }
+    throw response.data['message']?.toString() ?? 'Cart checkout failed';
   }
 }
