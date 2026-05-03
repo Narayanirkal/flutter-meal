@@ -12,8 +12,14 @@ class ErrorHandler {
           return 'Server is taking too long to respond.';
         case DioExceptionType.badResponse:
           final data = error.response?.data;
-          if (data is Map && data.containsKey('message')) {
-            return data['message'];
+          if (data is Map) {
+            // Extract detailed errors array if present
+            if (data.containsKey('errors') && data['errors'] is List && (data['errors'] as List).isNotEmpty) {
+              return (data['errors'] as List).join(', ');
+            }
+            if (data.containsKey('message')) {
+              return data['message'];
+            }
           }
           return 'Server error: ${error.response?.statusCode}';
         case DioExceptionType.cancel:
@@ -25,9 +31,14 @@ class ErrorHandler {
     return error.toString();
   }
 
+  /// Shows an error snackbar.
+  /// Always clears previous snackbars first to prevent stacking.
   static void showError(BuildContext context, dynamic error) {
     final message = getErrorMessage(error);
-    ScaffoldMessenger.of(context).showSnackBar(
+    final messenger = ScaffoldMessenger.of(context);
+    // Clear any existing snackbars to prevent stacking
+    messenger.clearSnackBars();
+    messenger.showSnackBar(
       SnackBar(
         content: Row(
           children: [
@@ -40,12 +51,18 @@ class ErrorHandler {
         behavior: SnackBarBehavior.floating,
         margin: const EdgeInsets.all(16),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        duration: const Duration(seconds: 3),
       ),
     );
   }
 
+  /// Shows a success snackbar.
+  /// Always clears previous snackbars first to prevent stacking.
   static void showSuccess(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
+    final messenger = ScaffoldMessenger.of(context);
+    // Clear any existing snackbars to prevent stacking
+    messenger.clearSnackBars();
+    messenger.showSnackBar(
       SnackBar(
         content: Row(
           children: [
@@ -58,6 +75,7 @@ class ErrorHandler {
         behavior: SnackBarBehavior.floating,
         margin: const EdgeInsets.all(16),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        duration: const Duration(seconds: 3),
       ),
     );
   }
