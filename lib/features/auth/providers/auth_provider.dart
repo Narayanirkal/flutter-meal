@@ -30,9 +30,8 @@ class AuthProvider with ChangeNotifier {
   }
 
   Future<void> _checkAuthStatus() async {
-    _state = AuthState.loading;
-    notifyListeners();
-
+    // Stay on [initial] until we know the session — so the splash can paint.
+    // [loading] is reserved for user-triggered actions (OTP, etc.).
     final isAuthenticated = await _authRepository.isAuthenticated();
     if (isAuthenticated) {
       _phoneNumber = await _authRepository.getPhoneNumber() ?? '';

@@ -183,14 +183,14 @@ class _HomeScreenState extends State<HomeScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
-              colors: [Color(0xFF6366F1), Color(0xFFA855F7)],
+              colors: [Color(0xFFFF4D00), Color(0xFFFF8533)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF6366F1).withOpacity(0.3),
+                color: const Color(0xFFFF4D00).withOpacity(0.3),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -606,13 +606,13 @@ class _HomeScreenState extends State<HomeScreen> {
     return Column(
       children: homepageProvider.entries.map((entry) {
         return Padding(
-          padding: const EdgeInsets.only(bottom: 8.0), // Reduced gap between cards
+          padding: const EdgeInsets.only(bottom: 8.0),
           child: _buildFeatureCard(
             context,
             entry.name,
             entry.description,
-            _getIconForEntry(entry.name),
-            _getColorForEntry(entry.name),
+            _getIconForEntry(entry),
+            _getColorForEntry(entry),
             () => _handleCardTap(context, entry),
           ),
         );
@@ -620,32 +620,45 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  IconData _getIconForEntry(String name) {
-    final lower = name.toLowerCase();
-    // Use child-friendly icon for children instead of star
-    if (lower.contains('child')) return CupertinoIcons.person_3_fill;
-    if (lower.contains('teacher')) return CupertinoIcons.book_fill;
-    if (lower.contains('professional')) return CupertinoIcons.briefcase_fill;
-    if (lower.contains('bulk')) return CupertinoIcons.cube_box_fill;
+  IconData _getIconForEntry(HomepageEntry entry) {
+    final nameLower = entry.name.toLowerCase();
+    final entityLower = entry.entityName?.toLowerCase() ?? '';
+    
+    bool isMatch(String keyword) => nameLower.contains(keyword) || entityLower.contains(keyword);
+
+    if (isMatch('child') || isMatch('student') || isMatch('pupil') || isMatch('learner')) return CupertinoIcons.person_3_fill;
+    if (isMatch('teacher') || isMatch('instructor')) return CupertinoIcons.book_fill;
+    if (isMatch('professional') || isMatch('office') || isMatch('corporate')) return CupertinoIcons.briefcase_fill;
+    if (isMatch('bulk') || isMatch('group')) return CupertinoIcons.cube_box_fill;
+    
     return CupertinoIcons.square_grid_2x2_fill;
   }
 
-  Color _getColorForEntry(String name) {
-    final lower = name.toLowerCase();
-    if (lower.contains('child')) return Colors.blue;
-    if (lower.contains('teacher')) return Colors.green;
-    if (lower.contains('professional')) return Colors.orange;
-    if (lower.contains('bulk')) return Colors.purple;
-    return Colors.indigo;
+  Color _getColorForEntry(HomepageEntry entry) {
+    final nameLower = entry.name.toLowerCase();
+    final entityLower = entry.entityName?.toLowerCase() ?? '';
+    
+    bool isMatch(String keyword) => nameLower.contains(keyword) || entityLower.contains(keyword);
+
+    if (isMatch('child') || isMatch('student') || isMatch('pupil') || isMatch('learner')) return Colors.blue;
+    if (isMatch('teacher') || isMatch('instructor')) return Colors.green;
+    if (isMatch('professional') || isMatch('office') || isMatch('corporate')) return Colors.orange;
+    if (isMatch('bulk') || isMatch('group')) return Colors.purple;
+    
+    return AppTheme.primaryColor;
   }
 
   void _handleCardTap(BuildContext context, HomepageEntry entry) {
-    final name = entry.name.toLowerCase();
-    if (entry.entityId == 'ENT-3' || name.contains('child')) {
+    final nameLower = entry.name.toLowerCase();
+    final entityLower = entry.entityName?.toLowerCase() ?? '';
+    
+    bool isMatch(String keyword) => nameLower.contains(keyword) || entityLower.contains(keyword);
+
+    if (entry.entityId == 'ENT-3' || isMatch('child') || isMatch('student') || isMatch('pupil') || isMatch('learner')) {
       Navigator.push(context, CupertinoPageRoute(builder: (context) => const ChildrenManagementScreen()));
-    } else if (entry.entityId == 'ENT-4' || name.contains('teacher')) {
+    } else if (entry.entityId == 'ENT-4' || isMatch('teacher') || isMatch('instructor')) {
       Navigator.push(context, CupertinoPageRoute(builder: (context) => const TeacherProfileScreen()));
-    } else if (name.contains('professional')) {
+    } else if (isMatch('professional') || isMatch('office') || isMatch('corporate')) {
       Navigator.push(context, CupertinoPageRoute(builder: (context) => const ProfessionalProfileScreen()));
     } else {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Coming soon!')));
@@ -725,7 +738,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 'Children', 
                 context.watch<ChildrenProvider>().children.length.toString(), 
                 CupertinoIcons.person_3_fill, 
-                Colors.blue
+                Colors.blue,
+                onTap: () => Navigator.push(context, CupertinoPageRoute(builder: (_) => ChildrenManagementScreen())),
               ),
             ),
             const SizedBox(width: 16),
@@ -744,10 +758,13 @@ class _HomeScreenState extends State<HomeScreen> {
     ).animate().fadeIn(delay: 400.ms);
   }
 
-  Widget _buildStatusMiniCard(BuildContext context, String label, String value, IconData icon, Color color) {
+  Widget _buildStatusMiniCard(BuildContext context, String label, String value, IconData icon, Color color, {VoidCallback? onTap}) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Container(
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(24),
+      child: Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: isDark ? AppTheme.surfaceDark : Colors.white,
@@ -790,6 +807,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 }

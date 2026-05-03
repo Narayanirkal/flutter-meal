@@ -164,7 +164,13 @@ class _SearchableDropdownState<T> extends State<SearchableDropdown<T>> {
           },
         );
       },
-    );
+    ).whenComplete(() {
+      // After the sheet closes, Flutter otherwise restores focus to the last
+      // TextField (e.g. Roll Number), reopening the keyboard over the form.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        FocusManager.instance.primaryFocus?.unfocus();
+      });
+    });
   }
 }
 

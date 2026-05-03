@@ -9,6 +9,7 @@ import 'package:meal_app/core/widgets/apple_card.dart';
 import 'package:meal_app/core/providers/payment_provider.dart';
 import 'package:meal_app/core/providers/cart_provider.dart';
 import 'package:meal_app/features/children/providers/children_provider.dart';
+import 'package:meal_app/features/children/ui/screens/children_management_screen.dart';
 import 'package:meal_app/features/profile/providers/profile_provider.dart';
 import 'package:meal_app/features/subscription/ui/screens/payment_status_screen.dart';
 import 'package:meal_app/features/subscription/ui/screens/cart_screen.dart';
@@ -39,10 +40,38 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     });
   }
 
-  /// Default start date = next day (yyyy-MM-dd)
-  String _getDefaultStartDate() {
-    final nextDay = DateTime.now().add(const Duration(days: 1));
-    return '${nextDay.year}-${nextDay.month.toString().padLeft(2, '0')}-${nextDay.day.toString().padLeft(2, '0')}';
+  /// Next calendar day (local) at midnight — lower bound for start dates.
+  DateTime _firstSelectableStartDate() {
+    final n = DateTime.now().add(const Duration(days: 1));
+    return DateTime(n.year, n.month, n.day);
+  }
+
+  /// yyyy-MM-dd — same rules as direct "Buy Now" payment.
+  Future<String?> _pickStartDate(
+    BuildContext context, {
+    String? currentIso,
+    String confirmText = 'CONFIRM',
+  }) async {
+    final first = _firstSelectableStartDate();
+    DateTime initial = first;
+    if (currentIso != null) {
+      try {
+        final parsed = DateTime.parse(currentIso);
+        final p = DateTime(parsed.year, parsed.month, parsed.day);
+        if (!p.isBefore(first)) initial = p;
+      } catch (_) {}
+    }
+    final last = first.add(const Duration(days: 60));
+    final selectedDate = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: first,
+      lastDate: last,
+      helpText: 'Select Meal Start Date',
+      confirmText: confirmText,
+    );
+    if (selectedDate == null) return null;
+    return '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
   }
 
   @override
@@ -152,9 +181,22 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
           ),
 
         if (childrenProvider.children.isEmpty && profileProvider.teacherProfile == null && profileProvider.professionalProfile == null)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 40),
-            child: Center(child: Text('No active profiles found to upgrade. Please create a profile first.')),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 40),
+            child: Column(
+              children: [
+                const Center(child: Text('No active profiles found to upgrade.')),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: () => Navigator.push(context, CupertinoPageRoute(builder: (_) => const ChildrenManagementScreen())),
+                  icon: const Icon(CupertinoIcons.person_add),
+                  label: const Text('Add Child / Profile'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  ),
+                ),
+              ],
+            ),
           ),
       ],
     );
@@ -289,11 +331,12 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     _showPlanPickerSheet(context, plans, entityType, entityId, name);
   }
 
-  /// Add to cart via backend API. No date picker — defaults to next day.
+  /// Add to cart via backend API — user picks start date (same as Buy Now).
   Future<void> _addToCartViaAPI(SubscriptionModel plan, String entityType, String entityId) async {
-    final cartProvider = context.read<CartProvider>();
-    final startDate = _getDefaultStartDate();
+    final startDate = await _pickStartDate(context);
+    if (startDate == null || !mounted) return;
 
+    final cartProvider = context.read<CartProvider>();
     final success = await cartProvider.addItem(
       subscriptionId: plan.id,
       entityType: entityType,
@@ -544,20 +587,11 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     );
   }
 
-  /// Date picker — only used for "Buy Now" direct payment.
+  /// Date picker for "Buy Now" direct payment.
   Future<void> _showDateSelectionSheet(BuildContext context, SubscriptionModel plan) async {
-    final nextDay = DateTime.now().add(const Duration(days: 1));
-    final selectedDate = await showDatePicker(
-      context: context,
-      initialDate: nextDay,
-      firstDate: nextDay,
-      lastDate: nextDay.add(const Duration(days: 60)),
-      helpText: 'Select Meal Start Date',
-      confirmText: 'PROCEED TO PAY',
-    );
-    if (selectedDate != null && context.mounted) {
-       final dateStr = '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
-       _handlePayment(context, plan.id, _selectedEntityType!, _selectedEntityId!, dateStr);
+    final dateStr = await _pickStartDate(context, confirmText: 'PROCEED TO PAY');
+    if (dateStr != null && context.mounted) {
+      _handlePayment(context, plan.id, _selectedEntityType!, _selectedEntityId!, dateStr);
     }
   }
 

@@ -44,6 +44,20 @@ class CartRepository {
     throw response.data['message']?.toString() ?? 'Failed to add item to cart';
   }
 
+  /// PATCH /api/client/cart/item/{itemId} — Update meal start date before checkout.
+  Future<void> updateCartItemStartDate({
+    required int itemId,
+    required String startDate,
+  }) async {
+    final response = await _dioClient.dio.patch(
+      ApiEndpoints.removeCartItem(itemId),
+      data: {'startDate': startDate},
+    );
+    if (response.data['success'] != true) {
+      throw response.data['message']?.toString() ?? 'Failed to update start date';
+    }
+  }
+
   /// DELETE /api/client/cart/item/{itemId} — Remove one item from server cart.
   Future<bool> removeCartItem(int itemId) async {
     final response = await _dioClient.dio.delete(
