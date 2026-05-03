@@ -137,8 +137,8 @@ class _ChildrenManagementScreenState extends State<ChildrenManagementScreen> {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: isDark 
-                    ? [Colors.indigo.withOpacity(0.2), Colors.transparent]
-                    : [Colors.indigo.withOpacity(0.05), Colors.transparent],
+                    ? [AppTheme.primaryColor.withOpacity(0.2), Colors.transparent]
+                    : [AppTheme.primaryColor.withOpacity(0.05), Colors.transparent],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),

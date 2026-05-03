@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 class AppTheme {
-  // Professional Color Palette (Slate & Indigo)
-  static const Color primaryColor = Color(0xFF6366F1); // Indigo 500
-  static const Color primaryDark = Color(0xFF4F46E5); // Indigo 600
+  // Brand palette — matches meal-admin (`--accent-primary: #ff4d00`)
+  static const Color primaryColor = Color(0xFFFF4D00);
+  static const Color primaryDark = Color(0xFFE64500);
   static const Color accentColor = Color(0xFFF43F5E); // Rose 500
   
   // Light Theme Colors

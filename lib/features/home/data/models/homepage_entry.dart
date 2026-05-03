@@ -1,6 +1,7 @@
 class HomepageEntry {
   final String id;
   final String? entityId;
+  final String? entityName;
   final String name;
   final String description;
   final int displayOrder;
@@ -9,6 +10,7 @@ class HomepageEntry {
   HomepageEntry({
     required this.id,
     this.entityId,
+    this.entityName,
     required this.name,
     required this.description,
     required this.displayOrder,
@@ -19,6 +21,7 @@ class HomepageEntry {
     return HomepageEntry(
       id: json['id'] as String,
       entityId: json['entity_id'] as String?,
+      entityName: json['entity_name'] as String?,
       name: json['name'] as String,
       description: json['description'] as String,
       displayOrder: json['display_order'] as int,

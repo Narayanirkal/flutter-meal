@@ -127,6 +127,28 @@ class CartProvider with ChangeNotifier {
     }
   }
 
+  // ─── Update cart line start date ────────────────────────────────────────────
+
+  Future<bool> updateItemStartDate(int cartItemId, String startDate) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      await _repository.updateCartItemStartDate(
+        itemId: cartItemId,
+        startDate: startDate,
+      );
+      await fetchCart();
+      return true;
+    } catch (e) {
+      _error = _extractErrorMessage(e);
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
   // ─── Remove item from server cart ───────────────────────────────────────────
 
   Future<bool> removeItem(int cartItemId) async {

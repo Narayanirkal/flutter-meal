@@ -149,8 +149,7 @@ class _CartScreenState extends State<CartScreen> {
             ),
             const Divider(height: 24),
             _buildDetailRow('Plan', item.planName, isDark),
-            if (item.startDate != null)
-              _buildDetailRow('Start Date', _formatDate(item.startDate!), isDark),
+            _buildStartDateRow(context, item, isDark, cartProvider),
             const SizedBox(height: 8),
             // Delete button
             SizedBox(
@@ -171,6 +170,63 @@ class _CartScreenState extends State<CartScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildStartDateRow(BuildContext context, CartItem item, bool isDark, CartProvider cartProvider) {
+    final value = item.startDate != null ? _formatDate(item.startDate!) : '—';
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Start Date', style: TextStyle(fontSize: 13, color: isDark ? Colors.white38 : AppTheme.textSecondaryLight)),
+                const SizedBox(height: 2),
+                Text(value, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: isDark ? Colors.white : AppTheme.textPrimaryLight)),
+              ],
+            ),
+          ),
+          TextButton(
+            onPressed: cartProvider.isLoading ? null : () => _changeStartDate(context, item, cartProvider),
+            child: const Text('Change', style: TextStyle(fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _changeStartDate(BuildContext context, CartItem item, CartProvider cartProvider) async {
+    final tomorrow = DateTime.now().add(const Duration(days: 1));
+    final first = DateTime(tomorrow.year, tomorrow.month, tomorrow.day);
+    final last = first.add(const Duration(days: 60));
+    DateTime initial = first;
+    if (item.startDate != null) {
+      try {
+        final parsed = DateTime.parse(item.startDate!);
+        final p = DateTime(parsed.year, parsed.month, parsed.day);
+        if (!p.isBefore(first)) initial = p;
+      } catch (_) {}
+    }
+    final selectedDate = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: first,
+      lastDate: last,
+      helpText: 'Select Meal Start Date',
+      confirmText: 'SAVE',
+    );
+    if (selectedDate == null || !context.mounted) return;
+    final dateStr = '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
+    final ok = await cartProvider.updateItemStartDate(item.id, dateStr);
+    if (!context.mounted) return;
+    if (ok) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Start date updated'), behavior: SnackBarBehavior.floating));
+    } else if (cartProvider.error != null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(cartProvider.error!), backgroundColor: Colors.red.shade700, behavior: SnackBarBehavior.floating));
+    }
   }
 
   /// Format ISO date string to readable format
