@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 
@@ -18,7 +19,7 @@ class ImagePreviewDialog extends StatelessWidget {
     Navigator.of(context).push(
       PageRouteBuilder(
         opaque: false,
-        barrierColor: Colors.black.withOpacity(0.92),
+        barrierColor: Colors.transparent, // Changed to transparent for blur effect
         barrierDismissible: true,
         pageBuilder: (context, animation, secondaryAnimation) {
           return ImagePreviewDialog(imageUrl: imageUrl, title: title);
@@ -34,104 +35,142 @@ class ImagePreviewDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       backgroundColor: Colors.transparent,
-      body: SafeArea(
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            // Dismiss on tap outside image
-            GestureDetector(
-              onTap: () => Navigator.of(context).pop(),
-              child: Container(color: Colors.transparent),
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          // Blur background
+          GestureDetector(
+            onTap: () => Navigator.of(context).pop(),
+            child: TweenAnimationBuilder<double>(
+              tween: Tween<double>(begin: 0.0, end: 1.0),
+              duration: const Duration(milliseconds: 250),
+              builder: (context, value, child) {
+                return BackdropFilter(
+                  filter: ColorFilter.mode(
+                    Colors.black.withOpacity(0.6 * value),
+                    BlendMode.darken,
+                  ),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 10 * value, sigmaY: 10 * value),
+                    child: Container(
+                      color: Colors.transparent,
+                    ),
+                  ),
+                );
+              },
             ),
-            // Image with pinch-to-zoom
-            Center(
-              child: InteractiveViewer(
-                minScale: 0.5,
-                maxScale: 4.0,
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
+          ),
+          
+          // Image with pinch-to-zoom
+          InteractiveViewer(
+            minScale: 0.5,
+            maxScale: 4.0,
+            child: GestureDetector(
+              // Tapping anywhere in the transparent area dismisses the dialog
+              onTap: () => Navigator.of(context).pop(),
+              child: Container(
+                color: Colors.transparent,
+                width: double.infinity,
+                height: double.infinity,
+                child: Center(
+                  child: GestureDetector(
+                    // Absorb taps on the actual image so it doesn't dismiss when tapping the image
+                    onTap: () {},
                     child: Image.network(
                       imageUrl,
                       fit: BoxFit.contain,
                       loadingBuilder: (context, child, loadingProgress) {
                         if (loadingProgress == null) return child;
                         return SizedBox(
-                          width: 200,
-                          height: 200,
-                          child: Center(
-                            child: CircularProgressIndicator(
-                              value: loadingProgress.expectedTotalBytes != null
-                                  ? loadingProgress.cumulativeBytesLoaded /
-                                      loadingProgress.expectedTotalBytes!
-                                  : null,
-                              color: Colors.white54,
-                              strokeWidth: 2,
-                            ),
+                          width: 48,
+                          height: 48,
+                          child: CircularProgressIndicator(
+                            value: loadingProgress.expectedTotalBytes != null
+                                ? loadingProgress.cumulativeBytesLoaded /
+                                    loadingProgress.expectedTotalBytes!
+                                : null,
+                            color: Colors.white,
+                            strokeWidth: 3,
                           ),
                         );
                       },
-                      errorBuilder: (_, __, ___) => Container(
-                        width: 200,
-                        height: 200,
-                        decoration: BoxDecoration(
-                          color: Colors.white10,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: const Center(
-                          child: Icon(CupertinoIcons.photo, color: Colors.white38, size: 64),
-                        ),
+                      errorBuilder: (_, __, ___) => const Icon(
+                        CupertinoIcons.photo, 
+                        color: Colors.white54, 
+                        size: 64,
                       ),
                     ),
                   ),
                 ),
               ),
             ),
-            // Close button
-            Positioned(
-              top: 12,
-              right: 12,
-              child: GestureDetector(
-                onTap: () => Navigator.of(context).pop(),
-                child: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.6),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white24),
-                  ),
-                  child: const Icon(CupertinoIcons.xmark, color: Colors.white, size: 20),
-                ),
-              ),
-            ),
-            // Title at bottom
-            if (title != null && title!.isNotEmpty)
-              Positioned(
-                bottom: 24,
-                left: 24,
-                right: 24,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.6),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    title!,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
+          ),
+          
+          // SafeArea for UI controls (Close button & Title)
+          SafeArea(
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                // Close button
+                Positioned(
+                  top: 16,
+                  right: 16,
+                  child: GestureDetector(
+                    onTap: () => Navigator.of(context).pop(),
+                    child: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withOpacity(0.5),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white24),
+                      ),
+                      child: const Icon(CupertinoIcons.xmark, color: Colors.white, size: 22),
                     ),
-                    textAlign: TextAlign.center,
                   ),
                 ),
-              ),
-          ],
-        ),
+                // Title at bottom
+                if (title != null && title!.trim().isNotEmpty)
+                  Positioned(
+                    bottom: 30,
+                    left: 24,
+                    right: 24,
+                    child: Center(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.75),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Colors.white12),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.3),
+                              blurRadius: 15,
+                              offset: const Offset(0, 8),
+                            )
+                          ],
+                        ),
+                        child: Text(
+                          // .trim() removes any \r\n from the API which causes vertical off-centering
+                          title!.trim(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.3,
+                            height: 1.2, // Ensures proper vertical alignment
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
