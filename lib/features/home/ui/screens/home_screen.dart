@@ -22,7 +22,7 @@ import 'package:meal_app/core/providers/meal_provider.dart';
 import 'package:meal_app/core/providers/cart_provider.dart';
 import 'package:meal_app/features/subscription/ui/screens/meal_skip_screen.dart';
 import 'package:meal_app/features/subscription/ui/screens/cart_screen.dart';
-import 'package:meal_app/core/providers/subscription_provider.dart';
+import 'package:meal_app/core/widgets/image_preview_dialog.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -283,10 +283,10 @@ class _HomeScreenState extends State<HomeScreen> {
     final menuDate = menu['menu_date']?.toString() ?? '';
 
     return Padding(
-      padding: const EdgeInsets.only(top: 12),
+      padding: const EdgeInsets.only(top: 8),
       child: Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(20),
           gradient: LinearGradient(
             colors: isDark
                 ? [const Color(0xFF1E293B), const Color(0xFF0F172A)]
@@ -297,8 +297,8 @@ class _HomeScreenState extends State<HomeScreen> {
           boxShadow: [
             BoxShadow(
               color: AppTheme.primaryColor.withOpacity(0.08),
-              blurRadius: 24,
-              offset: const Offset(0, 8),
+              blurRadius: 20,
+              offset: const Offset(0, 6),
             ),
           ],
           border: Border.all(
@@ -307,91 +307,46 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            // Meal image
-            if (imageUrl != null && imageUrl.isNotEmpty)
-              ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                child: Image.network(
-                  imageUrl,
-                  width: double.infinity,
-                  fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) => Container(
-                    height: 180,
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          AppTheme.primaryColor.withOpacity(0.15),
-                          AppTheme.primaryColor.withOpacity(0.05),
-                        ],
-                      ),
-                    ),
-                    child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(CupertinoIcons.flame_fill, size: 48, color: AppTheme.primaryColor.withOpacity(0.5)),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Today\'s Meal',
-                            style: TextStyle(
-                              color: AppTheme.primaryColor.withOpacity(0.6),
-                              fontWeight: FontWeight.w700,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              )
-            else
-              Container(
-                height: 140,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-                  gradient: LinearGradient(
-                    colors: [
-                      AppTheme.primaryColor.withOpacity(0.15),
-                      AppTheme.primaryColor.withOpacity(0.05),
-                    ],
-                  ),
-                ),
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(CupertinoIcons.flame_fill, size: 48, color: AppTheme.primaryColor.withOpacity(0.5)),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Today\'s Meal',
-                        style: TextStyle(
-                          color: AppTheme.primaryColor.withOpacity(0.6),
-                          fontWeight: FontWeight.w700,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+            // Meal image — tappable for preview
+            GestureDetector(
+              onTap: () {
+                if (imageUrl != null && imageUrl.isNotEmpty) {
+                  ImagePreviewDialog.show(context, imageUrl, title: items);
+                }
+              },
+              child: _buildMealImage(imageUrl, 140),
+            ),
 
-            // Meal info and button
+            // Meal info row + button — compact
             Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
+                  // Meal name + TODAY badge — compact single row
                   Row(
                     children: [
+                      Flexible(
+                        child: Text(
+                          items,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: isDark ? Colors.white : AppTheme.textPrimaryLight,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                         decoration: BoxDecoration(
                           color: AppTheme.primaryColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
                           menuDate.isNotEmpty ? 'TODAY' : 'MEAL',
@@ -406,17 +361,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                   const SizedBox(height: 10),
-                  Text(
-                    items,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      color: isDark ? Colors.white : AppTheme.textPrimaryLight,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 14),
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
@@ -432,8 +376,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
                       ),
                       style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                       ),
                     ),
                   ),
@@ -443,6 +387,58 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ).animate().fadeIn(duration: 500.ms).slideY(begin: 0.05, end: 0),
+    );
+  }
+
+  /// Builds the meal image with placeholder fallback (reusable).
+  Widget _buildMealImage(String? imageUrl, double height) {
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      return ClipRRect(
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        child: Image.network(
+          imageUrl,
+          height: height,
+          width: double.infinity,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _buildMealPlaceholder(height),
+        ),
+      );
+    }
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      child: _buildMealPlaceholder(height),
+    );
+  }
+
+  Widget _buildMealPlaceholder(double height) {
+    return Container(
+      height: height,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppTheme.primaryColor.withOpacity(0.15),
+            AppTheme.primaryColor.withOpacity(0.05),
+          ],
+        ),
+      ),
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(CupertinoIcons.flame_fill, size: 40, color: AppTheme.primaryColor.withOpacity(0.5)),
+            const SizedBox(height: 6),
+            Text(
+              'Today\'s Meal',
+              style: TextStyle(
+                color: AppTheme.primaryColor.withOpacity(0.6),
+                fontWeight: FontWeight.w700,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -654,11 +650,11 @@ class _HomeScreenState extends State<HomeScreen> {
     
     bool isMatch(String keyword) => nameLower.contains(keyword) || entityLower.contains(keyword);
 
-    if (entry.entityId == 'ENT-3' || isMatch('child') || isMatch('student') || isMatch('pupil') || isMatch('learner')) {
+    if (entry.entityId == 'ENT-1' || isMatch('child') || isMatch('student') || isMatch('pupil') || isMatch('learner')) {
       Navigator.push(context, CupertinoPageRoute(builder: (context) => const ChildrenManagementScreen()));
-    } else if (entry.entityId == 'ENT-4' || isMatch('teacher') || isMatch('instructor')) {
+    } else if (entry.entityId == 'ENT-2' || isMatch('teacher') || isMatch('instructor')) {
       Navigator.push(context, CupertinoPageRoute(builder: (context) => const TeacherProfileScreen()));
-    } else if (isMatch('professional') || isMatch('office') || isMatch('corporate')) {
+    } else if (entry.entityId == 'ENT-3' || isMatch('professional') || isMatch('office') || isMatch('corporate')) {
       Navigator.push(context, CupertinoPageRoute(builder: (context) => const ProfessionalProfileScreen()));
     } else {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Coming soon!')));
@@ -712,7 +708,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildQuickStatus(BuildContext context) {
-    final isSubscribed = context.watch<MenuProvider>().isSubscribed;
+    final mealProvider = context.watch<MealProvider>();
+    final isSubscribed = mealProvider.isSubscribed;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

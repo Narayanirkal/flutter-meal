@@ -9,11 +9,13 @@ class ChildrenProvider with ChangeNotifier {
 
   List<ChildModel> _children = [];
   bool _isLoading = false;
-  String? _error;
+  /// Stores the raw error object (DioException or String) so ErrorHandler
+  /// can extract the proper server message.
+  dynamic _error;
 
   List<ChildModel> get children => _children;
   bool get isLoading => _isLoading;
-  String? get error => _error;
+  dynamic get error => _error;
 
   Future<void> fetchChildren() async {
     _isLoading = true;
@@ -23,7 +25,7 @@ class ChildrenProvider with ChangeNotifier {
     try {
       _children = await _repository.getChildren();
     } catch (e) {
-      _error = e.toString();
+      _error = e;
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -32,6 +34,7 @@ class ChildrenProvider with ChangeNotifier {
 
   Future<bool> addChild(ChildModel child) async {
     _isLoading = true;
+    _error = null;
     notifyListeners();
 
     try {
@@ -42,7 +45,7 @@ class ChildrenProvider with ChangeNotifier {
       }
       return false;
     } catch (e) {
-      _error = e.toString();
+      _error = e;
       return false;
     } finally {
       _isLoading = false;
@@ -52,6 +55,7 @@ class ChildrenProvider with ChangeNotifier {
 
   Future<bool> updateChild(String id, ChildModel child) async {
     _isLoading = true;
+    _error = null;
     notifyListeners();
 
     try {
@@ -62,7 +66,7 @@ class ChildrenProvider with ChangeNotifier {
       }
       return false;
     } catch (e) {
-      _error = e.toString();
+      _error = e;
       return false;
     } finally {
       _isLoading = false;
@@ -72,6 +76,7 @@ class ChildrenProvider with ChangeNotifier {
 
   Future<bool> deleteChild(String id) async {
     _isLoading = true;
+    _error = null;
     notifyListeners();
 
     try {
@@ -82,7 +87,7 @@ class ChildrenProvider with ChangeNotifier {
       }
       return false;
     } catch (e) {
-      _error = e.toString();
+      _error = e;
       return false;
     } finally {
       _isLoading = false;

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
 import 'package:meal_app/core/theme/app_theme.dart';
-import 'package:meal_app/core/widgets/apple_card.dart';
 import 'package:meal_app/features/children/providers/children_provider.dart';
 import 'package:meal_app/features/children/data/models/child_model.dart';
 import 'package:meal_app/core/providers/lookup_provider.dart';
@@ -10,6 +9,7 @@ import 'package:meal_app/core/widgets/searchable_dropdown.dart';
 import 'package:meal_app/core/models/lookup_models.dart';
 import 'package:meal_app/core/utils/error_handler.dart';
 import 'package:meal_app/core/utils/time_utils.dart';
+import 'package:meal_app/core/utils/validators.dart';
 
 class ChildrenManagementScreen extends StatefulWidget {
   const ChildrenManagementScreen({super.key});
@@ -260,7 +260,7 @@ class _ChildrenManagementScreenState extends State<ChildrenManagementScreen> {
               if (success) {
                 if (mounted) ErrorHandler.showSuccess(context, 'Child deleted successfully');
               } else {
-                if (mounted) ErrorHandler.showError(context, 'Failed to delete Already Subscribed');
+                if (mounted) ErrorHandler.showError(context, 'Failed to delete — child may have active subscriptions');
               }
             },
             child: const Text('Delete'),
@@ -292,10 +292,10 @@ class _ChildFormState extends State<_ChildForm> {
   CityModel? _selectedCity;
   
   bool _isLoading = false;
+  bool _isSaving = false;
 
-  // Track per-field errors for clearing on interaction
-  String? _nameError;
-  String? _rollError;
+  // Switch to onUserInteraction after first submit attempt
+  AutovalidateMode _autovalidateMode = AutovalidateMode.disabled;
 
   @override
   void initState() {
@@ -337,6 +337,14 @@ class _ChildFormState extends State<_ChildForm> {
     }
   }
 
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _rollController.dispose();
+    _timeController.dispose();
+    super.dispose();
+  }
+
   Future<void> _selectTime(BuildContext context) async {
     FocusScope.of(context).unfocus();
     final TimeOfDay? picked = await showTimePicker(
@@ -361,10 +369,50 @@ class _ChildFormState extends State<_ChildForm> {
     }
   }
 
+  Future<void> _submitForm() async {
+    final childrenProvider = context.read<ChildrenProvider>();
+
+    // Activate auto-validation so errors clear on user interaction
+    if (_autovalidateMode != AutovalidateMode.onUserInteraction) {
+      setState(() => _autovalidateMode = AutovalidateMode.onUserInteraction);
+    }
+
+    if (!_formKey.currentState!.validate()) {
+      return; // errors are shown inline by validators
+    }
+
+    setState(() => _isSaving = true);
+
+    final newChild = ChildModel(
+      name: _nameController.text.trim(),
+      rollNumber: _rollController.text.trim(),
+      schoolId: _selectedSchool!.id,
+      standardId: _selectedStandard!.id,
+      mealSizeId: _selectedMealSize!.id,
+      mealTime: _timeController.text,
+    );
+
+    bool success;
+    if (widget.child == null) {
+      success = await childrenProvider.addChild(newChild);
+    } else {
+      success = await childrenProvider.updateChild(widget.child!.id!, newChild);
+    }
+
+    if (!mounted) return;
+    setState(() => _isSaving = false);
+
+    if (success) {
+      ErrorHandler.showSuccess(context, widget.child == null ? 'Child registered!' : 'Profile updated!');
+      Navigator.pop(context);
+    } else {
+      ErrorHandler.showError(context, childrenProvider.error);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final lookup = context.watch<LookupProvider>();
-    final childrenProvider = context.read<ChildrenProvider>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
@@ -383,6 +431,7 @@ class _ChildFormState extends State<_ChildForm> {
         ? const Center(child: CircularProgressIndicator())
         : Form(
             key: _formKey,
+            autovalidateMode: _autovalidateMode,
         child: SingleChildScrollView(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -405,46 +454,24 @@ class _ChildFormState extends State<_ChildForm> {
               TextFormField(
                 controller: _nameController,
                 autofocus: false,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: 'Child Name',
-                  prefixIcon: const Icon(CupertinoIcons.person),
-                  errorText: _nameError,
+                  prefixIcon: Icon(CupertinoIcons.person),
                 ),
-                onTap: () {
-                  if (_nameError != null) setState(() => _nameError = null);
-                },
-                onChanged: (_) {
-                  if (_nameError != null) setState(() => _nameError = null);
-                },
-                validator: (v) {
-                  if (v == null || v.isEmpty) return 'Child Name is required';
-                  if (RegExp(r'^\d+$').hasMatch(v)) return 'Name cannot be just a number';
-                  return null;
-                },
                 textInputAction: TextInputAction.next,
+                validator: (v) => Validators.name(v, fieldName: 'Child Name'),
               ),
               const SizedBox(height: 16),
               // 2. Roll Number
               TextFormField(
                 controller: _rollController,
                 autofocus: false,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: 'Roll Number',
-                  prefixIcon: const Icon(CupertinoIcons.number),
-                  errorText: _rollError,
+                  prefixIcon: Icon(CupertinoIcons.number),
                 ),
-                onTap: () {
-                  if (_rollError != null) setState(() => _rollError = null);
-                },
-                onChanged: (_) {
-                  if (_rollError != null) setState(() => _rollError = null);
-                },
-                validator: (v) {
-                  if (v == null || v.isEmpty) return 'Roll Number is required';
-                  if (!RegExp(r'\d').hasMatch(v)) return 'Roll Number must contain at least one digit';
-                  return null;
-                },
                 textInputAction: TextInputAction.done,
+                validator: (v) => Validators.rollNumber(v),
               ),
               const SizedBox(height: 16),
               // 3. School — shows ALL active schools from GET /api/client/schools
@@ -457,7 +484,7 @@ class _ChildFormState extends State<_ChildForm> {
                 listenable: lookup,
                 itemsGetter: () => lookup.schools,
                 loadingGetter: () => lookup.isLoading,
-                validator: (v) => v == null ? 'School is required' : null,
+                validator: (v) => Validators.requiredField(v, 'School'),
                 onInteraction: () {
                   FocusScope.of(context).unfocus();
                   lookup.fetchInitialData();
@@ -492,7 +519,7 @@ class _ChildFormState extends State<_ChildForm> {
                 listenable: lookup,
                 itemsGetter: () => lookup.standards,
                 loadingGetter: () => lookup.isLoading,
-                validator: (v) => v == null ? 'Standard is required' : null,
+                validator: (v) => Validators.requiredField(v, 'Standard'),
                 onInteraction: () {
                   FocusScope.of(context).unfocus();
                   lookup.fetchInitialData();
@@ -510,7 +537,7 @@ class _ChildFormState extends State<_ChildForm> {
                 listenable: lookup,
                 itemsGetter: () => lookup.states,
                 loadingGetter: () => lookup.isLoading,
-                validator: (v) => v == null ? 'State is required' : null,
+                validator: (v) => Validators.requiredField(v, 'State'),
                 onInteraction: () {
                   FocusScope.of(context).unfocus();
                   lookup.fetchInitialData();
@@ -538,7 +565,7 @@ class _ChildFormState extends State<_ChildForm> {
                 listenable: lookup,
                 itemsGetter: () => lookup.cities,
                 loadingGetter: () => lookup.isLoading,
-                validator: (v) => v == null ? 'City is required' : null,
+                validator: (v) => Validators.requiredField(v, 'City'),
                 onInteraction: () {
                   FocusScope.of(context).unfocus();
                   if (_selectedState == null) {
@@ -563,7 +590,7 @@ class _ChildFormState extends State<_ChildForm> {
                 listenable: lookup,
                 itemsGetter: () => lookup.mealSizes,
                 loadingGetter: () => lookup.isLoading,
-                validator: (v) => v == null ? 'Meal Size is required' : null,
+                validator: (v) => Validators.requiredField(v, 'Meal Size'),
                 onInteraction: () {
                   FocusScope.of(context).unfocus();
                   lookup.fetchInitialData();
@@ -583,43 +610,21 @@ class _ChildFormState extends State<_ChildForm> {
                       prefixIcon: Icon(CupertinoIcons.clock),
                       suffixIcon: Icon(CupertinoIcons.chevron_down, size: 16),
                     ),
-                    validator: (v) => _timeController.text.isEmpty ? 'Meal time is required' : null,
+                    validator: (v) => Validators.time(_timeController.text, fieldName: 'Meal time'),
                   ),
                 ),
               ),
               const SizedBox(height: 32),
               ElevatedButton(
-                onPressed: () async {
-                  if (_formKey.currentState!.validate()) {
-                    
-                    final newChild = ChildModel(
-                      name: _nameController.text,
-                      rollNumber: _rollController.text,
-                      schoolId: _selectedSchool!.id,
-                      standardId: _selectedStandard!.id,
-                      mealSizeId: _selectedMealSize!.id,
-                      mealTime: _timeController.text,
-                    );
-
-                    bool success;
-                    if (widget.child == null) {
-                      success = await childrenProvider.addChild(newChild);
-                    } else {
-                      success = await childrenProvider.updateChild(widget.child!.id!, newChild);
-                    }
-
-                    if (success) {
-                      if (mounted) ErrorHandler.showSuccess(context, widget.child == null ? 'Child registered!' : 'Profile updated!');
-                      Navigator.pop(context);
-                    } else {
-                      if (mounted) ErrorHandler.showError(context, childrenProvider.error);
-                    }
-                  } else {
-                    ErrorHandler.showError(context, 'Please fill all fields');
-                  }
-                },
+                onPressed: _isSaving ? null : _submitForm,
                 style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 60)),
-                child: Text(widget.child == null ? 'Register Child' : 'Update Child'),
+                child: _isSaving
+                    ? const SizedBox(
+                        width: 22,
+                        height: 22,
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                      )
+                    : Text(widget.child == null ? 'Register Child' : 'Update Child'),
               ),
             ],
           ),
