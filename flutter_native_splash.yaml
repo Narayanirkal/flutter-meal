@@ -1,13 +1,8 @@
 flutter_native_splash:
-  color: "#FFFFFF"
-  color_dark: "#121212"
-  image: "lib/core/image/buuttii_splash.png"
-  image_dark: "lib/core/image/buuttii_splash.png"
+  color: "#F8FAFC"
+  image: lib/core/image/buuttii_splash.png
+  android: true
+  ios: true
   fullscreen: true
-  android_12:
-    color: "#FFFFFF"
-    color_dark: "#121212"
-    image: "lib/core/image/buuttii_splash.png"
-    image_dark: "lib/core/image/buuttii_splash.png"
-    icon_background_color: "#FFFFFF"
-    icon_background_color_dark: "#121212"
+  android_gravity: center
+  ios_content_mode: center

@@ -9,7 +9,8 @@ import 'package:meal_app/core/widgets/searchable_dropdown.dart';
 import 'package:meal_app/core/models/lookup_models.dart';
 import 'package:meal_app/core/utils/error_handler.dart';
 import 'package:meal_app/core/utils/time_utils.dart';
-import 'package:meal_app/features/children/providers/children_provider.dart';
+import 'package:meal_app/core/utils/validators.dart';
+
 
 class ProfessionalProfileScreen extends StatefulWidget {
   const ProfessionalProfileScreen({super.key});
@@ -28,9 +29,10 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
   CityModel? _selectedCity;
   
   bool _isInitializing = true;
+  bool _isSaving = false;
 
-  // Track per-field errors for clearing on interaction
-  String? _nameError;
+  // Switch to onUserInteraction after first submit attempt
+  AutovalidateMode _autovalidateMode = AutovalidateMode.disabled;
 
   @override
   void initState() {
@@ -80,6 +82,13 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
     });
   }
 
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _timeController.dispose();
+    super.dispose();
+  }
+
   Future<void> _selectTime(BuildContext context) async {
     FocusScope.of(context).unfocus();
     final TimeOfDay? picked = await showTimePicker(
@@ -101,6 +110,49 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
       setState(() {
         _timeController.text = TimeUtils.toBackendFormat(picked);
       });
+    }
+  }
+
+  Future<void> _submitForm() async {
+    // Activate auto-validation so errors clear on user interaction
+    if (_autovalidateMode != AutovalidateMode.onUserInteraction) {
+      setState(() => _autovalidateMode = AutovalidateMode.onUserInteraction);
+    }
+
+    if (!_formKey.currentState!.validate()) {
+      return; // errors are shown inline by validators
+    }
+
+    if (_selectedCorporateLocation == null) {
+      ErrorHandler.showError(context, 'Please select a company');
+      return;
+    }
+
+    // Let the API handle profile conflict checks (400/403)
+    // No hard-coded client-side blocking
+    final profileProvider = context.read<ProfileProvider>();
+
+    setState(() => _isSaving = true);
+
+    final profile = ProfessionalProfileModel(
+      name: _nameController.text.trim(),
+      companyName: _selectedCorporateLocation!.name,
+      corporateLocationId: _selectedCorporateLocation!.id.toString(),
+      city: _selectedCity?.name ?? _selectedCorporateLocation!.city,
+      state: _selectedState?.name ?? _selectedCorporateLocation!.state,
+      lunchTime: _timeController.text,
+    );
+    
+    final success = await profileProvider.saveProfessionalProfile(profile);
+
+    if (!mounted) return;
+    setState(() => _isSaving = false);
+
+    if (success) {
+      ErrorHandler.showSuccess(context, 'Professional profile saved successfully');
+      Navigator.pop(context);
+    } else {
+      ErrorHandler.showError(context, profileProvider.error);
     }
   }
 
@@ -127,6 +179,7 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
             padding: const EdgeInsets.all(24),
             child: Form(
               key: _formKey,
+              autovalidateMode: _autovalidateMode,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -141,22 +194,12 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
                   TextFormField(
                     controller: _nameController,
                     autofocus: false,
-                    decoration: InputDecoration(
+                    decoration: const InputDecoration(
                       labelText: 'Full Name',
-                      prefixIcon: const Icon(CupertinoIcons.person_fill),
-                      errorText: _nameError,
+                      prefixIcon: Icon(CupertinoIcons.person_fill),
                     ),
-                    onTap: () {
-                      if (_nameError != null) setState(() => _nameError = null);
-                    },
-                    onChanged: (_) {
-                      if (_nameError != null) setState(() => _nameError = null);
-                    },
-                    validator: (v) {
-                      if (v == null || v.isEmpty) return 'Full Name is required';
-                      if (RegExp(r'^\d+$').hasMatch(v)) return 'Name cannot be just a number';
-                      return null;
-                    },
+                    textInputAction: TextInputAction.done,
+                    validator: (v) => Validators.name(v, fieldName: 'Full Name'),
                   ),
                   const SizedBox(height: 20),
                   // 2. Company Name (from Corporate Locations API)
@@ -169,7 +212,7 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
                     listenable: lookup,
                     itemsGetter: () => lookup.corporateLocations,
                     loadingGetter: () => lookup.isLoading,
-                    validator: (v) => v == null ? 'Company Name is required' : null,
+                    validator: (v) => Validators.requiredField(v, 'Company Name'),
                     onInteraction: () {
                       FocusScope.of(context).unfocus();
                       lookup.fetchCorporateLocations();
@@ -204,7 +247,7 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
                     listenable: lookup,
                     itemsGetter: () => lookup.states,
                     loadingGetter: () => lookup.isLoading,
-                    validator: (v) => v == null ? 'State is required' : null,
+                    validator: (v) => Validators.requiredField(v, 'State'),
                     onInteraction: () {
                       FocusScope.of(context).unfocus();
                       lookup.fetchInitialData();
@@ -232,7 +275,7 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
                     listenable: lookup,
                     itemsGetter: () => lookup.cities,
                     loadingGetter: () => lookup.isLoading,
-                    validator: (v) => v == null ? 'City is required' : null,
+                    validator: (v) => Validators.requiredField(v, 'City'),
                     onInteraction: () {
                       FocusScope.of(context).unfocus();
                       if (_selectedState == null) {
@@ -259,46 +302,23 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
                           prefixIcon: Icon(CupertinoIcons.clock_fill),
                           suffixIcon: Icon(CupertinoIcons.chevron_down, size: 16),
                         ),
-                        validator: (v) => v!.isEmpty ? 'Lunch time is required' : null,
+                        validator: (v) => Validators.time(_timeController.text, fieldName: 'Lunch time'),
                       ),
                     ),
                   ),
                   const SizedBox(height: 40),
                   ElevatedButton(
-                    onPressed: () async {
-                      final childrenProvider = context.read<ChildrenProvider>();
-                      final profileProvider = context.read<ProfileProvider>();
-                      
-                      if (childrenProvider.children.isNotEmpty || profileProvider.teacherProfile != null) {
-                        ErrorHandler.showError(context, 'Professional account is not allowed for users with existing Children or Teacher profiles.');
-                        return;
-                      }
-
-                      if (_formKey.currentState!.validate() && _selectedCorporateLocation != null) {
-                        final profile = ProfessionalProfileModel(
-                          name: _nameController.text,
-                          companyName: _selectedCorporateLocation!.name,
-                          corporateLocationId: _selectedCorporateLocation!.id.toString(),
-                          city: _selectedCity?.name ?? _selectedCorporateLocation!.city,
-                          state: _selectedState?.name ?? _selectedCorporateLocation!.state,
-                          lunchTime: _timeController.text,
-                        );
-                        
-                        final success = await profileProvider.saveProfessionalProfile(profile);
-                        if (success && mounted) {
-                          ErrorHandler.showSuccess(context, 'Professional profile saved successfully');
-                          Navigator.pop(context);
-                        } else if (mounted) {
-                          ErrorHandler.showError(context, profileProvider.error);
-                        }
-                      } else {
-                        ErrorHandler.showError(context, 'Please fill all fields and select a company');
-                      }
-                    },
+                    onPressed: _isSaving ? null : _submitForm,
                     style: ElevatedButton.styleFrom(
                       minimumSize: const Size(double.infinity, 60),
                     ),
-                    child: const Text('Save Professional Profile'),
+                    child: _isSaving
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                          )
+                        : const Text('Save Professional Profile'),
                   ),
                   if (context.read<ProfileProvider>().professionalProfile != null) ...[
                     const SizedBox(height: 16),
@@ -338,7 +358,7 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
                 ErrorHandler.showSuccess(context, 'Professional profile deleted successfully');
                 Navigator.pop(context);
               } else if (mounted) {
-                ErrorHandler.showError(context, 'Failed to delete Already Subscribed');
+                ErrorHandler.showError(context, 'Failed to delete — profile may have active subscriptions');
               }
             },
             child: const Text('Delete'),

@@ -61,6 +61,9 @@ class _SearchableDropdownState<T> extends State<SearchableDropdown<T>> {
       key: _fieldKey,
       initialValue: widget.value,
       validator: widget.validator,
+      // Always revalidate on value change so errors clear immediately
+      // when user selects an item from the dropdown
+      autovalidateMode: AutovalidateMode.onUserInteraction,
       builder: (FormFieldState<T> state) {
         final isDark = Theme.of(context).brightness == Brightness.dark;
         final hasError = state.hasError;

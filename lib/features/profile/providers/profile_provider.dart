@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:meal_app/features/profile/data/models/profile_models.dart';
 import 'package:meal_app/features/profile/data/repositories/profile_repository.dart';
+import 'package:meal_app/core/utils/error_handler.dart';
 
 class ProfileProvider with ChangeNotifier {
   final ProfileRepository _repository;
@@ -12,13 +13,15 @@ class ProfileProvider with ChangeNotifier {
   Map<String, dynamic>? _profileStatus;
   
   bool _isLoading = false;
-  String? _error;
+  /// Stores the raw error object (DioException or String) so ErrorHandler
+  /// can extract the proper server message instead of a raw toString().
+  dynamic _error;
 
   TeacherProfileModel? get teacherProfile => _teacherProfile;
   ProfessionalProfileModel? get professionalProfile => _professionalProfile;
   Map<String, dynamic>? get profileStatus => _profileStatus;
   bool get isLoading => _isLoading;
-  String? get error => _error;
+  dynamic get error => _error;
 
   Future<void> fetchProfiles({bool force = false}) async {
     if (!force && _teacherProfile != null && _professionalProfile != null) return;
@@ -39,7 +42,7 @@ class ProfileProvider with ChangeNotifier {
       _professionalProfile = results[1] as ProfessionalProfileModel?;
       _profileStatus = results[2] as Map<String, dynamic>?;
     } catch (e) {
-      _error = e.toString();
+      _error = e;
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -48,6 +51,7 @@ class ProfileProvider with ChangeNotifier {
 
   Future<bool> saveTeacherProfile(TeacherProfileModel profile) async {
     _isLoading = true;
+    _error = null;
     notifyListeners();
 
     try {
@@ -56,12 +60,12 @@ class ProfileProvider with ChangeNotifier {
         isUpdate: _teacherProfile != null
       );
       if (success) {
-        await fetchProfiles();
+        await fetchProfiles(force: true);
         return true;
       }
       return false;
     } catch (e) {
-      _error = e.toString();
+      _error = e;
       return false;
     } finally {
       _isLoading = false;
@@ -71,6 +75,7 @@ class ProfileProvider with ChangeNotifier {
 
   Future<bool> deleteTeacherProfile() async {
     _isLoading = true;
+    _error = null;
     notifyListeners();
 
     try {
@@ -82,7 +87,7 @@ class ProfileProvider with ChangeNotifier {
       }
       return false;
     } catch (e) {
-      _error = e.toString();
+      _error = e;
       return false;
     } finally {
       _isLoading = false;
@@ -92,6 +97,7 @@ class ProfileProvider with ChangeNotifier {
 
   Future<bool> saveProfessionalProfile(ProfessionalProfileModel profile) async {
     _isLoading = true;
+    _error = null;
     notifyListeners();
 
     try {
@@ -100,12 +106,12 @@ class ProfileProvider with ChangeNotifier {
         isUpdate: _professionalProfile != null
       );
       if (success) {
-        await fetchProfiles();
+        await fetchProfiles(force: true);
         return true;
       }
       return false;
     } catch (e) {
-      _error = e.toString();
+      _error = e;
       return false;
     } finally {
       _isLoading = false;
@@ -115,6 +121,7 @@ class ProfileProvider with ChangeNotifier {
 
   Future<bool> deleteProfessionalProfile() async {
     _isLoading = true;
+    _error = null;
     notifyListeners();
 
     try {
@@ -126,7 +133,7 @@ class ProfileProvider with ChangeNotifier {
       }
       return false;
     } catch (e) {
-      _error = e.toString();
+      _error = e;
       return false;
     } finally {
       _isLoading = false;

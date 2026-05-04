@@ -5,6 +5,7 @@ import 'package:meal_app/core/theme/app_theme.dart';
 import 'package:meal_app/features/profile/providers/profile_provider.dart';
 import 'package:meal_app/features/profile/data/models/profile_models.dart';
 import 'package:meal_app/core/utils/error_handler.dart';
+import 'package:meal_app/core/utils/validators.dart';
 import 'package:meal_app/core/providers/lookup_provider.dart';
 import 'package:meal_app/core/widgets/searchable_dropdown.dart';
 import 'package:meal_app/core/models/lookup_models.dart';
@@ -29,9 +30,10 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
   
   String _status = 'active';
   bool _isInitializing = true;
+  bool _isSaving = false;
 
-  // Track per-field errors for clearing on interaction
-  String? _nameError;
+  // Switch to onUserInteraction after first submit attempt
+  AutovalidateMode _autovalidateMode = AutovalidateMode.disabled;
 
   @override
   void initState() {
@@ -80,6 +82,51 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
   }
 
   @override
+  void dispose() {
+    _nameController.dispose();
+    _schoolController.dispose();
+    _cityController.dispose();
+    _stateController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submitForm() async {
+    final profileProvider = context.read<ProfileProvider>();
+
+    // Activate auto-validation so errors clear on user interaction
+    if (_autovalidateMode != AutovalidateMode.onUserInteraction) {
+      setState(() => _autovalidateMode = AutovalidateMode.onUserInteraction);
+    }
+
+    if (!_formKey.currentState!.validate()) {
+      return; // errors are shown inline by validators
+    }
+
+    setState(() => _isSaving = true);
+
+    final profile = TeacherProfileModel(
+      name: _nameController.text.trim(),
+      schoolCollegeName: _schoolController.text,
+      city: _cityController.text,
+      state: _stateController.text,
+      location: '',
+      status: _status,
+    );
+    
+    final success = await profileProvider.saveTeacherProfile(profile);
+
+    if (!mounted) return;
+    setState(() => _isSaving = false);
+
+    if (success) {
+      ErrorHandler.showSuccess(context, 'Teacher profile saved successfully');
+      Navigator.pop(context);
+    } else {
+      ErrorHandler.showError(context, profileProvider.error);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final profileProvider = context.watch<ProfileProvider>();
     final lookupProvider = context.watch<LookupProvider>();
@@ -102,6 +149,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
             padding: const EdgeInsets.all(24),
             child: Form(
               key: _formKey,
+              autovalidateMode: _autovalidateMode,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -117,22 +165,12 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                   TextFormField(
                     controller: _nameController,
                     autofocus: false,
-                    decoration: InputDecoration(
+                    decoration: const InputDecoration(
                       labelText: 'Full Name',
-                      prefixIcon: const Icon(CupertinoIcons.person_fill),
-                      errorText: _nameError,
+                      prefixIcon: Icon(CupertinoIcons.person_fill),
                     ),
-                    onTap: () {
-                      if (_nameError != null) setState(() => _nameError = null);
-                    },
-                    onChanged: (_) {
-                      if (_nameError != null) setState(() => _nameError = null);
-                    },
-                    validator: (v) {
-                      if (v == null || v.isEmpty) return 'Full Name is required';
-                      if (RegExp(r'^\d+$').hasMatch(v)) return 'Name cannot be just a number';
-                      return null;
-                    },
+                    textInputAction: TextInputAction.done,
+                    validator: (v) => Validators.name(v, fieldName: 'Full Name'),
                   ),
                   const SizedBox(height: 20),
 
@@ -146,7 +184,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                     listenable: lookupProvider,
                     itemsGetter: () => lookupProvider.schools,
                     loadingGetter: () => lookupProvider.isLoading,
-                    validator: (v) => v == null ? 'School/College is required' : null,
+                    validator: (v) => Validators.requiredField(v, 'School/College'),
                     onInteraction: () {
                       FocusScope.of(context).unfocus();
                       lookupProvider.fetchInitialData();
@@ -185,7 +223,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                     listenable: lookupProvider,
                     itemsGetter: () => lookupProvider.states,
                     loadingGetter: () => lookupProvider.isLoading,
-                    validator: (v) => v == null ? 'State is required' : null,
+                    validator: (v) => Validators.requiredField(v, 'State'),
                     onInteraction: () {
                       FocusScope.of(context).unfocus();
                       lookupProvider.fetchInitialData();
@@ -216,7 +254,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                     listenable: lookupProvider,
                     itemsGetter: () => lookupProvider.cities,
                     loadingGetter: () => lookupProvider.isLoading,
-                    validator: (v) => v == null ? 'City is required' : null,
+                    validator: (v) => Validators.requiredField(v, 'City'),
                     onInteraction: () {
                       FocusScope.of(context).unfocus();
                       if (_selectedState == null) {
@@ -234,30 +272,17 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
 
                   const SizedBox(height: 40),
                   ElevatedButton(
-                    onPressed: () async {
-                      if (_formKey.currentState!.validate()) {
-                        final profile = TeacherProfileModel(
-                          name: _nameController.text,
-                          schoolCollegeName: _schoolController.text,
-                          city: _cityController.text,
-                          state: _stateController.text,
-                          location: '',
-                          status: _status,
-                        );
-                        
-                        final success = await profileProvider.saveTeacherProfile(profile);
-                        if (success && mounted) {
-                          ErrorHandler.showSuccess(context, 'Teacher profile saved successfully');
-                          Navigator.pop(context);
-                        } else if (mounted) {
-                          ErrorHandler.showError(context, profileProvider.error);
-                        }
-                      }
-                    },
+                    onPressed: _isSaving ? null : _submitForm,
                     style: ElevatedButton.styleFrom(
                       minimumSize: const Size(double.infinity, 60),
                     ),
-                   child: const Text('Save Profile'),
+                    child: _isSaving
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                          )
+                        : const Text('Save Profile'),
                   ),
                   if (context.read<ProfileProvider>().teacherProfile != null) ...[
                     const SizedBox(height: 16),
@@ -297,7 +322,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                 ErrorHandler.showSuccess(context, 'Teacher profile deleted successfully');
                 Navigator.pop(context);
               } else if (mounted) {
-                ErrorHandler.showError(context, 'Failed to delete Already Subscribed');
+                ErrorHandler.showError(context, 'Failed to delete — profile may have active subscriptions');
               }
             },
             child: const Text('Delete'),

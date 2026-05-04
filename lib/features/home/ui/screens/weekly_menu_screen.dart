@@ -4,8 +4,8 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:meal_app/core/theme/app_theme.dart';
 import 'package:meal_app/features/home/providers/menu_provider.dart';
-import 'package:meal_app/core/widgets/apple_card.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:meal_app/core/widgets/image_preview_dialog.dart';
 
 class WeeklyMenuScreen extends StatefulWidget {
   const WeeklyMenuScreen({super.key});
@@ -79,88 +79,105 @@ class _WeeklyMenuScreenState extends State<WeeklyMenuScreen> {
                           ),
                         )
                       : ListView.builder(
-                          padding: const EdgeInsets.all(20),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           itemCount: menuProvider.weeklyMenu.length,
                           itemBuilder: (context, index) {
                             final menu = menuProvider.weeklyMenu[index];
-                            final imageUrl = menu['image_url']?.toString();
-                            final items = menu['items']?.toString() ?? menu['item_name']?.toString() ?? 'Meal';
-                            final menuDate = menu['menu_date']?.toString() ?? '';
-                            
-                            // Parse date to get day name
-                            String dayLabel = 'Day ${index + 1}';
-                            if (menuDate.isNotEmpty) {
-                              final parsed = DateTime.tryParse(menuDate);
-                              if (parsed != null) {
-                                dayLabel = DateFormat('EEEE').format(parsed);
-                              }
-                            }
-
-                            return Container(
-                              margin: const EdgeInsets.only(bottom: 16),
-                              decoration: BoxDecoration(
-                                color: isDark ? AppTheme.surfaceDark : Colors.white,
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: isDark ? Colors.white10 : Colors.grey.withOpacity(0.1)),
-                                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 12, offset: const Offset(0, 4))],
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // Image
-                                  if (imageUrl != null && imageUrl.isNotEmpty)
-                                    ClipRRect(
-                                      borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                                      child: Image.network(
-                                        imageUrl,
-                                        width: double.infinity,
-                                        fit: BoxFit.contain,
-                                        errorBuilder: (_, __, ___) => Container(
-                                          height: 80,
-                                          color: AppTheme.primaryColor.withOpacity(0.05),
-                                          child: Center(child: Icon(CupertinoIcons.photo, color: Colors.grey.withOpacity(0.3))),
-                                        ),
-                                      ),
-                                    ),
-                                  Padding(
-                                    padding: const EdgeInsets.all(16),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                              decoration: BoxDecoration(
-                                                color: AppTheme.primaryColor.withOpacity(0.1),
-                                                borderRadius: BorderRadius.circular(10),
-                                              ),
-                                              child: Text(
-                                                dayLabel.toUpperCase(),
-                                                style: const TextStyle(color: AppTheme.primaryColor, fontWeight: FontWeight.w900, fontSize: 11, letterSpacing: 0.5),
-                                              ),
-                                            ),
-                                            if (menuDate.isNotEmpty)
-                                              Text(
-                                                menuDate,
-                                                style: TextStyle(fontSize: 12, color: isDark ? Colors.white38 : AppTheme.textSecondaryLight),
-                                              ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 10),
-                                        Text(
-                                          items,
-                                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: isDark ? Colors.white : AppTheme.textPrimaryLight),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ).animate().fadeIn(delay: (index * 80).ms).slideY(begin: 0.05, end: 0);
+                            return _buildWeeklyMealCard(context, menu, index, isDark);
                           },
                         ),
     );
+  }
+
+  Widget _buildWeeklyMealCard(BuildContext context, dynamic menu, int index, bool isDark) {
+    final imageUrl = menu['image_url']?.toString();
+    final items = menu['items']?.toString() ?? menu['item_name']?.toString() ?? 'Meal';
+    final menuDateRaw = menu['menu_date']?.toString() ?? '';
+    String formattedDate = menuDateRaw;
+
+    // Parse date to get day name
+    String dayLabel = 'Day ${index + 1}';
+    if (menuDateRaw.isNotEmpty) {
+      final parsed = DateTime.tryParse(menuDateRaw);
+      if (parsed != null) {
+        dayLabel = DateFormat('EEEE').format(parsed);
+        formattedDate = DateFormat('dd MMM yyyy').format(parsed);
+      }
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.surfaceDark : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: isDark ? Colors.white10 : Colors.grey.withOpacity(0.1)),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 3))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Image — tappable for preview
+          if (imageUrl != null && imageUrl.isNotEmpty)
+            GestureDetector(
+              onTap: () => ImagePreviewDialog.show(context, imageUrl, title: '$dayLabel — $items'),
+              child: ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                child: Image.network(
+                  imageUrl,
+                  height: 130,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    height: 70,
+                    color: AppTheme.primaryColor.withOpacity(0.05),
+                    child: Center(child: Icon(CupertinoIcons.photo, color: Colors.grey.withOpacity(0.3))),
+                  ),
+                ),
+              ),
+            ),
+          // Info section — compact
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Day badge + date — single compact row
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        dayLabel.toUpperCase(),
+                        style: const TextStyle(color: AppTheme.primaryColor, fontWeight: FontWeight.w900, fontSize: 10, letterSpacing: 0.5),
+                      ),
+                    ),
+                    const Spacer(),
+                    if (formattedDate.isNotEmpty)
+                      Text(
+                        formattedDate,
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: isDark ? Colors.white70 : AppTheme.textSecondaryLight),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                // Meal name
+                Text(
+                  items,
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: isDark ? Colors.white : AppTheme.textPrimaryLight),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ).animate().fadeIn(delay: (index * 60).ms).slideY(begin: 0.04, end: 0);
   }
 }
