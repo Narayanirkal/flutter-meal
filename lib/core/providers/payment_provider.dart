@@ -71,6 +71,7 @@ class PaymentProvider with ChangeNotifier {
     required String subscriptionId,
     required String entityType,
     required String entityId,
+    required bool includeSaturday,
     String? startDate,
     bool isSandbox = true, // set false for production
   }) async {
@@ -85,6 +86,7 @@ class PaymentProvider with ChangeNotifier {
         subscriptionId: subscriptionId,
         entityType: entityType,
         entityId: entityId,
+        includeSaturday: includeSaturday,
         startDate: startDate,
         customRedirectUrl: ApiEndpoints.paymentStatusPage,
       );

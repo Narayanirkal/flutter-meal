@@ -13,6 +13,7 @@ class CartItem {
   final String? startDate;
   final String? entityId;
   final String? subscriptionId;
+  final bool includeSaturday;
 
   CartItem({
     required this.id,
@@ -23,6 +24,7 @@ class CartItem {
     this.startDate,
     this.entityId,
     this.subscriptionId,
+    this.includeSaturday = true,
   });
 
   factory CartItem.fromJson(Map<String, dynamic> json) {
@@ -35,6 +37,7 @@ class CartItem {
       startDate: json['start_date']?.toString(),
       entityId: json['entity_id']?.toString(),
       subscriptionId: json['subscription_id']?.toString(),
+      includeSaturday: json['include_saturday'] == null ? true : json['include_saturday'] == true,
     );
   }
 }
@@ -102,6 +105,7 @@ class CartProvider with ChangeNotifier {
     required String subscriptionId,
     required String entityType,
     required String entityId,
+    required bool includeSaturday,
     required String startDate,
   }) async {
     _isLoading = true;
@@ -113,6 +117,7 @@ class CartProvider with ChangeNotifier {
         subscriptionId: subscriptionId,
         entityType: entityType,
         entityId: entityId,
+        includeSaturday: includeSaturday,
         startDate: startDate,
       );
 

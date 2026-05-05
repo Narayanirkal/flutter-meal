@@ -27,7 +27,6 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   String? _selectedEntityType;
   String? _selectedEntityId;
   String? _selectedEntityName;
-  int? _selectedMealSizeId;
 
   @override
   void initState() {
@@ -260,7 +259,6 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                         _selectedEntityType = entityType;
                         _selectedEntityId = entityId;
                         _selectedEntityName = name;
-                        _selectedMealSizeId = mealSizeId;
                         _step = 1;
                       });
                     },
@@ -304,12 +302,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   /// Quick add to cart via server API.
   void _quickAddToCart(String entityType, String entityId, String name, int? mealSizeId) {
     final subscriptionProvider = context.read<SubscriptionProvider>();
-    final plans = subscriptionProvider.subscriptions.where((plan) {
-      if (entityType == 'child' && mealSizeId != null && plan.mealSizeId != null) {
-        return plan.mealSizeId == mealSizeId;
-      }
-      return true;
-    }).toList();
+    final plans = subscriptionProvider.subscriptions;
 
     if (plans.isEmpty) {
       ErrorHandler.showError(context, 'No plans available for this profile.');
@@ -320,11 +313,10 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       _selectedEntityType = entityType;
       _selectedEntityId = entityId;
       _selectedEntityName = name;
-      _selectedMealSizeId = mealSizeId;
     });
 
     if (plans.length == 1) {
-      _addToCartViaAPI(plans.first, entityType, entityId);
+      _showSaturdayOptionSheet(context, plans.first, entityType, entityId);
       return;
     }
 
@@ -332,7 +324,12 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   }
 
   /// Add to cart via backend API — user picks start date (same as Buy Now).
-  Future<void> _addToCartViaAPI(SubscriptionModel plan, String entityType, String entityId) async {
+  Future<void> _addToCartViaAPI(
+    SubscriptionModel plan,
+    String entityType,
+    String entityId,
+    bool includeSaturday,
+  ) async {
     // Default to tomorrow — user can change start date from the cart screen
     final tomorrow = DateTime.now().add(const Duration(days: 1));
     final startDate = '${tomorrow.year}-${tomorrow.month.toString().padLeft(2, '0')}-${tomorrow.day.toString().padLeft(2, '0')}';
@@ -342,12 +339,14 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       subscriptionId: plan.id,
       entityType: entityType,
       entityId: entityId,
+      includeSaturday: includeSaturday,
       startDate: startDate,
     );
 
     if (mounted) {
       if (success) {
-        ErrorHandler.showSuccess(context, '${plan.planName} added to cart — tap Cart to change start date');
+        final variant = includeSaturday ? 'With Saturday' : 'Without Saturday';
+        ErrorHandler.showSuccess(context, '${plan.planName} ($variant) added to cart — tap Cart to change start date');
       } else {
         ErrorHandler.showError(context, cartProvider.error ?? 'Failed to add to cart');
       }
@@ -375,7 +374,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
             ...plans.map((plan) => InkWell(
               onTap: () {
                 Navigator.pop(ctx);
-                _addToCartViaAPI(plan, entityType, entityId);
+                _showSaturdayOptionSheet(context, plan, entityType, entityId);
               },
               child: Container(
                 margin: const EdgeInsets.only(bottom: 10),
@@ -400,7 +399,10 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                         ],
                       ),
                     ),
-                    Text('₹${plan.price}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: AppTheme.primaryColor)),
+                    Text(
+                      '₹${plan.priceWithSaturday} / ₹${plan.priceWithoutSaturday}',
+                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: AppTheme.primaryColor),
+                    ),
                   ],
                 ),
               ),
@@ -413,12 +415,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
 
   Widget _buildPlanSelectionView() {
     final subscriptionProvider = context.watch<SubscriptionProvider>();
-    final availablePlans = subscriptionProvider.subscriptions.where((plan) {
-      if (_selectedMealSizeId != null && plan.mealSizeId != null) {
-        return plan.mealSizeId == _selectedMealSizeId;
-      }
-      return true;
-    }).toList();
+    final availablePlans = subscriptionProvider.subscriptions;
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Column(
@@ -514,7 +511,22 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              Text('₹${plan.price}', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: isPremium ? Colors.white : AppTheme.primaryColor)),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '₹${plan.priceWithSaturday}',
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: isPremium ? Colors.white : AppTheme.primaryColor),
+                  ),
+                  Text(
+                    '₹${plan.priceWithoutSaturday} (No Sat)',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isPremium ? Colors.white70 : (Theme.of(context).brightness == Brightness.dark ? Colors.white54 : AppTheme.textSecondaryLight),
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
           Text(
@@ -528,7 +540,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
           if (plan.trialDays > 0) _buildFeatureRow('${plan.trialDays} Days Free Trial', isPremium),
           const SizedBox(height: 24),
           ElevatedButton(
-            onPressed: () => _showDateSelectionSheet(context, plan),
+            onPressed: () => _showSaturdayOptionSheet(context, plan, _selectedEntityType!, _selectedEntityId!, isBuyNow: true),
             style: ElevatedButton.styleFrom(
               backgroundColor: isPremium ? Colors.white : AppTheme.primaryColor,
               foregroundColor: isPremium ? AppTheme.primaryColor : Colors.white,
@@ -540,7 +552,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
           const SizedBox(height: 10),
           OutlinedButton(
             onPressed: () {
-              _addToCartViaAPI(plan, _selectedEntityType!, _selectedEntityId!);
+              _showSaturdayOptionSheet(context, plan, _selectedEntityType!, _selectedEntityId!);
             },
             style: OutlinedButton.styleFrom(
               foregroundColor: isPremium ? Colors.white : AppTheme.primaryColor,
@@ -595,15 +607,107 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     );
   }
 
-  /// Date picker for "Buy Now" direct payment.
-  Future<void> _showDateSelectionSheet(BuildContext context, SubscriptionModel plan) async {
-    final dateStr = await _pickStartDate(context, confirmText: 'PROCEED TO PAY');
-    if (dateStr != null && context.mounted) {
-      _handlePayment(context, plan.id, _selectedEntityType!, _selectedEntityId!, dateStr);
-    }
+  Future<void> _showSaturdayOptionSheet(
+    BuildContext context,
+    SubscriptionModel plan,
+    String entityType,
+    String entityId, {
+    bool isBuyNow = false,
+  }) async {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 30),
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Choose Plan Variant',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: isDark ? Colors.white : AppTheme.textPrimaryLight,
+              ),
+            ),
+            const SizedBox(height: 12),
+            _buildVariantTile(ctx, plan, includeSaturday: true, isDark: isDark, isBuyNow: isBuyNow, entityType: entityType, entityId: entityId),
+            const SizedBox(height: 10),
+            _buildVariantTile(ctx, plan, includeSaturday: false, isDark: isDark, isBuyNow: isBuyNow, entityType: entityType, entityId: entityId),
+          ],
+        ),
+      ),
+    );
   }
 
-  Future<void> _handlePayment(BuildContext context, String planId, String entityType, String entityId, String startDate) async {
+  Widget _buildVariantTile(
+    BuildContext sheetContext,
+    SubscriptionModel plan, {
+    required bool includeSaturday,
+    required bool isDark,
+    required bool isBuyNow,
+    required String entityType,
+    required String entityId,
+  }) {
+    final price = includeSaturday ? plan.priceWithSaturday : plan.priceWithoutSaturday;
+    final title = includeSaturday ? 'With Saturday' : 'Without Saturday';
+    final subtitle = includeSaturday
+        ? 'Meals include Saturdays'
+        : 'Saturday meals excluded';
+    return InkWell(
+      onTap: () async {
+        Navigator.pop(sheetContext);
+        if (isBuyNow) {
+          final dateStr = await _pickStartDate(context, confirmText: 'PROCEED TO PAY');
+          if (!mounted) return;
+          if (dateStr != null) {
+            _handlePayment(context, plan.id, entityType, entityId, includeSaturday, dateStr);
+          }
+          return;
+        }
+        _addToCartViaAPI(plan, entityType, entityId, includeSaturday);
+      },
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: isDark ? Colors.white24 : Colors.grey.shade300),
+        ),
+        child: Row(
+          children: [
+            const Icon(CupertinoIcons.calendar, color: AppTheme.primaryColor),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: TextStyle(fontWeight: FontWeight.w700, color: isDark ? Colors.white : AppTheme.textPrimaryLight)),
+                  Text(subtitle, style: TextStyle(fontSize: 12, color: isDark ? Colors.white54 : AppTheme.textSecondaryLight)),
+                ],
+              ),
+            ),
+            Text('₹$price', style: const TextStyle(fontWeight: FontWeight.w800, color: AppTheme.primaryColor)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handlePayment(
+    BuildContext context,
+    String planId,
+    String entityType,
+    String entityId,
+    bool includeSaturday,
+    String startDate,
+  ) async {
     final paymentProvider = context.read<PaymentProvider>();
     showCupertinoDialog(
       context: context,
@@ -617,7 +721,14 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       ),
     );
 
-    final result = await paymentProvider.initiateCheckout(subscriptionId: planId, entityType: entityType, entityId: entityId, startDate: startDate, isSandbox: true);
+    final result = await paymentProvider.initiateCheckout(
+      subscriptionId: planId,
+      entityType: entityType,
+      entityId: entityId,
+      includeSaturday: includeSaturday,
+      startDate: startDate,
+      isSandbox: true,
+    );
     if (context.mounted) Navigator.of(context, rootNavigator: true).pop();
     if (!context.mounted) return;
 

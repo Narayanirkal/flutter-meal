@@ -10,6 +10,7 @@ class PaymentRepository {
     required String subscriptionId,
     required String entityType,
     required String entityId,
+    required bool includeSaturday,
     String? startDate,
     String? customRedirectUrl,
   }) async {
@@ -20,6 +21,7 @@ class PaymentRepository {
           'subscriptionId': subscriptionId,
           'entityType': entityType,
           'entityId': entityId,
+          'includeSaturday': includeSaturday,
           if (startDate != null) 'startDate': startDate,
           if (customRedirectUrl != null) 'redirectUrl': customRedirectUrl,
         },

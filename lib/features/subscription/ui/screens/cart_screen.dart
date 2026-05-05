@@ -116,7 +116,7 @@ class _CartScreenState extends State<CartScreen> {
       confirmDismiss: (_) async {
         final success = await cartProvider.removeItem(item.id);
         if (!success && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
+          ScaffoldMessenger.of(this.context).showSnackBar(
             SnackBar(content: Text(cartProvider.error ?? 'Failed to remove item'), backgroundColor: Colors.red.shade700),
           );
         }
@@ -149,6 +149,7 @@ class _CartScreenState extends State<CartScreen> {
             ),
             const Divider(height: 24),
             _buildDetailRow('Plan', item.planName, isDark),
+            _buildDetailRow('Variant', item.includeSaturday ? 'With Saturday' : 'Without Saturday', isDark),
             _buildStartDateRow(context, item, isDark, cartProvider),
             const SizedBox(height: 8),
             // Delete button

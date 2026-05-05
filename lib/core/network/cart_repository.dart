@@ -27,6 +27,7 @@ class CartRepository {
     required String subscriptionId,
     required String entityType,
     required String entityId,
+    required bool includeSaturday,
     required String startDate,
   }) async {
     final response = await _dioClient.dio.post(
@@ -35,6 +36,7 @@ class CartRepository {
         'subscriptionId': subscriptionId,
         'entityType': entityType,
         'entityId': entityId,
+        'includeSaturday': includeSaturday,
         'startDate': startDate,
       },
     );
