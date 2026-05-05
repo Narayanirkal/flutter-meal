@@ -93,6 +93,11 @@ class _WeeklyMenuScreenState extends State<WeeklyMenuScreen> {
     final imageUrl = menu['image_url']?.toString();
     final items = menu['items']?.toString() ?? menu['item_name']?.toString() ?? 'Meal';
     final menuDateRaw = menu['menu_date']?.toString() ?? '';
+    final nutritionPoints = (menu['nutrition_points'] as List?)
+            ?.map((e) => e.toString())
+            .where((e) => e.trim().isNotEmpty)
+            .toList() ??
+        [];
     String formattedDate = menuDateRaw;
 
     // Parse date to get day name
@@ -173,6 +178,35 @@ class _WeeklyMenuScreenState extends State<WeeklyMenuScreen> {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
+                if (nutritionPoints.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  ...nutritionPoints.take(3).map(
+                    (point) => Padding(
+                      padding: const EdgeInsets.only(bottom: 3),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '• ',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isDark ? Colors.white70 : AppTheme.textSecondaryLight,
+                            ),
+                          ),
+                          Expanded(
+                            child: Text(
+                              point,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: isDark ? Colors.white70 : AppTheme.textSecondaryLight,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),

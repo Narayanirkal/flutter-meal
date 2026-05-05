@@ -84,17 +84,7 @@ class SettingsScreen extends StatelessWidget {
             CupertinoIcons.info_circle_fill, 
             'About Buuttii',
             isDark,
-            () {
-              showAboutDialog(
-                context: context,
-                applicationName: 'Buuttii',
-                applicationVersion: '1.0.0',
-                applicationIcon: const Icon(CupertinoIcons.layers_alt_fill, color: AppTheme.primaryColor, size: 50),
-                children: [
-                  const Text('Buuttii is a professional meal management application designed for parents, teachers, and professionals.'),
-                ],
-              );
-            }
+            () => _showAboutDialog(context, isDark),
           ),
           const SizedBox(height: 50),
           
@@ -251,6 +241,98 @@ class SettingsScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(color: isDark ? Colors.white10 : Colors.grey.withOpacity(0.1)),
       ),
+    );
+  }
+
+  void _showAboutDialog(BuildContext context, bool isDark) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              const Icon(CupertinoIcons.layers_alt_fill, color: AppTheme.primaryColor, size: 24),
+              const SizedBox(width: 10),
+              Text(
+                'About Buuttii',
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: isDark ? Colors.white : AppTheme.textPrimaryLight,
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Version 1.0.0',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: isDark ? Colors.white70 : AppTheme.textSecondaryLight,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                'Buuttii helps parents, teachers, and professionals manage daily meal subscriptions, menus, and skips in one place.',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: isDark ? Colors.white : AppTheme.textPrimaryLight,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => _showLicenseDialog(dialogContext, isDark),
+              child: const Text('License'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showLicenseDialog(BuildContext context, bool isDark) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text(
+            'Buuttii License',
+            style: TextStyle(
+              fontWeight: FontWeight.w700,
+              color: isDark ? Colors.white : AppTheme.textPrimaryLight,
+            ),
+          ),
+          content: SingleChildScrollView(
+            child: Text(
+              'Copyright (c) ${DateTime.now().year} Buuttii.\n\n'
+              'This mobile application and its content are proprietary to Buuttii and intended for authorized meal subscription use only.\n\n'
+              'Unauthorized copying, redistribution, reverse engineering, or commercial reuse of app content, branding, or data is prohibited.\n\n'
+              'Use of this app is subject to Buuttii policies and applicable local laws.',
+              style: TextStyle(
+                fontSize: 14,
+                height: 1.4,
+                color: isDark ? Colors.white : AppTheme.textPrimaryLight,
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
     );
   }
 
