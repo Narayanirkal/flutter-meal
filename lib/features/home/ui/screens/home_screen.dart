@@ -6,7 +6,6 @@ import 'package:meal_app/features/auth/providers/auth_provider.dart';
 import 'package:meal_app/core/theme/app_theme.dart';
 import 'package:meal_app/core/widgets/apple_card.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:meal_app/core/providers/lookup_provider.dart';
 import 'package:meal_app/features/profile/providers/profile_provider.dart';
 import 'package:meal_app/features/children/providers/children_provider.dart';
 import 'package:meal_app/features/children/ui/screens/children_management_screen.dart';
@@ -281,6 +280,11 @@ class _HomeScreenState extends State<HomeScreen> {
     final imageUrl = menu['image_url']?.toString();
     final items = menu['items']?.toString() ?? menu['item_name']?.toString() ?? 'Today\'s Meal';
     final menuDate = menu['menu_date']?.toString() ?? '';
+    final nutritionPoints = (menu['nutrition_points'] as List?)
+            ?.map((e) => e.toString())
+            .where((e) => e.trim().isNotEmpty)
+            .toList() ??
+        [];
 
     return Padding(
       padding: const EdgeInsets.only(top: 8),
@@ -361,6 +365,35 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                   const SizedBox(height: 10),
+                  if (nutritionPoints.isNotEmpty) ...[
+                    ...nutritionPoints.take(2).map(
+                      (point) => Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '• ',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: isDark ? Colors.white70 : AppTheme.textSecondaryLight,
+                              ),
+                            ),
+                            Expanded(
+                              child: Text(
+                                point,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: isDark ? Colors.white70 : AppTheme.textSecondaryLight,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                  ],
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(

@@ -49,7 +49,7 @@ class ApiEndpoints {
   static const String mealSizes = '/api/common/lookup/meal-sizes';
   static const String standards = '/api/common/lookup/standards';
   static const String corporateLocations = '/api/common/corporate-locations';
-  static const String subscriptions = '/api/common/subscriptions';
+  static const String subscriptions = '/api/common/subscription-plan-days';
   static const String homepage = '/api/common/homepage';
   static const String states = '/api/common/lookup/states';
   static const String cities = '/api/common/lookup/cities';
@@ -88,4 +88,6 @@ class ApiEndpoints {
   static const String skipMeal = '/api/client/meals/skip';
   static const String mealSkips = '/api/client/meals/skips';
   static String cancelSkip(int skipId) => '/api/client/meals/skip/$skipId';
+  static const String clientMenuNutritionToday = '/api/client/menu-nutrition/today';
+  static const String clientMenuNutritionWeekly = '/api/client/menu-nutrition/weekly';
 }

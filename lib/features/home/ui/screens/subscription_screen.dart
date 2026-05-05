@@ -393,7 +393,10 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(plan.planName, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: isDark ? Colors.white : AppTheme.textPrimaryLight)),
-                          Text(plan.billingCycle, style: TextStyle(fontSize: 12, color: isDark ? Colors.white54 : AppTheme.textSecondaryLight)),
+                          Text(
+                            '${plan.billingCycle} • ${plan.durationDays} days',
+                            style: TextStyle(fontSize: 12, color: isDark ? Colors.white54 : AppTheme.textSecondaryLight),
+                          ),
                         ],
                       ),
                     ),
@@ -514,11 +517,15 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
               Text('₹${plan.price}', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: isPremium ? Colors.white : AppTheme.primaryColor)),
             ],
           ),
-          Text(plan.billingCycle, style: TextStyle(fontSize: 14, color: isPremium ? Colors.white70 : (Theme.of(context).brightness == Brightness.dark ? Colors.white54 : AppTheme.textSecondaryLight))),
+          Text(
+            '${plan.billingCycle} • ${plan.durationDays} days',
+            style: TextStyle(fontSize: 14, color: isPremium ? Colors.white70 : (Theme.of(context).brightness == Brightness.dark ? Colors.white54 : AppTheme.textSecondaryLight)),
+          ),
           const SizedBox(height: 20),
-          _buildFeatureRow('Family Meal Tracking', isPremium),
-          _buildFeatureRow('Priority Support', isPremium),
-          _buildFeatureRow('${plan.trialDays} Days Free Trial', isPremium),
+          ...(plan.features.isNotEmpty
+              ? plan.features.map((feature) => _buildFeatureRow(feature, isPremium))
+              : [_buildFeatureRow('${plan.durationDays} days meal plan', isPremium)]),
+          if (plan.trialDays > 0) _buildFeatureRow('${plan.trialDays} Days Free Trial', isPremium),
           const SizedBox(height: 24),
           ElevatedButton(
             onPressed: () => _showDateSelectionSheet(context, plan),
