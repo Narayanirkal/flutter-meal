@@ -2,6 +2,9 @@ class SubscriptionModel {
   final String id;
   final String planName;
   final String price;
+  final String priceWithSaturday;
+  final String priceWithoutSaturday;
+  final bool saturdayOptionEnabled;
   final String billingCycle;
   final int durationDays;
   final int trialDays;
@@ -14,6 +17,9 @@ class SubscriptionModel {
     required this.id,
     required this.planName,
     required this.price,
+    required this.priceWithSaturday,
+    required this.priceWithoutSaturday,
+    required this.saturdayOptionEnabled,
     required this.billingCycle,
     required this.durationDays,
     required this.trialDays,
@@ -27,7 +33,10 @@ class SubscriptionModel {
     return SubscriptionModel(
       id: json['id'],
       planName: json['plan_name'],
-      price: json['price'],
+      price: (json['price'] ?? '').toString(),
+      priceWithSaturday: (json['price_with_saturday'] ?? json['price'] ?? '0').toString(),
+      priceWithoutSaturday: (json['price_without_saturday'] ?? json['price'] ?? '0').toString(),
+      saturdayOptionEnabled: json['saturday_option_enabled'] == null ? true : json['saturday_option_enabled'] == true,
       billingCycle: json['billing_cycle'],
       durationDays: int.tryParse('${json['duration_days'] ?? 0}') ?? 0,
       trialDays: int.tryParse('${json['trial_days'] ?? 0}') ?? 0,

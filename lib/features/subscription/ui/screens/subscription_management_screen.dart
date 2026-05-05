@@ -127,6 +127,7 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
         final amountPaid = _safeString(sub['amount_paid'], '');
         final daysRemaining = sub['days_remaining'];
         final status = _safeString(sub['status'] ?? sub['subscription_status'], 'ACTIVE');
+        final includeSaturday = sub['include_saturday'] == null ? true : sub['include_saturday'] == true;
         
         final expiryStr = _safeString(sub['end_date'] ?? sub['expiry_date'], '');
         DateTime? expiry;
@@ -193,6 +194,15 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
                   ),
                 ),
               ],
+              const SizedBox(height: 4),
+              Text(
+                includeSaturday ? 'Variant: With Saturday' : 'Variant: Without Saturday',
+                style: TextStyle(
+                  color: isDark ? Colors.white54 : AppTheme.textSecondaryLight,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
               const Divider(height: 32),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -282,6 +292,7 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
           payment['payment_status'] ?? payment['order_status'] ?? payment['status'],
           'PENDING',
         ).toUpperCase();
+        final includeSaturday = payment['include_saturday'] == null ? true : payment['include_saturday'] == true;
         final isSuccess = pStatus == 'COMPLETED' || pStatus == 'SUCCESS';
 
         final dateStr = _safeString(payment['created_at'] ?? payment['payment_date'], '');
@@ -327,6 +338,14 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
                           fontSize: 12,
                         ),
                       ),
+                    Text(
+                      includeSaturday ? 'With Saturday' : 'Without Saturday',
+                      style: TextStyle(
+                        color: isDark ? Colors.white38 : AppTheme.textSecondaryLight,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                     Text(
                       DateFormat('dd MMM yyyy, hh:mm a').format(date),
                       style: TextStyle(
