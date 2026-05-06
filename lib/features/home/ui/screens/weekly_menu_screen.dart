@@ -179,32 +179,35 @@ class _WeeklyMenuScreenState extends State<WeeklyMenuScreen> {
                   overflow: TextOverflow.ellipsis,
                 ),
                 if (nutritionPoints.isNotEmpty) ...[
-                  const SizedBox(height: 8),
-                  ...nutritionPoints.take(3).map(
-                    (point) => Padding(
-                      padding: const EdgeInsets.only(bottom: 3),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '• ',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: isDark ? Colors.white70 : AppTheme.textSecondaryLight,
-                            ),
-                          ),
-                          Expanded(
-                            child: Text(
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: nutritionPoints.take(4).map((point) {
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryColor.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppTheme.primaryColor.withOpacity(0.2)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(CupertinoIcons.leaf_arrow_circlepath, size: 14, color: AppTheme.primaryColor),
+                            const SizedBox(width: 6),
+                            Text(
                               point,
                               style: TextStyle(
                                 fontSize: 12,
-                                color: isDark ? Colors.white70 : AppTheme.textSecondaryLight,
+                                fontWeight: FontWeight.w600,
+                                color: isDark ? Colors.white : AppTheme.textPrimaryLight,
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
                   ),
                 ],
               ],

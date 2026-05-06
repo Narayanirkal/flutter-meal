@@ -117,11 +117,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       _buildWelcomeSection(isDark),
                       // Today's meal section — only visible for subscribed users
                       _buildTodayMealCard(context, isDark),
-                      const SizedBox(height: 16),
                       _buildAlertsBanner(context, isDark),
-                      const SizedBox(height: 12),
                       _buildQuickActions(context, isDark),
-                      const SizedBox(height: 16),
                       _buildFeatureCards(context),
                       const SizedBox(height: 20),
                       _buildQuickStatus(context),
@@ -223,7 +220,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildWelcomeSection(bool isDark) {
     final name = _displayName.isNotEmpty ? _displayName : 'User';
     return Container(
-      padding: const EdgeInsets.all(24),
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: isDark 
@@ -234,29 +232,23 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       child: Row(
         children: [
+          Text(
+            'Welcome back, ',
+            style: TextStyle(
+              fontSize: 22,
+              color: isDark ? Colors.white : AppTheme.textSecondaryLight,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
           Expanded(
-            child: RichText(
+            child: Text(
+              name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              text: TextSpan(
-                children: [
-                  TextSpan(
-                    text: 'Welcome back, ',
-                    style: TextStyle(
-                      fontSize: 22,
-                      color: isDark ? Colors.white : AppTheme.textSecondaryLight,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  TextSpan(
-                    text: name,
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w900,
-                      color: isDark ? Colors.white : AppTheme.textPrimaryLight,
-                    ),
-                  ),
-                ],
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+                color: isDark ? Colors.white : AppTheme.textPrimaryLight,
               ),
             ),
           ),
@@ -287,7 +279,7 @@ class _HomeScreenState extends State<HomeScreen> {
         [];
 
     return Padding(
-      padding: const EdgeInsets.only(top: 8),
+      padding: const EdgeInsets.only(bottom: 16),
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
@@ -333,12 +325,12 @@ class _HomeScreenState extends State<HomeScreen> {
                   // Meal name + TODAY badge — compact single row
                   Row(
                     children: [
-                      Flexible(
+                      Expanded(
                         child: Text(
                           items,
                           style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
                             color: isDark ? Colors.white : AppTheme.textPrimaryLight,
                           ),
                           maxLines: 1,
@@ -366,33 +358,36 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 10),
                   if (nutritionPoints.isNotEmpty) ...[
-                    ...nutritionPoints.take(2).map(
-                      (point) => Padding(
-                        padding: const EdgeInsets.only(bottom: 4),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '• ',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: isDark ? Colors.white70 : AppTheme.textSecondaryLight,
-                              ),
-                            ),
-                            Expanded(
-                              child: Text(
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: nutritionPoints.take(4).map((point) {
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryColor.withOpacity(0.08),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppTheme.primaryColor.withOpacity(0.2)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(CupertinoIcons.leaf_arrow_circlepath, size: 14, color: AppTheme.primaryColor),
+                              const SizedBox(width: 6),
+                              Text(
                                 point,
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: isDark ? Colors.white70 : AppTheme.textSecondaryLight,
+                                  fontWeight: FontWeight.w600,
+                                  color: isDark ? Colors.white : AppTheme.textPrimaryLight,
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 12),
                   ],
                   SizedBox(
                     width: double.infinity,
@@ -481,7 +476,9 @@ class _HomeScreenState extends State<HomeScreen> {
     
     if (alerts.isEmpty) return const SizedBox.shrink();
 
-    return Column(
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
       children: alerts.map<Widget>((alert) {
         final message = alert['message']?.toString() ?? 'Subscription expiring soon';
         final remainingDays = alert['remaining_days'];
@@ -526,6 +523,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ).animate().fadeIn().slideX(begin: -0.1, end: 0);
       }).toList(),
+      ),
     );
   }
 
@@ -577,9 +575,12 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    return Row(
-      children: actionWidgets,
-    ).animate().fadeIn(delay: 200.ms);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Row(
+        children: actionWidgets,
+      ).animate().fadeIn(delay: 200.ms),
+    );
   }
 
   Widget _buildQuickActionTile(BuildContext context, String label, IconData icon, Color color, bool isDark, VoidCallback onTap, {int? badge}) {
