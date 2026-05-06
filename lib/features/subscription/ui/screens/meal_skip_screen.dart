@@ -140,15 +140,34 @@ class _MealSkipScreenState extends State<MealSkipScreen> {
                             ],
                           ),
                         )
-                      : ListView.builder(
-                          padding: const EdgeInsets.all(20),
-                          itemCount: mealProvider.skips.length,
-                          itemBuilder: (context, index) {
-                            final skip = mealProvider.skips[index];
-                            return _buildSkipCard(context, skip, isDark, mealProvider)
-                                .animate()
-                                .fadeIn(delay: (index * 80).ms)
-                                .slideX(begin: 0.1, end: 0);
+                      : Builder(
+                          builder: (context) {
+                            // Approved first, Requested second, Cancelled last
+                            final sortedSkips = List.from(mealProvider.skips)..sort((a, b) {
+                              final statusA = a['status']?.toString().toLowerCase() ?? '';
+                              final statusB = b['status']?.toString().toLowerCase() ?? '';
+                              
+                              int getPriority(String status) {
+                                if (status == 'approved') return 0;
+                                if (status == 'requested') return 1;
+                                if (status == 'cancelled') return 3;
+                                return 2; // Others in middle
+                              }
+                              
+                              return getPriority(statusA).compareTo(getPriority(statusB));
+                            });
+
+                            return ListView.builder(
+                              padding: const EdgeInsets.all(20),
+                              itemCount: sortedSkips.length,
+                              itemBuilder: (context, index) {
+                                final skip = sortedSkips[index];
+                                return _buildSkipCard(context, skip, isDark, mealProvider)
+                                    .animate()
+                                    .fadeIn(delay: (index * 80).ms)
+                                    .slideX(begin: 0.1, end: 0);
+                              },
+                            );
                           },
                         ),
                 ),

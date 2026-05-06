@@ -22,6 +22,7 @@ import 'package:meal_app/core/providers/cart_provider.dart';
 import 'package:meal_app/features/subscription/ui/screens/meal_skip_screen.dart';
 import 'package:meal_app/features/subscription/ui/screens/cart_screen.dart';
 import 'package:meal_app/core/widgets/image_preview_dialog.dart';
+import 'package:meal_app/features/subscription/ui/screens/subscription_management_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -329,11 +330,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: Text(
                           items,
                           style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w900,
                             color: isDark ? Colors.white : AppTheme.textPrimaryLight,
                           ),
-                          maxLines: 1,
+                          maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -358,34 +359,38 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 10),
                   if (nutritionPoints.isNotEmpty) ...[
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: nutritionPoints.take(4).map((point) {
-                        return Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: AppTheme.primaryColor.withOpacity(0.08),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppTheme.primaryColor.withOpacity(0.2)),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(CupertinoIcons.leaf_arrow_circlepath, size: 14, color: AppTheme.primaryColor),
-                              const SizedBox(width: 6),
-                              Text(
-                                point,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: isDark ? Colors.white : AppTheme.textPrimaryLight,
-                                ),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: nutritionPoints.map((point) {
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 8.0),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: AppTheme.primaryColor.withOpacity(0.08),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: AppTheme.primaryColor.withOpacity(0.2)),
                               ),
-                            ],
-                          ),
-                        );
-                      }).toList(),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(CupertinoIcons.leaf_arrow_circlepath, size: 14, color: AppTheme.primaryColor),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    point,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: isDark ? Colors.white : AppTheme.textPrimaryLight,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
                     ),
                     const SizedBox(height: 12),
                   ],
@@ -780,6 +785,31 @@ class _HomeScreenState extends State<HomeScreen> {
                 isActive ? 'Active' : 'Inactive',
                 isActive ? CupertinoIcons.checkmark_seal_fill : CupertinoIcons.xmark_seal_fill,
                 isActive ? Colors.green : Colors.red,
+                onTap: () {
+                  if (isActive) {
+                    Navigator.push(
+                      context,
+                      CupertinoPageRoute(builder: (_) => const SubscriptionManagementScreen()),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: const Text('You don\'t have an active plan. Subscribe and get meals!'),
+                        backgroundColor: AppTheme.primaryColor,
+                        action: SnackBarAction(
+                          label: 'SUBSCRIBE',
+                          textColor: Colors.white,
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              CupertinoPageRoute(builder: (_) => const SubscriptionScreen()),
+                            );
+                          },
+                        ),
+                      ),
+                    );
+                  }
+                },
               ),
             ),
           ],
