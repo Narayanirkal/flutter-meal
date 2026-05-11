@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:meal_app/core/providers/payment_provider.dart';
 import 'package:meal_app/core/providers/cart_provider.dart';
 import 'package:meal_app/core/providers/meal_provider.dart';
+import 'package:meal_app/core/providers/subscription_provider.dart';
 import 'package:meal_app/core/theme/app_theme.dart';
 import 'package:meal_app/core/widgets/apple_card.dart';
 import 'package:meal_app/core/utils/meal_date.dart';
@@ -90,6 +91,7 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
     final cart = context.read<CartProvider>();
     final meal = context.read<MealProvider>();
     final payment = context.read<PaymentProvider>();
+    final subscriptions = context.read<SubscriptionProvider>();
 
     final orderType = (_statusData?['orderType']?.toString() ?? widget.orderType ?? '').toLowerCase();
     final isCartOrder = orderType == 'cart';
@@ -117,6 +119,7 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
         meal.fetchMealStatus(),
         meal.fetchAlerts(),
         payment.fetchActiveSubscriptions(),
+        subscriptions.fetchSubscriptions(force: true),
       ]);
     } catch (_) {/* ignore — these are best-effort refreshes */}
   }
@@ -152,18 +155,18 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
         child: Padding(
           padding: const EdgeInsets.all(24.0),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Spacer(),
-              if (_isPolling)
-                _buildLoadingUI(isDark)
-              else if (status == 'SUCCESS')
-                _buildSuccessUI(isDark)
-              else if (status == 'FAILED')
-                _buildFailureUI(isDark)
-              else
-                _buildPendingUI(isDark),
-              const Spacer(),
+              Expanded(
+                child: Center(
+                  child: _isPolling
+                      ? _buildLoadingUI(isDark)
+                      : (status == 'SUCCESS')
+                          ? _buildSuccessUI(isDark)
+                          : (status == 'FAILED')
+                              ? _buildFailureUI(isDark)
+                              : _buildPendingUI(isDark),
+                ),
+              ),
               if (!_isPolling)
                 ElevatedButton(
                   onPressed: () => Navigator.pop(context),
