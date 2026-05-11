@@ -40,47 +40,39 @@ class _HomeScreenState extends State<HomeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadAllData();
       _fetchUserName();
+      _loadDeferredData();
     });
+  }
+
+  Future<void> _loadDeferredData() async {
+    if (!mounted) return;
+    await Future.wait([
+      context.read<MealProvider>().fetchAlerts(),
+      context.read<MealProvider>().fetchMealStatus(),
+      context.read<MealProvider>().fetchSubscriptionStatus(),
+    ]);
   }
 
   Future<void> _loadAllData() async {
     if (!mounted) return;
     final futures = <Future>[];
-    futures.add(context.read<ChildrenProvider>().fetchChildren());
+    // Lazy startup: load only essentials for Home first paint.
     futures.add(context.read<HomepageProvider>().fetchHomepageEntries());
     futures.add(context.read<MenuProvider>().fetchTodayMenu());
-    futures.add(context.read<MealProvider>().fetchAlerts());
-    futures.add(context.read<MealProvider>().fetchMealStatus());
-    futures.add(context.read<MealProvider>().fetchSubscriptionStatus());
     futures.add(context.read<CartProvider>().fetchCart());
+    futures.add(context.read<AuthProvider>().refreshMeProfile(silent: true));
     await Future.wait(futures);
   }
 
   /// Fetch the username from /api/client/auth/me endpoint
   Future<void> _fetchUserName() async {
     if (!mounted) return;
-    try {
-      final profileProvider = context.read<ProfileProvider>();
-      await profileProvider.fetchProfiles(force: true);
-      final profileStatus = profileProvider.profileStatus;
-      if (profileStatus != null && mounted) {
-        final user = profileStatus['user'];
-        if (user != null && user['username'] != null) {
-          setState(() {
-            _displayName = user['username'].toString();
-          });
-          return;
-        }
-      }
-    } catch (_) {}
-    
-    // Fallback to auth provider username
-    if (mounted) {
-      final authProvider = context.read<AuthProvider>();
-      setState(() {
-        _displayName = authProvider.username.isNotEmpty ? authProvider.username : 'User';
-      });
-    }
+    final authProvider = context.read<AuthProvider>();
+    await authProvider.refreshMeProfile(silent: true);
+    if (!mounted) return;
+    setState(() {
+      _displayName = authProvider.username.isNotEmpty ? authProvider.username : 'User';
+    });
   }
 
   @override
@@ -137,6 +129,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildAppBar(BuildContext context) {
+    final itemCount = context.watch<CartProvider>().itemCount;
     return SliverAppBar(
       floating: true,
       backgroundColor: Colors.transparent,
@@ -151,10 +144,9 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
       actions: [
-        _buildSubscribeButton(context),
+        if (itemCount > 0) _buildCartActionButton(context),
+        if (itemCount == 0) _buildSubscribeButton(context),
         const SizedBox(width: 8),
-        _buildCartActionButton(context),
-        const SizedBox(width: 4),
         IconButton(
           icon: const Icon(CupertinoIcons.settings_solid, size: 24),
           onPressed: () {
@@ -262,8 +254,16 @@ class _HomeScreenState extends State<HomeScreen> {
     .scale(duration: 2000.ms, begin: const Offset(1, 1), end: const Offset(1.02, 1.02), curve: Curves.easeInOut);
   }
 
+  String _truncateName(String value) {
+    final name = value.trim();
+    if (name.length <= 10) return name;
+    return '${name.substring(0, 10)}...';
+  }
+
   Widget _buildWelcomeSection(bool isDark) {
-    final name = _displayName.isNotEmpty ? _displayName : 'User';
+    final textTheme = Theme.of(context).textTheme;
+    final colorScheme = Theme.of(context).colorScheme;
+    final name = _displayName.isNotEmpty ? _truncateName(_displayName) : 'User';
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -278,11 +278,11 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Row(
         children: [
           Text(
-            'Welcome back, ',
-            style: TextStyle(
-              fontSize: 22,
-              color: isDark ? Colors.white : AppTheme.textSecondaryLight,
-              fontWeight: FontWeight.w500,
+            'Welcome Back ',
+            style: textTheme.titleMedium?.copyWith(
+              fontSize: 18,
+              color: colorScheme.onSurface.withOpacity(0.8),
+              fontWeight: FontWeight.w600,
             ),
           ),
           Expanded(
@@ -290,10 +290,10 @@ class _HomeScreenState extends State<HomeScreen> {
               name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 22,
+              style: textTheme.titleMedium?.copyWith(
+                fontSize: 18,
                 fontWeight: FontWeight.w900,
-                color: isDark ? Colors.white : AppTheme.textPrimaryLight,
+                color: colorScheme.onSurface,
               ),
             ),
           ),
@@ -702,22 +702,31 @@ class _HomeScreenState extends State<HomeScreen> {
   void _handleCardTap(BuildContext context, HomepageEntry entry) {
     switch (entry.entityId) {
       case 'ENT-1':
-        Navigator.push(
-          context,
-          CupertinoPageRoute(builder: (_) => const ChildrenManagementScreen()),
-        );
+        context.read<ChildrenProvider>().fetchChildren().whenComplete(() {
+          if (!mounted) return;
+          Navigator.push(
+            context,
+            CupertinoPageRoute(builder: (_) => const ChildrenManagementScreen()),
+          );
+        });
         return;
       case 'ENT-2':
-        Navigator.push(
-          context,
-          CupertinoPageRoute(builder: (_) => const TeacherProfileScreen()),
-        );
+        context.read<ProfileProvider>().fetchProfiles().whenComplete(() {
+          if (!mounted) return;
+          Navigator.push(
+            context,
+            CupertinoPageRoute(builder: (_) => const TeacherProfileScreen()),
+          );
+        });
         return;
       case 'ENT-3':
-        Navigator.push(
-          context,
-          CupertinoPageRoute(builder: (_) => const ProfessionalProfileScreen()),
-        );
+        context.read<ProfileProvider>().fetchProfiles().whenComplete(() {
+          if (!mounted) return;
+          Navigator.push(
+            context,
+            CupertinoPageRoute(builder: (_) => const ProfessionalProfileScreen()),
+          );
+        });
         return;
       default:
         ScaffoldMessenger.of(context).showSnackBar(
@@ -751,15 +760,15 @@ class _HomeScreenState extends State<HomeScreen> {
                 Text(
                   title,
                   style: const TextStyle(
-                    fontSize: 18,
+                    fontSize: 11,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   subtitle,
-                  style: TextStyle(
-                    fontSize: 13,
+                    style: TextStyle(
+                      fontSize: 12,
                     color: isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondaryLight,
                   ),
                 ),

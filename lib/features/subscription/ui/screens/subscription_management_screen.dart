@@ -412,12 +412,12 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
   /// Compact label/value row used inside the active-plan card.
   Widget _buildMetaRow(String label, String value, bool isDark) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 130,
+            width: 108,
             child: Text(
               label,
               style: TextStyle(
@@ -430,12 +430,13 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
           Expanded(
             child: Text(
               value,
+              textAlign: TextAlign.right,
               style: TextStyle(
                 color: isDark ? Colors.white : AppTheme.textPrimaryLight,
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
               ),
-              overflow: TextOverflow.ellipsis,
+              softWrap: true,
             ),
           ),
         ],

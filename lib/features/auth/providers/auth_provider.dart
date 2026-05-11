@@ -12,6 +12,7 @@ class AuthProvider with ChangeNotifier {
   String _errorMessage = '';
   String _phoneNumber = '';
   String _username = '';
+  bool _isProfileLoading = false;
 
   AuthProvider(this._authRepository) {
     _checkAuthStatus();
@@ -22,6 +23,7 @@ class AuthProvider with ChangeNotifier {
   String get errorMessage => _errorMessage;
   String get phoneNumber => _phoneNumber;
   String get username => _username;
+  bool get isProfileLoading => _isProfileLoading;
 
   void setAuthMode(AuthMode mode) {
     _authMode = mode;
@@ -36,6 +38,7 @@ class AuthProvider with ChangeNotifier {
     if (isAuthenticated) {
       _phoneNumber = await _authRepository.getPhoneNumber() ?? '';
       _username = await _authRepository.getUsername() ?? '';
+      await refreshMeProfile(silent: true);
       _state = AuthState.authenticated;
     } else {
       _state = AuthState.unauthenticated;
@@ -165,5 +168,21 @@ class AuthProvider with ChangeNotifier {
     _username = '';
     _authMode = AuthMode.login;
     notifyListeners();
+  }
+
+  Future<void> refreshMeProfile({bool silent = false}) async {
+    if (!silent) {
+      _isProfileLoading = true;
+      notifyListeners();
+    }
+    try {
+      final liveUsername = await _authRepository.fetchCurrentUsername();
+      if (liveUsername != null && liveUsername.trim().isNotEmpty) {
+        _username = liveUsername.trim();
+      }
+    } finally {
+      _isProfileLoading = false;
+      notifyListeners();
+    }
   }
 }
