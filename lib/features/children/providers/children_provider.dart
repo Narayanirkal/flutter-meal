@@ -2,31 +2,66 @@ import 'package:flutter/material.dart';
 import 'package:meal_app/core/network/api_endpoints.dart';
 import 'package:meal_app/core/services/network_status_service.dart';
 import 'package:meal_app/core/services/offline_queue.dart';
+import 'package:meal_app/core/storage/cache_store.dart';
 import 'package:meal_app/features/children/data/models/child_model.dart';
 import 'package:meal_app/features/children/data/repositories/children_repository.dart';
 
 class ChildrenProvider with ChangeNotifier {
   final ChildrenRepository _repository;
 
-  ChildrenProvider(this._repository);
+  ChildrenProvider(this._repository) {
+    _loadFromCache();
+  }
 
   List<ChildModel> _children = [];
   bool _isLoading = false;
   /// Stores the raw error object (DioException or String) so ErrorHandler
   /// can extract the proper server message.
   dynamic _error;
+  DateTime? _lastFetchedAt;
+  Future<void>? _inflightRequest;
 
   List<ChildModel> get children => _children;
   bool get isLoading => _isLoading;
   dynamic get error => _error;
 
-  Future<void> fetchChildren() async {
-    _isLoading = true;
-    _error = null;
-    notifyListeners();
+  Future<void> _loadFromCache() async {
+    try {
+      final cached = await CacheStore.getJsonList('children_list');
+      if (cached.isNotEmpty) {
+        _children = cached.map(ChildModel.fromJson).toList();
+        notifyListeners();
+      }
+    } catch (_) {
+      // ignore cache issues
+    }
+  }
+
+  Future<void> fetchChildren({bool force = false, bool silent = false}) async {
+    final isFresh = _lastFetchedAt != null &&
+        DateTime.now().difference(_lastFetchedAt!).inMinutes < 3;
+    if (!force && _children.isNotEmpty && isFresh) return;
+    if (_inflightRequest != null) return _inflightRequest;
+
+    final request = _doFetch(silent: silent);
+    _inflightRequest = request;
+    try {
+      await request;
+    } finally {
+      _inflightRequest = null;
+    }
+  }
+
+  Future<void> _doFetch({bool silent = false}) async {
+    if (!silent) {
+      if (_children.isEmpty) _isLoading = true;
+      _error = null;
+      notifyListeners();
+    }
 
     try {
       _children = await _repository.getChildren();
+      _lastFetchedAt = DateTime.now();
     } catch (e) {
       _error = e;
     } finally {

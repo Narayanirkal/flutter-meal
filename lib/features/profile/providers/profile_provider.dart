@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:meal_app/core/network/api_endpoints.dart';
 import 'package:meal_app/core/services/network_status_service.dart';
 import 'package:meal_app/core/services/offline_queue.dart';
+import 'package:meal_app/core/storage/cache_store.dart';
 import 'package:meal_app/features/profile/data/models/profile_models.dart';
 import 'package:meal_app/features/profile/data/repositories/profile_repository.dart';
 import 'package:meal_app/core/utils/error_handler.dart';
@@ -9,7 +10,9 @@ import 'package:meal_app/core/utils/error_handler.dart';
 class ProfileProvider with ChangeNotifier {
   final ProfileRepository _repository;
 
-  ProfileProvider(this._repository);
+  ProfileProvider(this._repository) {
+    _loadFromCache();
+  }
 
   TeacherProfileModel? _teacherProfile;
   ProfessionalProfileModel? _professionalProfile;
@@ -19,6 +22,8 @@ class ProfileProvider with ChangeNotifier {
   /// Stores the raw error object (DioException or String) so ErrorHandler
   /// can extract the proper server message instead of a raw toString().
   dynamic _error;
+  DateTime? _lastFetchedAt;
+  Future<void>? _inflightRequest;
 
   TeacherProfileModel? get teacherProfile => _teacherProfile;
   ProfessionalProfileModel? get professionalProfile => _professionalProfile;
@@ -26,13 +31,48 @@ class ProfileProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   dynamic get error => _error;
 
-  Future<void> fetchProfiles({bool force = false}) async {
-    if (!force && _teacherProfile != null && _professionalProfile != null) return;
-    if (_isLoading) return;
-    
-    _isLoading = true;
-    _error = null;
-    notifyListeners();
+  Future<void> _loadFromCache() async {
+    try {
+      final teacher = await CacheStore.getJson('teacher_profile');
+      if (teacher is Map) {
+        _teacherProfile = TeacherProfileModel.fromJson(Map<String, dynamic>.from(teacher));
+      }
+      final professional = await CacheStore.getJson('professional_profile');
+      if (professional is Map) {
+        _professionalProfile = ProfessionalProfileModel.fromJson(
+          Map<String, dynamic>.from(professional),
+        );
+      }
+      notifyListeners();
+    } catch (_) {
+      // ignore cache read errors
+    }
+  }
+
+  Future<void> fetchProfiles({bool force = false, bool silent = false}) async {
+    final hasAnyProfile = _teacherProfile != null || _professionalProfile != null;
+    final isFresh = _lastFetchedAt != null &&
+        DateTime.now().difference(_lastFetchedAt!).inMinutes < 3;
+    if (!force && hasAnyProfile && isFresh) return;
+    if (_inflightRequest != null) return _inflightRequest;
+
+    final request = _doFetch(silent: silent);
+    _inflightRequest = request;
+    try {
+      await request;
+    } finally {
+      _inflightRequest = null;
+    }
+  }
+
+  Future<void> _doFetch({bool silent = false}) async {
+    if (!silent) {
+      if (_teacherProfile == null && _professionalProfile == null) {
+        _isLoading = true;
+      }
+      _error = null;
+      notifyListeners();
+    }
 
     try {
       final results = await Future.wait([
@@ -44,6 +84,7 @@ class ProfileProvider with ChangeNotifier {
       _teacherProfile = results[0] as TeacherProfileModel?;
       _professionalProfile = results[1] as ProfessionalProfileModel?;
       _profileStatus = results[2] as Map<String, dynamic>?;
+      _lastFetchedAt = DateTime.now();
     } catch (e) {
       _error = e;
     } finally {

@@ -13,17 +13,17 @@ class HomepageRepository {
     const cacheKey = 'homepage_entries';
     try {
       final response = await _dioClient.dio.get(ApiEndpoints.homepage);
-      
+
       if (response.statusCode == 200 && response.data['success'] == true) {
         final List<dynamic> data = response.data['data'];
-        await CacheStore.setJson(cacheKey, data);
+        await CacheStore.setJson(cacheKey, data, ttl: const Duration(hours: 24));
         return data.map((json) => HomepageEntry.fromJson(json)).toList();
       }
       return [];
     } on DioException catch (e) {
-      final cached = await CacheStore.getJson(cacheKey);
-      if (cached is List) {
-        return cached.whereType<Map>().map((j) => HomepageEntry.fromJson(Map<String, dynamic>.from(j))).toList();
+      final cached = await CacheStore.getJsonList(cacheKey);
+      if (cached.isNotEmpty) {
+        return cached.map((j) => HomepageEntry.fromJson(j)).toList();
       }
       throw _handleError(e);
     }

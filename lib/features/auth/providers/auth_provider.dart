@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:meal_app/core/services/network_status_service.dart';
 import 'package:meal_app/features/auth/data/repositories/auth_repository.dart';
 
 enum AuthState { initial, loading, authenticated, unauthenticated, error }
@@ -13,6 +16,7 @@ class AuthProvider with ChangeNotifier {
   String _phoneNumber = '';
   String _username = '';
   bool _isProfileLoading = false;
+  bool _pendingDashboardRefresh = false;
 
   AuthProvider(this._authRepository) {
     _checkAuthStatus();
@@ -38,12 +42,26 @@ class AuthProvider with ChangeNotifier {
     if (isAuthenticated) {
       _phoneNumber = await _authRepository.getPhoneNumber() ?? '';
       _username = await _authRepository.getUsername() ?? '';
-      await refreshMeProfile(silent: true);
       _state = AuthState.authenticated;
+      notifyListeners();
+      // Offline-first: never block cold start on /auth/me — paint home from
+      // cache immediately, then revalidate quietly when reachable.
+      unawaited(refreshMeProfile(silent: true));
     } else {
       _state = AuthState.unauthenticated;
+      notifyListeners();
     }
-    notifyListeners();
+  }
+
+  /// After OTP login/register, home should force-refresh dashboard APIs once.
+  void markPendingDashboardRefresh() {
+    _pendingDashboardRefresh = true;
+  }
+
+  bool consumePendingDashboardRefresh() {
+    if (!_pendingDashboardRefresh) return false;
+    _pendingDashboardRefresh = false;
+    return true;
   }
 
   // ─── LOGIN FLOW ────────────────────────────────────────────────────────────
@@ -82,7 +100,8 @@ class AuthProvider with ChangeNotifier {
     try {
       final success = await _authRepository.loginVerifyOtp(_phoneNumber, code);
       if (success) {
-        _username = await _authRepository.getUsername() ?? '';
+        markPendingDashboardRefresh();
+        await refreshMeProfile(silent: true, forceNetwork: true);
         _state = AuthState.authenticated;
         notifyListeners();
         return true;
@@ -137,7 +156,8 @@ class AuthProvider with ChangeNotifier {
     try {
       final success = await _authRepository.registerVerifyOtp(_phoneNumber, _username, code);
       if (success) {
-        _username = await _authRepository.getUsername() ?? _username;
+        markPendingDashboardRefresh();
+        await refreshMeProfile(silent: true, forceNetwork: true);
         _state = AuthState.authenticated;
         notifyListeners();
         return true;
@@ -170,12 +190,19 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> refreshMeProfile({bool silent = false}) async {
+  Future<void> refreshMeProfile({bool silent = false, bool forceNetwork = false}) async {
     if (!silent) {
       _isProfileLoading = true;
       notifyListeners();
     }
     try {
+      if (!forceNetwork && !NetworkStatusService.instance.isOnline) {
+        final cached = await _authRepository.getUsername();
+        if (cached != null && cached.trim().isNotEmpty) {
+          _username = cached.trim();
+        }
+        return;
+      }
       final liveUsername = await _authRepository.fetchCurrentUsername();
       if (liveUsername != null && liveUsername.trim().isNotEmpty) {
         _username = liveUsername.trim();

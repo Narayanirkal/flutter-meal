@@ -165,10 +165,10 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
     switch (authState) {
       case AuthState.initial:
-        // Show a blank screen matching the native splash background color
-        return const Scaffold(
-          backgroundColor: Color(0xFFF8FAFC),
-          body: SizedBox.shrink(),
+        // Lightweight shell — never block on network; theme follows system.
+        return Scaffold(
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          body: const SizedBox.shrink(),
         );
       case AuthState.authenticated:
         return const HomeScreen();
