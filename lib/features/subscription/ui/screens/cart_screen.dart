@@ -208,11 +208,18 @@ class _CartScreenState extends State<CartScreen> {
           TextButton(
             onPressed: cartProvider.isLoading ? null : () => _changeStartDate(context, item, cartProvider),
             style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               minimumSize: const Size(72, 0),
               tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              alignment: Alignment.centerRight,
             ),
-            child: const Text('Change', style: TextStyle(fontWeight: FontWeight.w700)),
+            child: const Text(
+              'Change',
+              style: TextStyle(
+                fontWeight: FontWeight.w900,
+                color: AppTheme.primaryColor,
+              ),
+            ),
           ),
         ],
       ),
@@ -244,12 +251,23 @@ class _CartScreenState extends State<CartScreen> {
 
   Widget _buildDetailRow(String label, String value, bool isDark) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: TextStyle(fontSize: 13, color: isDark ? Colors.white38 : AppTheme.textSecondaryLight)),
-          Flexible(child: Text(value, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: isDark ? Colors.white : AppTheme.textPrimaryLight), overflow: TextOverflow.ellipsis)),
+          SizedBox(
+            width: 110,
+            child: Text(label, style: TextStyle(fontSize: 13, color: isDark ? Colors.white54 : AppTheme.textSecondaryLight)),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: isDark ? Colors.white : AppTheme.textPrimaryLight),
+              softWrap: true,
+            ),
+          ),
         ],
       ),
     );

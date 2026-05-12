@@ -1,3 +1,4 @@
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:meal_app/core/network/api_endpoints.dart';
@@ -42,6 +43,13 @@ class DioClient {
         return handler.next(options);
       },
       onError: (DioException e, handler) async {
+        if (_isTransientNetworkError(e)) {
+          final retried = await _retryRequest(e.requestOptions);
+          if (retried != null) {
+            return handler.resolve(retried);
+          }
+        }
+
         if (e.response?.statusCode == 401) {
           // Don't try to refresh on the refresh endpoint itself — would loop forever.
           final isRefreshCall = e.requestOptions.path.contains(ApiEndpoints.refresh);
@@ -75,6 +83,37 @@ class DioClient {
   }
 
   Future<String?>? _refreshFuture;
+
+  bool _isTransientNetworkError(DioException e) {
+    return e.type == DioExceptionType.connectionError ||
+        e.type == DioExceptionType.connectionTimeout ||
+        e.type == DioExceptionType.sendTimeout ||
+        e.type == DioExceptionType.receiveTimeout;
+  }
+
+  Future<Response<dynamic>?> _retryRequest(RequestOptions requestOptions) async {
+    try {
+      final results = await Connectivity().checkConnectivity();
+      if (results.isNotEmpty && results.every((r) => r == ConnectivityResult.none)) {
+        return null;
+      }
+    } catch (_) {/* fall through */}
+
+    const maxRetries = 1;
+    var attempt = 0;
+    while (attempt < maxRetries) {
+      attempt += 1;
+      await Future.delayed(Duration(milliseconds: 400 * attempt));
+      try {
+        return await _dio.fetch(requestOptions);
+      } catch (e) {
+        if (e is DioException && !_isTransientNetworkError(e)) {
+          return null;
+        }
+      }
+    }
+    return null;
+  }
 
   Future<String?> _refreshToken() async {
     if (_refreshFuture != null) {

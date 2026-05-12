@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:meal_app/core/storage/local_cache.dart';
+import 'package:meal_app/core/network/api_endpoints.dart';
+import 'package:meal_app/core/services/network_status_service.dart';
+import 'package:meal_app/core/services/offline_queue.dart';
+import 'package:meal_app/core/storage/cache_store.dart';
 import 'package:meal_app/features/profile/data/models/profile_models.dart';
 import 'package:meal_app/features/profile/data/repositories/profile_repository.dart';
 
@@ -8,7 +11,9 @@ class ProfileProvider with ChangeNotifier {
   final LocalCache _cache;
   static const _cacheKey = 'cache_profiles_v1';
 
-  ProfileProvider(this._repository, this._cache);
+  ProfileProvider(this._repository) {
+    _loadFromCache();
+  }
 
   TeacherProfileModel? _teacherProfile;
   ProfessionalProfileModel? _professionalProfile;
@@ -18,6 +23,8 @@ class ProfileProvider with ChangeNotifier {
   /// Stores the raw error object (DioException or String) so ErrorHandler
   /// can extract the proper server message instead of a raw toString().
   dynamic _error;
+  DateTime? _lastFetchedAt;
+  Future<void>? _inflightRequest;
 
   TeacherProfileModel? get teacherProfile => _teacherProfile;
   ProfessionalProfileModel? get professionalProfile => _professionalProfile;
@@ -25,32 +32,48 @@ class ProfileProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   dynamic get error => _error;
 
-  Future<void> fetchProfiles({bool force = false}) async {
-    if (!force && _teacherProfile != null && _professionalProfile != null) return;
-    if (_isLoading) return;
+  Future<void> _loadFromCache() async {
+    try {
+      final teacher = await CacheStore.getJson('teacher_profile');
+      if (teacher is Map) {
+        _teacherProfile = TeacherProfileModel.fromJson(Map<String, dynamic>.from(teacher));
+      }
+      final professional = await CacheStore.getJson('professional_profile');
+      if (professional is Map) {
+        _professionalProfile = ProfessionalProfileModel.fromJson(
+          Map<String, dynamic>.from(professional),
+        );
+      }
+      notifyListeners();
+    } catch (_) {
+      // ignore cache read errors
+    }
+  }
 
-    bool hasCachedProfile = false;
-    final cached = await _cache.loadJson(_cacheKey);
-    if (cached != null &&
-        (_teacherProfile == null || _professionalProfile == null || _profileStatus == null)) {
-      final teacher = cached['teacher_profile'];
-      final professional = cached['professional_profile'];
-      if (_teacherProfile == null && teacher is Map<String, dynamic>) {
-        _teacherProfile = TeacherProfileModel.fromJson(teacher);
+  Future<void> fetchProfiles({bool force = false, bool silent = false}) async {
+    final hasAnyProfile = _teacherProfile != null || _professionalProfile != null;
+    final isFresh = _lastFetchedAt != null &&
+        DateTime.now().difference(_lastFetchedAt!).inMinutes < 3;
+    if (!force && hasAnyProfile && isFresh) return;
+    if (_inflightRequest != null) return _inflightRequest;
+
+    final request = _doFetch(silent: silent);
+    _inflightRequest = request;
+    try {
+      await request;
+    } finally {
+      _inflightRequest = null;
+    }
+  }
+
+  Future<void> _doFetch({bool silent = false}) async {
+    if (!silent) {
+      if (_teacherProfile == null && _professionalProfile == null) {
+        _isLoading = true;
       }
-      if (_professionalProfile == null && professional is Map<String, dynamic>) {
-        _professionalProfile = ProfessionalProfileModel.fromJson(professional);
-      }
-      if (_profileStatus == null && cached['profile_status'] is Map<String, dynamic>) {
-        _profileStatus = Map<String, dynamic>.from(cached['profile_status'] as Map);
-      }
-      hasCachedProfile = _teacherProfile != null || _professionalProfile != null;
+      _error = null;
       notifyListeners();
     }
-    
-    _isLoading = true;
-    _error = null;
-    notifyListeners();
 
     try {
       final results = await Future.wait([
@@ -59,49 +82,10 @@ class ProfileProvider with ChangeNotifier {
         _repository.getProfileStatus(),
       ]);
 
-      final fetchedTeacher = results[0] as TeacherProfileModel?;
-      final fetchedProfessional = results[1] as ProfessionalProfileModel?;
-      final fetchedStatus = results[2] as Map<String, dynamic>?;
-
-      // Repositories return `null` both for "not found" and transient/offline failures.
-      // Preserve already-hydrated cached profiles when fetch returns null.
-      if (fetchedTeacher != null || _teacherProfile == null) {
-        _teacherProfile = fetchedTeacher;
-      }
-      if (fetchedProfessional != null || _professionalProfile == null) {
-        _professionalProfile = fetchedProfessional;
-      }
-      if (fetchedStatus != null || _profileStatus == null) {
-        _profileStatus = fetchedStatus;
-      }
-
-      final existingCache = await _cache.loadJson(_cacheKey);
-      final existingTeacher = existingCache != null && existingCache['teacher_profile'] is Map
-          ? Map<String, dynamic>.from(existingCache['teacher_profile'] as Map)
-          : null;
-      final existingProfessional = existingCache != null && existingCache['professional_profile'] is Map
-          ? Map<String, dynamic>.from(existingCache['professional_profile'] as Map)
-          : null;
-      final existingStatus = existingCache != null && existingCache['profile_status'] is Map
-          ? Map<String, dynamic>.from(existingCache['profile_status'] as Map)
-          : null;
-      final teacherForCache = _teacherProfile == null
-          ? null
-          : {
-              ..._teacherProfile!.toJson(),
-              'id': _teacherProfile!.id,
-            };
-      final professionalForCache = _professionalProfile == null
-          ? null
-          : {
-              ..._professionalProfile!.toJson(),
-              'id': _professionalProfile!.id,
-            };
-      await _cache.saveJson(_cacheKey, {
-        'teacher_profile': teacherForCache ?? existingTeacher,
-        'professional_profile': professionalForCache ?? existingProfessional,
-        'profile_status': _profileStatus ?? existingStatus,
-      });
+      _teacherProfile = results[0] as TeacherProfileModel?;
+      _professionalProfile = results[1] as ProfessionalProfileModel?;
+      _profileStatus = results[2] as Map<String, dynamic>?;
+      _lastFetchedAt = DateTime.now();
     } catch (e) {
       // Keep using cached profile silently in offline mode.
       _error = hasCachedProfile ? null : e;
@@ -112,6 +96,27 @@ class ProfileProvider with ChangeNotifier {
   }
 
   Future<bool> saveTeacherProfile(TeacherProfileModel profile) async {
+    if (!NetworkStatusService.instance.isOnline) {
+      await OfflineQueue.enqueue(
+        method: _teacherProfile != null ? 'PUT' : 'POST',
+        path: ApiEndpoints.teacherProfile,
+        data: profile.toJson(),
+      );
+      _teacherProfile = TeacherProfileModel(
+        id: _teacherProfile?.id ?? 'local-${DateTime.now().microsecondsSinceEpoch}',
+        name: profile.name,
+        schoolCollegeName: profile.schoolCollegeName,
+        city: profile.city,
+        state: profile.state,
+        location: profile.location,
+        status: profile.status,
+        mealSizeId: profile.mealSizeId,
+        mealTime: profile.mealTime,
+      );
+      notifyListeners();
+      return true;
+    }
+
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -136,6 +141,13 @@ class ProfileProvider with ChangeNotifier {
   }
 
   Future<bool> deleteTeacherProfile() async {
+    if (!NetworkStatusService.instance.isOnline) {
+      await OfflineQueue.enqueue(method: 'DELETE', path: ApiEndpoints.teacherProfile);
+      _teacherProfile = null;
+      notifyListeners();
+      return true;
+    }
+
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -158,6 +170,27 @@ class ProfileProvider with ChangeNotifier {
   }
 
   Future<bool> saveProfessionalProfile(ProfessionalProfileModel profile) async {
+    if (!NetworkStatusService.instance.isOnline) {
+      await OfflineQueue.enqueue(
+        method: _professionalProfile != null ? 'PUT' : 'POST',
+        path: ApiEndpoints.professionalProfile,
+        data: profile.toJson(),
+      );
+      _professionalProfile = ProfessionalProfileModel(
+        id: _professionalProfile?.id ?? 'local-${DateTime.now().microsecondsSinceEpoch}',
+        name: profile.name,
+        companyName: profile.companyName,
+        corporateLocationId: profile.corporateLocationId,
+        city: profile.city,
+        state: profile.state,
+        lunchTime: profile.lunchTime,
+        corporateLocationName: profile.corporateLocationName,
+        mealSizeId: profile.mealSizeId,
+      );
+      notifyListeners();
+      return true;
+    }
+
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -182,6 +215,13 @@ class ProfileProvider with ChangeNotifier {
   }
 
   Future<bool> deleteProfessionalProfile() async {
+    if (!NetworkStatusService.instance.isOnline) {
+      await OfflineQueue.enqueue(method: 'DELETE', path: ApiEndpoints.professionalProfile);
+      _professionalProfile = null;
+      notifyListeners();
+      return true;
+    }
+
     _isLoading = true;
     _error = null;
     notifyListeners();
