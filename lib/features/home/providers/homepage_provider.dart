@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:meal_app/core/storage/cache_store.dart';
+import 'package:meal_app/core/storage/local_cache.dart';
+import 'package:meal_app/core/utils/error_handler.dart';
 import 'package:meal_app/features/home/data/models/homepage_entry.dart';
 import 'package:meal_app/features/home/data/repositories/homepage_repository.dart';
 
@@ -15,7 +17,7 @@ class HomepageProvider with ChangeNotifier {
   Future<void>? _inflightRequest;
   bool _hasInitiallyLoaded = false;
 
-  HomepageProvider(this._repository) {
+  HomepageProvider(this._repository, this._cache) {
     _loadFromCache();
   }
 
@@ -70,7 +72,7 @@ class HomepageProvider with ChangeNotifier {
       // Keep cached data on error; don't clear it. Avoid noisy errors when offline
       // but we still have a usable homepage from disk.
       if (_entries.isEmpty) {
-        _errorMessage = e.toString();
+        _errorMessage = ErrorHandler.getErrorMessage(e);
       } else {
         _errorMessage = '';
       }

@@ -37,9 +37,9 @@ class _WeeklyMenuScreenState extends State<WeeklyMenuScreen> {
           onPressed: () => Navigator.pop(context),
         ),
       ),
-      body: menuProvider.isLoading
+      body: menuProvider.isLoading && menuProvider.weeklyMenu.isEmpty
           ? const Center(child: CupertinoActivityIndicator())
-          : menuProvider.error != null
+          : menuProvider.error != null && menuProvider.weeklyMenu.isEmpty
               ? Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,

@@ -3,6 +3,7 @@ import 'package:meal_app/core/network/payment_repository.dart';
 import 'package:meal_app/core/network/api_endpoints.dart';
 import 'package:meal_app/core/services/phonepe_service.dart';
 import 'package:meal_app/core/storage/local_cache.dart';
+import 'package:meal_app/core/utils/error_handler.dart';
 
 /// Payment status returned after the SDK transaction completes.
 enum PaymentStatus { none, processing, success, failure, interrupted }
@@ -54,7 +55,7 @@ class PaymentProvider with ChangeNotifier {
       await _cache.saveJson(_historyCacheKey, {'items': _paymentHistory});
     } catch (e) {
       // Keep showing cached history in offline mode; only show hard error if nothing cached.
-      _error = hasCachedData ? null : e.toString();
+      _error = hasCachedData ? null : ErrorHandler.getErrorMessage(e);
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -82,7 +83,7 @@ class PaymentProvider with ChangeNotifier {
       await _cache.saveJson(_activeCacheKey, {'items': _activeSubscriptions});
     } catch (e) {
       // Keep showing cached plans in offline mode; only show hard error if nothing cached.
-      _error = hasCachedData ? null : e.toString();
+      _error = hasCachedData ? null : ErrorHandler.getErrorMessage(e);
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -156,7 +157,7 @@ class PaymentProvider with ChangeNotifier {
         'sdkError': sdkResult['error'],
       };
     } catch (e) {
-      _error = e.toString().replaceAll('Exception:', '').trim();
+      _error = ErrorHandler.getErrorMessage(e);
       _paymentStatus = PaymentStatus.failure;
       return null;
     } finally {
@@ -171,7 +172,7 @@ class PaymentProvider with ChangeNotifier {
     try {
       return await _repository.getPaymentStatus(txnId);
     } catch (e) {
-      _error = e.toString();
+      _error = ErrorHandler.getErrorMessage(e);
       return null;
     }
   }

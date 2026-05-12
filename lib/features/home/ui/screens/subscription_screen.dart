@@ -14,6 +14,7 @@ import 'package:meal_app/features/subscription/ui/screens/payment_status_screen.
 import 'package:meal_app/features/subscription/ui/screens/cart_screen.dart';
 import 'package:meal_app/core/utils/error_handler.dart';
 import 'package:meal_app/core/providers/meal_provider.dart';
+import 'package:meal_app/core/services/connectivity_service.dart';
 import 'package:meal_app/core/widgets/badges/subscription_badge.dart';
 import 'package:meal_app/features/subscription/ui/widgets/meal_size_segmented_control.dart';
 
@@ -32,6 +33,8 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   int? _selectedMealSizeId;
   int? _selectedTrialMealSizeId;
   int? _selectedRegularMealSizeId;
+  ConnectivityService? _connectivityService;
+  bool _wasOnline = true;
 
   @override
   void initState() {
@@ -222,7 +225,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
           _buildEntityCard(
             context,
             entityType: 'teacher',
-            entityId: teacher!.id.toString(),
+            entityId: teacher.id.toString(),
             name: teacher.name,
             subtitle: 'Teacher Profile • Large Pack',
             icon: CupertinoIcons.book_fill,
@@ -235,8 +238,8 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
           _buildEntityCard(
             context,
             entityType: 'professional',
-            entityId: profileProvider.professionalProfile!.id!,
-            name: profileProvider.professionalProfile!.name,
+            entityId: professional.id.toString(),
+            name: professional.name,
             subtitle: 'Pro Profile • Large Pack',
             icon: CupertinoIcons.briefcase_fill,
             color: Colors.orange,
@@ -535,12 +538,10 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
 
   Widget _buildPlanSelectionView() {
     final subscriptionProvider = context.watch<SubscriptionProvider>();
-    final availablePlans = subscriptionProvider.subscriptions.where((plan) {
-      if (_selectedMealSizeId != null && plan.mealSizeId != null) {
-        return plan.mealSizeId == _selectedMealSizeId;
-      }
-      return true;
-    }).toList();
+    // Show the full catalog for everyone; meal size on the profile only affects
+    // which size is pre-selected in segment controls, not which plans are visible.
+    final availablePlans = List<SubscriptionModel>.from(subscriptionProvider.subscriptions)
+      ..sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final trialPlans = availablePlans.where((p) => p.trialDays > 0).toList();
@@ -555,18 +556,14 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
           'Choose Your Plan',
           style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, letterSpacing: -0.5, color: isDark ? Colors.white : AppTheme.textPrimaryLight),
         ).animate().fadeIn().slideY(begin: 0.2, end: 0),
-        const SizedBox(height: 8),
-        if (_selectedEntityName != null)
-          Text(
-            'For $_selectedEntityName',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppTheme.primaryColor),
-          ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
+        _buildPlanRecipientSelector(isDark),
+        const SizedBox(height: 10),
         Text(
           'Unlock premium meal tracking.',
           style: TextStyle(fontSize: 14, color: isDark ? Colors.white54 : AppTheme.textSecondaryLight),
         ).animate().fadeIn(delay: 200.ms),
-        const SizedBox(height: 32),
+        const SizedBox(height: 24),
 
         if (subscriptionProvider.isLoading)
           const Center(child: CircularProgressIndicator())
@@ -611,12 +608,149 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     );
   }
 
+  Widget _buildPlanRecipientSelector(bool isDark) {
+    final childrenProvider = context.watch<ChildrenProvider>();
+    final profileProvider = context.watch<ProfileProvider>();
+    final safeChildren = childrenProvider.children.where((c) => (c.id ?? '').toString().isNotEmpty).toList();
+    final teacher = profileProvider.teacherProfile;
+    final professional = profileProvider.professionalProfile;
+    final hasTeacher = teacher != null && (teacher.id ?? '').toString().isNotEmpty;
+    final hasProfessional = professional != null && (professional.id ?? '').toString().isNotEmpty;
+
+    if (_selectedEntityId != null && (_selectedEntityName ?? '').isNotEmpty) {
+      return Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppTheme.primaryColor.withValues(alpha: isDark ? 0.12 : 0.08),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.25)),
+        ),
+        child: Row(
+          children: [
+            Icon(CupertinoIcons.person_crop_circle_fill, color: AppTheme.primaryColor, size: 22),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Buying for',
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: isDark ? Colors.white54 : AppTheme.textSecondaryLight),
+                  ),
+                  Text(
+                    _selectedEntityName!,
+                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: isDark ? Colors.white : AppTheme.textPrimaryLight),
+                  ),
+                ],
+              ),
+            ),
+            TextButton(
+              onPressed: () => setState(() {
+                _selectedEntityType = null;
+                _selectedEntityId = null;
+                _selectedEntityName = null;
+                _selectedMealSizeId = null;
+              }),
+              child: const Text('Change', style: TextStyle(fontWeight: FontWeight.w800)),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final chips = <Widget>[
+      ...safeChildren.map(
+        (child) => Padding(
+          padding: const EdgeInsets.only(right: 8, bottom: 8),
+          child: ActionChip(
+            avatar: Icon(CupertinoIcons.person_3_fill, size: 16, color: Colors.blue.shade700),
+            label: Text(child.name, overflow: TextOverflow.ellipsis),
+            onPressed: () => setState(() {
+              _selectedEntityType = 'child';
+              _selectedEntityId = child.id!.toString();
+              _selectedEntityName = child.name;
+              _selectedMealSizeId = child.mealSizeId;
+            }),
+          ),
+        ),
+      ),
+      if (hasTeacher)
+        Padding(
+          padding: const EdgeInsets.only(right: 8, bottom: 8),
+          child: ActionChip(
+            avatar: Icon(CupertinoIcons.book_fill, size: 16, color: Colors.green.shade700),
+            label: Text(teacher.name, overflow: TextOverflow.ellipsis),
+            onPressed: () => setState(() {
+              _selectedEntityType = 'teacher';
+              _selectedEntityId = teacher.id.toString();
+              _selectedEntityName = teacher.name;
+              _selectedMealSizeId = teacher.mealSizeId;
+            }),
+          ),
+        ),
+      if (hasProfessional)
+        Padding(
+          padding: const EdgeInsets.only(right: 8, bottom: 8),
+          child: ActionChip(
+            avatar: Icon(CupertinoIcons.briefcase_fill, size: 16, color: Colors.orange.shade700),
+            label: Text(professional.name, overflow: TextOverflow.ellipsis),
+            onPressed: () => setState(() {
+              _selectedEntityType = 'professional';
+              _selectedEntityId = professional.id.toString();
+              _selectedEntityName = professional.name;
+              _selectedMealSizeId = professional.mealSizeId;
+            }),
+          ),
+        ),
+    ];
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.orange.withValues(alpha: 0.08) : Colors.orange.shade50,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.orange.withValues(alpha: 0.35)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(CupertinoIcons.info_circle_fill, color: Colors.orange.shade700, size: 18),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Select who this plan is for before Buy Now or Add to cart.',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: isDark ? Colors.white70 : Colors.black87),
+                ),
+              ),
+            ],
+          ),
+          if (chips.isEmpty) ...[
+            const SizedBox(height: 10),
+            Text(
+              'No profiles found. Go back and add a child or complete your teacher/professional profile.',
+              style: TextStyle(fontSize: 12, color: isDark ? Colors.white54 : AppTheme.textSecondaryLight),
+            ),
+          ] else ...[
+            const SizedBox(height: 12),
+            Wrap(spacing: 0, runSpacing: 0, children: chips),
+          ],
+        ],
+      ),
+    );
+  }
+
   String _mealVariantLabel(SubscriptionModel plan) {
-    final raw = plan.planName.trim().toLowerCase();
+    final name = plan.planName.trim();
+    if (name.isEmpty) return 'Plan';
+    final raw = name.toLowerCase();
     if (raw.contains('small')) return 'Small';
     if (raw.contains('medium')) return 'Medium';
     if (raw.contains('large')) return 'Large';
-    return plan.planName;
+    return name;
   }
 
   Widget _buildPlanSection({
@@ -703,8 +837,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
         ? 'Includes Saturday deliveries'
         : 'Saturday meals excluded';
     final features = <String>[
-      '$duration days included',
-      if (plan.trialDays > 0) '${plan.trialDays} days free trial',
+      if (plan.trialDays > 0) '${plan.trialDays} days trial window',
       ...plan.features,
     ];
     final mealTypeLine =
@@ -946,7 +1079,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: const Text('Payment failed or was cancelled.'), backgroundColor: Colors.red.shade700, behavior: SnackBarBehavior.floating, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))));
       }
     } else if (paymentProvider.error != null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(paymentProvider.error!), backgroundColor: Colors.red.shade700, behavior: SnackBarBehavior.floating, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))));
+      ErrorHandler.showError(context, paymentProvider.error);
     }
   }
 }

@@ -24,7 +24,9 @@ import 'package:meal_app/features/subscription/ui/screens/meal_skip_screen.dart'
 import 'package:meal_app/features/subscription/ui/screens/cart_screen.dart';
 import 'package:meal_app/core/widgets/image_preview_dialog.dart';
 import 'package:meal_app/features/subscription/ui/screens/subscription_management_screen.dart';
+import 'package:meal_app/core/services/connectivity_service.dart';
 import 'package:meal_app/core/services/network_status_service.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});

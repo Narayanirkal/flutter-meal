@@ -189,9 +189,9 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
                       style: const TextStyle(color: AppTheme.primaryColor, fontSize: 10, fontWeight: FontWeight.w900),
                     ),
                   ),
-                  Icon(
+                  const Icon(
                     CupertinoIcons.checkmark_seal_fill,
-                    color: Theme.of(context).colorScheme.primary,
+                    color: Color(0xFF22C55E),
                     size: 20,
                   ),
                 ],

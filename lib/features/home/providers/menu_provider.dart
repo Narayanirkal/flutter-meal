@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:meal_app/core/network/dio_client.dart';
 import 'package:meal_app/core/network/api_endpoints.dart';
 import 'package:meal_app/core/storage/cache_store.dart';
+import 'package:meal_app/core/storage/local_cache.dart';
+import 'package:meal_app/core/utils/error_handler.dart';
 
 class MenuProvider with ChangeNotifier {
   final DioClient _dioClient;
+  final LocalCache _cache;
+  static const _todayCacheKey = 'cache_today_menu_v1';
+  static const _weeklyCacheKey = 'cache_weekly_menu_v1';
 
-  MenuProvider(this._dioClient) {
+  MenuProvider(this._dioClient, this._cache) {
     _loadCachedTodayMenu();
   }
 
@@ -42,6 +48,18 @@ class MenuProvider with ChangeNotifier {
       return value.map((e) => e.toString()).where((e) => e.trim().isNotEmpty).toList();
     }
     return [];
+  }
+
+  Future<void> _prefetchWeeklyMenuImages(List<dynamic> menus) async {
+    final manager = DefaultCacheManager();
+    for (final entry in menus) {
+      if (entry is! Map) continue;
+      final url = entry['image_url']?.toString();
+      if (url == null || url.isEmpty) continue;
+      try {
+        await manager.downloadFile(url);
+      } catch (_) {}
+    }
   }
 
   Future<void> _loadCachedTodayMenu() async {
@@ -112,7 +130,7 @@ class MenuProvider with ChangeNotifier {
         _subscriptionSummary = [];
         await CacheStore.remove('today_menu');
       } else {
-        _error = e.toString();
+        _error = ErrorHandler.getErrorMessage(e);
         // Keep cached data on network error
       }
     } finally {
@@ -172,6 +190,8 @@ class MenuProvider with ChangeNotifier {
           'menu': _weeklyMenu,
           'subscription_summary': _subscriptionSummary,
         });
+        // Warm disk cache so weekly images still appear offline later.
+        await _prefetchWeeklyMenuImages(_weeklyMenu);
       } else {
         _weeklyMenu = [];
       }
@@ -180,7 +200,8 @@ class MenuProvider with ChangeNotifier {
         _isSubscribed = false;
         _weeklyMenu = [];
       } else {
-        _error = e.toString();
+        // Keep showing cached weekly menu when offline / flaky network.
+        _error = _weeklyMenu.isEmpty ? ErrorHandler.getErrorMessage(e) : null;
       }
     } finally {
       _isLoading = false;

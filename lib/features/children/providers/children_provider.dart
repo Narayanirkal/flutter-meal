@@ -3,6 +3,7 @@ import 'package:meal_app/core/network/api_endpoints.dart';
 import 'package:meal_app/core/services/network_status_service.dart';
 import 'package:meal_app/core/services/offline_queue.dart';
 import 'package:meal_app/core/storage/cache_store.dart';
+import 'package:meal_app/core/storage/local_cache.dart';
 import 'package:meal_app/features/children/data/models/child_model.dart';
 import 'package:meal_app/features/children/data/repositories/children_repository.dart';
 
@@ -11,7 +12,7 @@ class ChildrenProvider with ChangeNotifier {
   final LocalCache _cache;
   static const _cacheKey = 'cache_children_v1';
 
-  ChildrenProvider(this._repository) {
+  ChildrenProvider(this._repository, this._cache) {
     _loadFromCache();
   }
 

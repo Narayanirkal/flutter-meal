@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:meal_app/core/network/meal_repository.dart';
 import 'package:meal_app/core/storage/cache_store.dart';
+import 'package:meal_app/core/storage/local_cache.dart';
+import 'package:meal_app/core/utils/error_handler.dart';
 
 /// Centralized provider for meals, skips, subscription alerts,
 /// and remaining-meal status tracking.
@@ -11,7 +13,7 @@ class MealProvider with ChangeNotifier {
   static const _mealStatusCacheKey = 'cache_meal_status_v1';
   static const _skipHistoryCacheKey = 'cache_meal_skips_v1';
 
-  MealProvider(this._repository) {
+  MealProvider(this._repository, this._cache) {
     _loadCachedData();
   }
 
@@ -124,7 +126,7 @@ class MealProvider with ChangeNotifier {
         _isSubscribed = false;
         _todayMenu = null;
       } else {
-        _error = e.toString();
+        _error = ErrorHandler.getErrorMessage(e);
       }
     } finally {
       _isLoading = false;
@@ -150,7 +152,7 @@ class MealProvider with ChangeNotifier {
       if (e.toString().contains('403')) {
         _isSubscribed = false;
       } else {
-        _error = e.toString();
+        _error = ErrorHandler.getErrorMessage(e);
       }
     } finally {
       _isLoading = false;
@@ -171,7 +173,7 @@ class MealProvider with ChangeNotifier {
       _mealStatus = await _repository.fetchMealStatus();
       await CacheStore.setJson('meal_status', _mealStatus, ttl: const Duration(hours: 6));
     } catch (e) {
-      _error = e.toString();
+      _error = ErrorHandler.getErrorMessage(e);
     } finally {
       if (!silent) {
         _isLoading = false;
@@ -204,7 +206,7 @@ class MealProvider with ChangeNotifier {
       await fetchSkips(); // refresh list
       return true;
     } catch (e) {
-      _error = e.toString().replaceAll('Exception:', '').trim();
+      _error = ErrorHandler.getErrorMessage(e);
       return false;
     } finally {
       _isLoading = false;
@@ -224,7 +226,7 @@ class MealProvider with ChangeNotifier {
       notifyListeners();
     } catch (e) {
       // If cached skips are present, keep showing them offline without erroring out.
-      _error = _skips.isNotEmpty ? null : e.toString();
+      _error = _skips.isNotEmpty ? null : ErrorHandler.getErrorMessage(e);
     }
   }
 
@@ -236,7 +238,7 @@ class MealProvider with ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      _error = e.toString();
+      _error = ErrorHandler.getErrorMessage(e);
     }
   }
 
@@ -246,7 +248,7 @@ class MealProvider with ChangeNotifier {
       if (success) await fetchSkips();
       return success;
     } catch (e) {
-      _error = e.toString().replaceAll('Exception:', '').trim();
+      _error = ErrorHandler.getErrorMessage(e);
       return false;
     }
   }
@@ -257,7 +259,7 @@ class MealProvider with ChangeNotifier {
       if (success) await fetchSkips();
       return success;
     } catch (e) {
-      _error = e.toString().replaceAll('Exception:', '').trim();
+      _error = ErrorHandler.getErrorMessage(e);
       return false;
     }
   }
@@ -277,7 +279,7 @@ class MealProvider with ChangeNotifier {
       }
       await CacheStore.setJson('subscription_status', _subscriptionStatusData, ttl: const Duration(hours: 6));
     } catch (e) {
-      _error = e.toString();
+      _error = ErrorHandler.getErrorMessage(e);
     } finally {
       if (!silent) {
         _isLoading = false;
@@ -315,7 +317,7 @@ class MealProvider with ChangeNotifier {
       );
       return true;
     } catch (e) {
-      _error = e.toString().replaceAll('Exception:', '').trim();
+      _error = ErrorHandler.getErrorMessage(e);
       return false;
     } finally {
       _isLoading = false;
