@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:meal_app/core/network/meal_repository.dart';
+import 'package:meal_app/core/storage/local_cache.dart';
 
 /// Centralized provider for meals, skips, subscription alerts,
 /// and remaining-meal status tracking.
 class MealProvider with ChangeNotifier {
   final MealRepository _repository;
+  final LocalCache _cache;
+  static const _statusCacheKey = 'cache_subscription_status_v1';
+  static const _mealStatusCacheKey = 'cache_meal_status_v1';
+  static const _skipHistoryCacheKey = 'cache_meal_skips_v1';
 
-  MealProvider(this._repository);
+  MealProvider(this._repository, this._cache);
 
   // ─── State ────────────────────────────────────────────────────────────────
 
@@ -105,8 +110,14 @@ class MealProvider with ChangeNotifier {
   // ─── Meal Remaining Status ────────────────────────────────────────────────
 
   Future<void> fetchMealStatus() async {
+    final cached = await _cache.loadJson(_mealStatusCacheKey);
+    if (cached != null && _mealStatus.isEmpty) {
+      _mealStatus = (cached['items'] as List? ?? const []).toList();
+      notifyListeners();
+    }
     try {
       _mealStatus = await _repository.fetchMealStatus();
+      await _cache.saveJson(_mealStatusCacheKey, {'items': _mealStatus});
       notifyListeners();
     } catch (e) {
       _error = e.toString();
@@ -144,11 +155,18 @@ class MealProvider with ChangeNotifier {
   }
 
   Future<void> fetchSkips() async {
+    final cached = await _cache.loadJson(_skipHistoryCacheKey);
+    if (cached != null && _skips.isEmpty) {
+      _skips = (cached['items'] as List? ?? const []).toList();
+      notifyListeners();
+    }
     try {
       _skips = await _repository.fetchMealSkips();
+      await _cache.saveJson(_skipHistoryCacheKey, {'items': _skips});
       notifyListeners();
     } catch (e) {
-      _error = e.toString();
+      // If cached skips are present, keep showing them offline without erroring out.
+      _error = _skips.isNotEmpty ? null : e.toString();
     }
   }
 
@@ -166,8 +184,15 @@ class MealProvider with ChangeNotifier {
   // ─── Subscription Status & Alerts ────────────────────────────────────────
 
   Future<void> fetchSubscriptionStatus() async {
+    final cached = await _cache.loadJson(_statusCacheKey);
+    if (cached != null && _subscriptionStatusData == null) {
+      _subscriptionStatusData = Map<String, dynamic>.from(cached);
+      notifyListeners();
+    }
     try {
       _subscriptionStatusData = await _repository.fetchSubscriptionStatus();
+      _isSubscribed = _subscriptionStatusData?['has_active_subscription'] == true;
+      await _cache.saveJson(_statusCacheKey, _subscriptionStatusData ?? {});
       notifyListeners();
     } catch (e) {
       _error = e.toString();

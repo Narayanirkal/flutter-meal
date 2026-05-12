@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:meal_app/core/storage/local_cache.dart';
 import 'package:meal_app/features/profile/data/models/profile_models.dart';
 import 'package:meal_app/features/profile/data/repositories/profile_repository.dart';
-import 'package:meal_app/core/utils/error_handler.dart';
 
 class ProfileProvider with ChangeNotifier {
   final ProfileRepository _repository;
+  final LocalCache _cache;
+  static const _cacheKey = 'cache_profiles_v1';
 
-  ProfileProvider(this._repository);
+  ProfileProvider(this._repository, this._cache);
 
   TeacherProfileModel? _teacherProfile;
   ProfessionalProfileModel? _professionalProfile;
@@ -26,6 +28,25 @@ class ProfileProvider with ChangeNotifier {
   Future<void> fetchProfiles({bool force = false}) async {
     if (!force && _teacherProfile != null && _professionalProfile != null) return;
     if (_isLoading) return;
+
+    bool hasCachedProfile = false;
+    final cached = await _cache.loadJson(_cacheKey);
+    if (cached != null &&
+        (_teacherProfile == null || _professionalProfile == null || _profileStatus == null)) {
+      final teacher = cached['teacher_profile'];
+      final professional = cached['professional_profile'];
+      if (_teacherProfile == null && teacher is Map<String, dynamic>) {
+        _teacherProfile = TeacherProfileModel.fromJson(teacher);
+      }
+      if (_professionalProfile == null && professional is Map<String, dynamic>) {
+        _professionalProfile = ProfessionalProfileModel.fromJson(professional);
+      }
+      if (_profileStatus == null && cached['profile_status'] is Map<String, dynamic>) {
+        _profileStatus = Map<String, dynamic>.from(cached['profile_status'] as Map);
+      }
+      hasCachedProfile = _teacherProfile != null || _professionalProfile != null;
+      notifyListeners();
+    }
     
     _isLoading = true;
     _error = null;
@@ -38,11 +59,40 @@ class ProfileProvider with ChangeNotifier {
         _repository.getProfileStatus(),
       ]);
 
-      _teacherProfile = results[0] as TeacherProfileModel?;
-      _professionalProfile = results[1] as ProfessionalProfileModel?;
-      _profileStatus = results[2] as Map<String, dynamic>?;
+      final fetchedTeacher = results[0] as TeacherProfileModel?;
+      final fetchedProfessional = results[1] as ProfessionalProfileModel?;
+      final fetchedStatus = results[2] as Map<String, dynamic>?;
+
+      // Repositories return `null` both for "not found" and transient/offline failures.
+      // Preserve already-hydrated cached profiles when fetch returns null.
+      if (fetchedTeacher != null || _teacherProfile == null) {
+        _teacherProfile = fetchedTeacher;
+      }
+      if (fetchedProfessional != null || _professionalProfile == null) {
+        _professionalProfile = fetchedProfessional;
+      }
+      if (fetchedStatus != null || _profileStatus == null) {
+        _profileStatus = fetchedStatus;
+      }
+
+      final existingCache = await _cache.loadJson(_cacheKey);
+      final existingTeacher = existingCache != null && existingCache['teacher_profile'] is Map
+          ? Map<String, dynamic>.from(existingCache['teacher_profile'] as Map)
+          : null;
+      final existingProfessional = existingCache != null && existingCache['professional_profile'] is Map
+          ? Map<String, dynamic>.from(existingCache['professional_profile'] as Map)
+          : null;
+      final existingStatus = existingCache != null && existingCache['profile_status'] is Map
+          ? Map<String, dynamic>.from(existingCache['profile_status'] as Map)
+          : null;
+      await _cache.saveJson(_cacheKey, {
+        'teacher_profile': _teacherProfile?.toJson() ?? existingTeacher,
+        'professional_profile': _professionalProfile?.toJson() ?? existingProfessional,
+        'profile_status': _profileStatus ?? existingStatus,
+      });
     } catch (e) {
-      _error = e;
+      // Keep using cached profile silently in offline mode.
+      _error = hasCachedProfile ? null : e;
     } finally {
       _isLoading = false;
       notifyListeners();

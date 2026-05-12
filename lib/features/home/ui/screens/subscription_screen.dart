@@ -14,6 +14,7 @@ import 'package:meal_app/features/profile/providers/profile_provider.dart';
 import 'package:meal_app/features/subscription/ui/screens/payment_status_screen.dart';
 import 'package:meal_app/features/subscription/ui/screens/cart_screen.dart';
 import 'package:meal_app/core/utils/error_handler.dart';
+import 'package:meal_app/core/services/connectivity_service.dart';
 
 class SubscriptionScreen extends StatefulWidget {
   const SubscriptionScreen({super.key});
@@ -28,6 +29,8 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   String? _selectedEntityId;
   String? _selectedEntityName;
   int? _selectedMealSizeId;
+  ConnectivityService? _connectivityService;
+  bool _wasOnline = true;
 
   @override
   void initState() {
@@ -38,6 +41,36 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       context.read<ProfileProvider>().fetchProfiles(force: true);
       context.read<CartProvider>().fetchCart(); // Fetch server cart
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final service = context.read<ConnectivityService>();
+    if (_connectivityService == service) return;
+    _connectivityService?.removeListener(_handleConnectivityChange);
+    _connectivityService = service;
+    _wasOnline = _connectivityService?.isOnline ?? true;
+    _connectivityService?.addListener(_handleConnectivityChange);
+  }
+
+  @override
+  void dispose() {
+    _connectivityService?.removeListener(_handleConnectivityChange);
+    super.dispose();
+  }
+
+  Future<void> _handleConnectivityChange() async {
+    final online = _connectivityService?.isOnline ?? true;
+    if (online && !_wasOnline && mounted) {
+      await Future.wait([
+        context.read<SubscriptionProvider>().fetchSubscriptions(force: true),
+        context.read<ChildrenProvider>().fetchChildren(),
+        context.read<ProfileProvider>().fetchProfiles(force: true),
+      ]);
+      await context.read<CartProvider>().syncOfflineItemsIfAny();
+    }
+    _wasOnline = online;
   }
 
   /// Next calendar day (local) at midnight — lower bound for start dates.
@@ -351,6 +384,14 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       entityId: entityId,
       includeSaturday: includeSaturday,
       startDate: startDate,
+      entityName: _selectedEntityName ?? entityType,
+      planName: plan.planName,
+      unitPrice: double.tryParse(
+            includeSaturday ? plan.priceWithSaturday : plan.priceWithoutSaturday,
+          ) ??
+          0,
+      mealSizeId: plan.mealSizeId,
+      mealSizeName: _selectedMealSizeId != null ? 'Selected meal size' : null,
     );
 
     if (mounted) {

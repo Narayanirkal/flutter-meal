@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:meal_app/core/network/cart_repository.dart';
 import 'package:meal_app/core/network/api_endpoints.dart';
 import 'package:meal_app/core/services/phonepe_service.dart';
+import 'package:meal_app/core/storage/local_cache.dart';
 import 'package:meal_app/core/utils/meal_date.dart';
 
 /// Server-side cart item — mirrors the backend response.
@@ -58,8 +59,11 @@ class CartItem {
 /// All operations hit the backend — no local-only state.
 class CartProvider with ChangeNotifier {
   final CartRepository _repository;
+  final LocalCache _cache;
+  static const _cartCacheKey = 'cache_cart_v1';
+  int _nextOfflineTempId = -1;
 
-  CartProvider(this._repository);
+  CartProvider(this._repository, this._cache);
 
   List<CartItem> _items = [];
   List<CartItem> get items => List.unmodifiable(_items);
@@ -78,9 +82,50 @@ class CartProvider with ChangeNotifier {
 
   int get itemCount => _items.length;
 
+  bool _isLikelyNetworkError(Object e) {
+    final raw = e.toString().toLowerCase();
+    return raw.contains('socket') ||
+        raw.contains('network') ||
+        raw.contains('timed out') ||
+        raw.contains('failed host lookup') ||
+        raw.contains('connection');
+  }
+
+  Future<void> _persistLocalCart() async {
+    await _cache.saveJson(_cartCacheKey, {
+      'cart_id': _cartId,
+      'total_amount': _totalAmount,
+      'items': _items
+          .map((i) => {
+                'id': i.id,
+                'entity_name': i.entityName,
+                'entity_type': i.entityType,
+                'plan_name': i.planName,
+                'unit_price': i.unitPrice,
+                'start_date': i.startDate,
+                'entity_id': i.entityId,
+                'subscription_id': i.subscriptionId,
+                'include_saturday': i.includeSaturday,
+                'meal_size_id': i.mealSizeId,
+                'meal_size_name': i.mealSizeName,
+                'meal_timing': i.mealTiming,
+              })
+          .toList(),
+    });
+  }
+
   // ─── Fetch cart from server ─────────────────────────────────────────────────
 
   Future<void> fetchCart() async {
+    final cached = await _cache.loadJson(_cartCacheKey);
+    if (cached != null && _items.isEmpty) {
+      _cartId = cached['cart_id']?.toString();
+      _totalAmount = double.tryParse(cached['total_amount']?.toString() ?? '0') ?? 0;
+      final itemsList = (cached['items'] as List? ?? const []).whereType<Map>();
+      _items = itemsList.map((json) => CartItem.fromJson(Map<String, dynamic>.from(json))).toList();
+      notifyListeners();
+    }
+
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -101,10 +146,9 @@ class CartProvider with ChangeNotifier {
       // Parse items
       final List itemsList = data['items'] ?? [];
       _items = itemsList.map((json) => CartItem.fromJson(json)).toList();
+      await _persistLocalCart();
     } catch (e) {
-      _error = e.toString();
-      _items = [];
-      _totalAmount = 0;
+      _error = _items.isNotEmpty ? null : e.toString();
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -157,6 +201,12 @@ class CartProvider with ChangeNotifier {
     required String entityId,
     required bool includeSaturday,
     required String startDate,
+    String? entityName,
+    String? planName,
+    double? unitPrice,
+    int? mealSizeId,
+    String? mealSizeName,
+    String? mealTiming,
   }) async {
     _isLoading = true;
     _error = null;
@@ -180,6 +230,33 @@ class CartProvider with ChangeNotifier {
       await fetchCart();
       return true;
     } catch (e) {
+      if (_isLikelyNetworkError(e)) {
+        final safeStart = MealDate.isValidFutureStartDate(startDate)
+            ? startDate
+            : MealDate.tomorrowYmd();
+        _items.add(
+          CartItem(
+            id: _nextOfflineTempId--,
+            entityName: entityName ?? entityType.toUpperCase(),
+            entityType: entityType,
+            planName: planName ?? 'Plan',
+            unitPrice: unitPrice ?? 0,
+            startDate: safeStart,
+            entityId: entityId,
+            subscriptionId: subscriptionId,
+            includeSaturday: includeSaturday,
+            mealSizeId: mealSizeId,
+            mealSizeName: mealSizeName,
+            mealTiming: mealTiming,
+          ),
+        );
+        _totalAmount = _items.fold(0, (sum, i) => sum + i.unitPrice);
+        await _persistLocalCart();
+        _error = null;
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      }
       _error = _extractErrorMessage(e);
       _isLoading = false;
       notifyListeners();
@@ -222,6 +299,14 @@ class CartProvider with ChangeNotifier {
     notifyListeners();
 
     try {
+      if (cartItemId <= 0) {
+        _items.removeWhere((i) => i.id == cartItemId);
+        _totalAmount = _items.fold(0, (sum, i) => sum + i.unitPrice);
+        await _persistLocalCart();
+        _isLoading = false;
+        notifyListeners();
+        return true;
+      }
       await _repository.removeCartItem(cartItemId);
       // Refresh cart from server
       await fetchCart();
@@ -246,8 +331,17 @@ class CartProvider with ChangeNotifier {
       _items = [];
       _totalAmount = 0;
       _cartId = null;
+      await _persistLocalCart();
     } catch (e) {
-      _error = _extractErrorMessage(e);
+      if (_isLikelyNetworkError(e)) {
+        _items = [];
+        _totalAmount = 0;
+        _cartId = null;
+        await _persistLocalCart();
+        _error = null;
+      } else {
+        _error = _extractErrorMessage(e);
+      }
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -263,7 +357,28 @@ class CartProvider with ChangeNotifier {
     _totalAmount = 0;
     _cartId = null;
     _error = null;
+    _persistLocalCart();
     notifyListeners();
+  }
+
+  Future<void> syncOfflineItemsIfAny() async {
+    final pending = _items.where((i) => i.id <= 0).toList();
+    if (pending.isEmpty) return;
+    for (final item in pending) {
+      if (item.subscriptionId == null || item.entityId == null) continue;
+      try {
+        await _repository.addToCart(
+          subscriptionId: item.subscriptionId!,
+          entityType: item.entityType,
+          entityId: item.entityId!,
+          includeSaturday: item.includeSaturday,
+          startDate: item.startDate ?? MealDate.tomorrowYmd(),
+        );
+      } catch (_) {
+        // keep pending item for next reconnect
+      }
+    }
+    await fetchCart();
   }
 
   // ─── Check if entity is already in cart ─────────────────────────────────────
@@ -277,6 +392,11 @@ class CartProvider with ChangeNotifier {
   Future<Map<String, dynamic>?> checkoutAll({bool isSandbox = true}) async {
     if (_items.isEmpty) {
       _error = 'Cart is empty';
+      notifyListeners();
+      return null;
+    }
+    if (_items.any((i) => i.id <= 0)) {
+      _error = 'Some cart items are saved offline. Please reconnect to sync before checkout.';
       notifyListeners();
       return null;
     }

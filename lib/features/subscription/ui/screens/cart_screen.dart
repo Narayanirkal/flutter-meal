@@ -22,7 +22,7 @@ class _CartScreenState extends State<CartScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<CartProvider>().fetchCart();
+      context.read<CartProvider>().syncOfflineItemsIfAny();
     });
   }
 

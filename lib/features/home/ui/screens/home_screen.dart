@@ -19,10 +19,11 @@ import 'package:meal_app/features/home/providers/menu_provider.dart';
 import 'package:meal_app/features/home/ui/screens/weekly_menu_screen.dart';
 import 'package:meal_app/core/providers/meal_provider.dart';
 import 'package:meal_app/core/providers/cart_provider.dart';
-import 'package:meal_app/features/subscription/ui/screens/meal_skip_screen.dart';
 import 'package:meal_app/features/subscription/ui/screens/cart_screen.dart';
 import 'package:meal_app/core/widgets/image_preview_dialog.dart';
 import 'package:meal_app/features/subscription/ui/screens/subscription_management_screen.dart';
+import 'package:meal_app/core/services/connectivity_service.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -33,6 +34,8 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   String _displayName = '';
+  ConnectivityService? _connectivityService;
+  bool _wasOnline = true;
 
   @override
   void initState() {
@@ -41,6 +44,34 @@ class _HomeScreenState extends State<HomeScreen> {
       _loadAllData();
       _fetchUserName();
     });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final service = context.read<ConnectivityService>();
+    if (_connectivityService == service) return;
+    _connectivityService?.removeListener(_handleConnectivityChange);
+    _connectivityService = service;
+    _wasOnline = _connectivityService?.isOnline ?? true;
+    _connectivityService?.addListener(_handleConnectivityChange);
+  }
+
+  @override
+  void dispose() {
+    _connectivityService?.removeListener(_handleConnectivityChange);
+    super.dispose();
+  }
+
+  Future<void> _handleConnectivityChange() async {
+    final online = _connectivityService?.isOnline ?? true;
+    if (online && !_wasOnline && mounted) {
+      await Future.wait([
+        _loadAllData(),
+        _fetchUserName(),
+      ]);
+    }
+    _wasOnline = online;
   }
 
   Future<void> _loadAllData() async {
@@ -119,7 +150,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       // Today's meal section — only visible for subscribed users
                       _buildTodayMealCard(context, isDark),
                       _buildAlertsBanner(context, isDark),
-                      _buildQuickActions(context, isDark),
                       _buildFeatureCards(context),
                       const SizedBox(height: 20),
                       _buildQuickStatus(context),
@@ -472,12 +502,13 @@ class _HomeScreenState extends State<HomeScreen> {
     if (imageUrl != null && imageUrl.isNotEmpty) {
       return ClipRRect(
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        child: Image.network(
-          imageUrl,
+        child: CachedNetworkImage(
+          imageUrl: imageUrl,
           height: height,
           width: double.infinity,
           fit: BoxFit.contain,
-          errorBuilder: (_, __, ___) => _buildMealPlaceholder(height),
+          placeholder: (_, __) => _buildMealPlaceholder(height),
+          errorWidget: (_, __, ___) => _buildMealPlaceholder(height),
         ),
       );
     }
@@ -572,72 +603,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ).animate().fadeIn().slideX(begin: -0.1, end: 0);
       }).toList(),
-      ),
-    );
-  }
-
-  /// Quick actions — conditionally shown:
-  /// - Meal Skips: only when user has active subscription
-  Widget _buildQuickActions(BuildContext context, bool isDark) {
-    final mealProvider = context.watch<MealProvider>();
-    final isSubscribed = mealProvider.isSubscribed;
-
-    if (!isSubscribed) return const SizedBox.shrink();
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: Row(
-        children: [
-          Expanded(
-            child: _buildQuickActionTile(
-              context,
-              'Meal Skips',
-              CupertinoIcons.calendar_badge_minus,
-              Colors.orange,
-              isDark,
-              () => Navigator.push(context, CupertinoPageRoute(builder: (_) => const MealSkipScreen())),
-            ),
-          ),
-        ],
-      ).animate().fadeIn(delay: 200.ms),
-    );
-  }
-
-  Widget _buildQuickActionTile(BuildContext context, String label, IconData icon, Color color, bool isDark, VoidCallback onTap, {int? badge}) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(18),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-        decoration: BoxDecoration(
-          color: isDark ? AppTheme.surfaceDark : Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: isDark ? Colors.white10 : Colors.grey.withOpacity(0.1)),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(icon, color: color, size: 18),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14,
-                  color: isDark ? Colors.white : AppTheme.textPrimaryLight,
-                ),
-              ),
-            ),
-            Icon(CupertinoIcons.chevron_right, size: 14, color: isDark ? Colors.white38 : Colors.grey),
-          ],
-        ),
       ),
     );
   }

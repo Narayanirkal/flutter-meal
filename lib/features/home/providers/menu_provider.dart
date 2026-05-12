@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:meal_app/core/network/dio_client.dart';
 import 'package:meal_app/core/network/api_endpoints.dart';
+import 'package:meal_app/core/storage/local_cache.dart';
 
 class MenuProvider with ChangeNotifier {
   final DioClient _dioClient;
+  final LocalCache _cache;
+  static const _todayCacheKey = 'cache_today_menu_v1';
+  static const _weeklyCacheKey = 'cache_weekly_menu_v1';
   
-  MenuProvider(this._dioClient);
+  MenuProvider(this._dioClient, this._cache);
 
   bool _isLoading = false;
   bool get isLoading => _isLoading;
@@ -39,6 +43,16 @@ class MenuProvider with ChangeNotifier {
   }
 
   Future<void> fetchTodayMenu() async {
+    final cached = await _cache.loadJson(_todayCacheKey);
+    if (cached != null && _todayMenu == null) {
+      _isSubscribed = cached['is_subscribed'] == true;
+      _todayMenu = cached['menu'] is Map<String, dynamic>
+          ? Map<String, dynamic>.from(cached['menu'] as Map)
+          : null;
+      _subscriptionSummary = (cached['subscription_summary'] as List? ?? const []).toList();
+      notifyListeners();
+    }
+
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -64,6 +78,11 @@ class MenuProvider with ChangeNotifier {
           _todayMenu = null;
         }
         _subscriptionSummary = data['subscription_summary'] ?? [];
+        await _cache.saveJson(_todayCacheKey, {
+          'is_subscribed': _isSubscribed,
+          'menu': _todayMenu,
+          'subscription_summary': _subscriptionSummary,
+        });
       } else {
         _todayMenu = null;
         _subscriptionSummary = [];
@@ -82,6 +101,14 @@ class MenuProvider with ChangeNotifier {
   }
 
   Future<void> fetchWeeklyMenu() async {
+    final cached = await _cache.loadJson(_weeklyCacheKey);
+    if (cached != null && _weeklyMenu.isEmpty) {
+      _isSubscribed = cached['is_subscribed'] == true;
+      _weeklyMenu = (cached['menu'] as List? ?? const []).toList();
+      _subscriptionSummary = (cached['subscription_summary'] as List? ?? const []).toList();
+      notifyListeners();
+    }
+
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -119,6 +146,11 @@ class MenuProvider with ChangeNotifier {
           return entry;
         }).toList();
         _subscriptionSummary = data['subscription_summary'] ?? [];
+        await _cache.saveJson(_weeklyCacheKey, {
+          'is_subscribed': _isSubscribed,
+          'menu': _weeklyMenu,
+          'subscription_summary': _subscriptionSummary,
+        });
       } else {
         _weeklyMenu = [];
       }
