@@ -152,6 +152,12 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     final cartProvider = context.watch<CartProvider>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    final safeChildren = childrenProvider.children.where((c) => (c.id ?? '').toString().isNotEmpty).toList();
+    final teacher = profileProvider.teacherProfile;
+    final professional = profileProvider.professionalProfile;
+    final hasTeacher = teacher != null && (teacher.id ?? '').toString().isNotEmpty;
+    final hasProfessional = professional != null && (professional.id ?? '').toString().isNotEmpty;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -166,56 +172,56 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
         ).animate().fadeIn(delay: 200.ms),
         const SizedBox(height: 32),
 
-        if (childrenProvider.children.isNotEmpty) ...[
+        if (safeChildren.isNotEmpty) ...[
           const Text('CHILDREN', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Colors.grey)),
           const SizedBox(height: 12),
-          ...childrenProvider.children.map((child) => _buildEntityCard(
+          ...safeChildren.map((child) => _buildEntityCard(
             context,
             entityType: 'child',
-            entityId: child.id!,
+            entityId: child.id!.toString(),
             name: child.name,
             subtitle: 'Child • ${child.mealSizeName ?? 'Standard'}',
             icon: CupertinoIcons.person_3_fill,
             color: Colors.blue,
             isDark: isDark,
             mealSizeId: child.mealSizeId,
-            isInCart: cartProvider.hasEntity(child.id!),
+            isInCart: cartProvider.hasEntity(child.id!.toString()),
           )),
           const SizedBox(height: 20),
         ],
 
-        if (profileProvider.teacherProfile != null || profileProvider.professionalProfile != null) ...[
+        if (hasTeacher || hasProfessional) ...[
           const Text('OTHER PROFILES', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Colors.grey)),
           const SizedBox(height: 12),
         ],
-        if (profileProvider.teacherProfile != null)
+        if (hasTeacher)
           _buildEntityCard(
             context,
             entityType: 'teacher',
-            entityId: profileProvider.teacherProfile!.id!,
-            name: profileProvider.teacherProfile!.name,
+            entityId: teacher!.id.toString(),
+            name: teacher.name,
             subtitle: 'Teacher Profile • Large Pack',
             icon: CupertinoIcons.book_fill,
             color: Colors.green,
             isDark: isDark,
-            mealSizeId: profileProvider.teacherProfile!.mealSizeId,
-            isInCart: cartProvider.hasEntity(profileProvider.teacherProfile!.id!),
+            mealSizeId: teacher.mealSizeId,
+            isInCart: cartProvider.hasEntity(teacher.id.toString()),
           ),
-        if (profileProvider.professionalProfile != null)
+        if (hasProfessional)
           _buildEntityCard(
             context,
             entityType: 'professional',
-            entityId: profileProvider.professionalProfile!.id!,
-            name: profileProvider.professionalProfile!.name,
+            entityId: professional!.id.toString(),
+            name: professional.name,
             subtitle: 'Professional Profile • Large Pack',
             icon: CupertinoIcons.briefcase_fill,
             color: Colors.orange,
             isDark: isDark,
-            mealSizeId: profileProvider.professionalProfile!.mealSizeId,
-            isInCart: cartProvider.hasEntity(profileProvider.professionalProfile!.id!),
+            mealSizeId: professional.mealSizeId,
+            isInCart: cartProvider.hasEntity(professional.id.toString()),
           ),
 
-        if (childrenProvider.children.isEmpty && profileProvider.teacherProfile == null && profileProvider.professionalProfile == null)
+        if (safeChildren.isEmpty && !hasTeacher && !hasProfessional)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: 40),
             child: Column(

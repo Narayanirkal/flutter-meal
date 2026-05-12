@@ -1,5 +1,6 @@
 import 'package:meal_app/core/network/dio_client.dart';
 import 'package:meal_app/core/network/api_endpoints.dart';
+import 'package:dio/dio.dart';
 
 /// Repository for server-side cart operations.
 /// All cart data lives on the backend — the client never stores cart locally.
@@ -17,8 +18,11 @@ class CartRepository {
       }
       return {};
     } catch (e) {
-      // If 404 (no cart), return empty
-      return {};
+      if (e is DioException && e.response?.statusCode == 404) {
+        // No active cart yet.
+        return {};
+      }
+      rethrow;
     }
   }
 

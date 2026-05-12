@@ -85,9 +85,21 @@ class ProfileProvider with ChangeNotifier {
       final existingStatus = existingCache != null && existingCache['profile_status'] is Map
           ? Map<String, dynamic>.from(existingCache['profile_status'] as Map)
           : null;
+      final teacherForCache = _teacherProfile == null
+          ? null
+          : {
+              ..._teacherProfile!.toJson(),
+              'id': _teacherProfile!.id,
+            };
+      final professionalForCache = _professionalProfile == null
+          ? null
+          : {
+              ..._professionalProfile!.toJson(),
+              'id': _professionalProfile!.id,
+            };
       await _cache.saveJson(_cacheKey, {
-        'teacher_profile': _teacherProfile?.toJson() ?? existingTeacher,
-        'professional_profile': _professionalProfile?.toJson() ?? existingProfessional,
+        'teacher_profile': teacherForCache ?? existingTeacher,
+        'professional_profile': professionalForCache ?? existingProfessional,
         'profile_status': _profileStatus ?? existingStatus,
       });
     } catch (e) {

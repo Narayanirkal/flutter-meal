@@ -114,6 +114,50 @@ class CartProvider with ChangeNotifier {
     });
   }
 
+  Future<void> _addLocalItem({
+    required String subscriptionId,
+    required String entityType,
+    required String entityId,
+    required bool includeSaturday,
+    required String startDate,
+    String? entityName,
+    String? planName,
+    double? unitPrice,
+    int? mealSizeId,
+    String? mealSizeName,
+    String? mealTiming,
+  }) async {
+    final safeStart = MealDate.isValidFutureStartDate(startDate)
+        ? startDate
+        : MealDate.tomorrowYmd();
+    final existingIdx = _items.indexWhere((i) =>
+        i.subscriptionId == subscriptionId &&
+        i.entityType == entityType &&
+        i.entityId == entityId &&
+        i.includeSaturday == includeSaturday);
+    final localItem = CartItem(
+      id: _nextOfflineTempId--,
+      entityName: entityName ?? entityType.toUpperCase(),
+      entityType: entityType,
+      planName: planName ?? 'Plan',
+      unitPrice: unitPrice ?? 0,
+      startDate: safeStart,
+      entityId: entityId,
+      subscriptionId: subscriptionId,
+      includeSaturday: includeSaturday,
+      mealSizeId: mealSizeId,
+      mealSizeName: mealSizeName,
+      mealTiming: mealTiming,
+    );
+    if (existingIdx >= 0) {
+      _items[existingIdx] = localItem;
+    } else {
+      _items.add(localItem);
+    }
+    _totalAmount = _items.fold(0, (sum, i) => sum + i.unitPrice);
+    await _persistLocalCart();
+  }
+
   // ─── Fetch cart from server ─────────────────────────────────────────────────
 
   Future<void> fetchCart() async {
@@ -228,30 +272,39 @@ class CartProvider with ChangeNotifier {
 
       // Refresh cart from server to get updated state
       await fetchCart();
+      if (!_items.any((i) => i.entityId == entityId)) {
+        // Server add succeeded but cart fetch is stale/unavailable: keep local view consistent.
+        await _addLocalItem(
+          subscriptionId: subscriptionId,
+          entityType: entityType,
+          entityId: entityId,
+          includeSaturday: includeSaturday,
+          startDate: safeStart,
+          entityName: entityName,
+          planName: planName,
+          unitPrice: unitPrice,
+          mealSizeId: mealSizeId,
+          mealSizeName: mealSizeName,
+          mealTiming: mealTiming,
+        );
+        notifyListeners();
+      }
       return true;
     } catch (e) {
       if (_isLikelyNetworkError(e)) {
-        final safeStart = MealDate.isValidFutureStartDate(startDate)
-            ? startDate
-            : MealDate.tomorrowYmd();
-        _items.add(
-          CartItem(
-            id: _nextOfflineTempId--,
-            entityName: entityName ?? entityType.toUpperCase(),
-            entityType: entityType,
-            planName: planName ?? 'Plan',
-            unitPrice: unitPrice ?? 0,
-            startDate: safeStart,
-            entityId: entityId,
-            subscriptionId: subscriptionId,
-            includeSaturday: includeSaturday,
-            mealSizeId: mealSizeId,
-            mealSizeName: mealSizeName,
-            mealTiming: mealTiming,
-          ),
+        await _addLocalItem(
+          subscriptionId: subscriptionId,
+          entityType: entityType,
+          entityId: entityId,
+          includeSaturday: includeSaturday,
+          startDate: startDate,
+          entityName: entityName,
+          planName: planName,
+          unitPrice: unitPrice,
+          mealSizeId: mealSizeId,
+          mealSizeName: mealSizeName,
+          mealTiming: mealTiming,
         );
-        _totalAmount = _items.fold(0, (sum, i) => sum + i.unitPrice);
-        await _persistLocalCart();
         _error = null;
         _isLoading = false;
         notifyListeners();
