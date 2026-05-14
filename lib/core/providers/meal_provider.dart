@@ -107,10 +107,12 @@ class MealProvider with ChangeNotifier {
 
   // ─── Today's Menu ─────────────────────────────────────────────────────────
 
-  Future<void> fetchTodayMenu() async {
-    _isLoading = true;
-    _error = null;
-    notifyListeners();
+  Future<void> fetchTodayMenu({bool silent = false}) async {
+    if (!silent) {
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
+    }
 
     try {
       final data = await _repository.fetchTodayMenu();
@@ -125,21 +127,25 @@ class MealProvider with ChangeNotifier {
       if (e.toString().contains('403')) {
         _isSubscribed = false;
         _todayMenu = null;
-      } else {
+      } else if (!silent || (_todayMenu == null)) {
         _error = ErrorHandler.getErrorMessage(e);
       }
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      if (!silent) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 
   // ─── Weekly Menu ──────────────────────────────────────────────────────────
 
-  Future<void> fetchWeeklyMenu() async {
-    _isLoading = true;
-    _error = null;
-    notifyListeners();
+  Future<void> fetchWeeklyMenu({bool silent = false}) async {
+    if (!silent) {
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
+    }
 
     try {
       final data = await _repository.fetchWeeklyMenu();
@@ -151,12 +157,14 @@ class MealProvider with ChangeNotifier {
     } catch (e) {
       if (e.toString().contains('403')) {
         _isSubscribed = false;
-      } else {
+      } else if (!silent || _weeklyMenu.isEmpty) {
         _error = ErrorHandler.getErrorMessage(e);
       }
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      if (!silent) {
+        _isLoading = false;
+        notifyListeners();
+      }
     }
   }
 

@@ -19,8 +19,9 @@ class _WeeklyMenuScreenState extends State<WeeklyMenuScreen> {
   @override
   void initState() {
     super.initState();
+    // Fetch silently so cached data shows immediately; spinner only on empty
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<MenuProvider>().fetchWeeklyMenu();
+      context.read<MenuProvider>().fetchWeeklyMenuSilent();
     });
   }
 
@@ -131,18 +132,18 @@ class _WeeklyMenuScreenState extends State<WeeklyMenuScreen> {
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
                 child: CachedNetworkImage(
                   imageUrl: imageUrl,
-                  height: 130,
                   width: double.infinity,
-                  fit: BoxFit.cover,
+                  // Use contain so the full image is visible, not cropped
+                  fit: BoxFit.contain,
                   placeholder: (_, __) => Container(
-                    height: 70,
+                    height: 160,
                     color: AppTheme.primaryColor.withValues(alpha: 0.05),
-                    child: Center(child: Icon(CupertinoIcons.photo, color: Colors.grey.withValues(alpha: 0.3))),
+                    child: Center(child: Icon(CupertinoIcons.photo, color: Colors.grey.withValues(alpha: 0.3), size: 32)),
                   ),
                   errorWidget: (_, __, ___) => Container(
-                    height: 70,
+                    height: 100,
                     color: AppTheme.primaryColor.withValues(alpha: 0.05),
-                    child: Center(child: Icon(CupertinoIcons.photo, color: Colors.grey.withValues(alpha: 0.3))),
+                    child: Center(child: Icon(CupertinoIcons.photo, color: Colors.grey.withValues(alpha: 0.3), size: 32)),
                   ),
                 ),
               ),

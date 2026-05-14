@@ -139,7 +139,10 @@ class MenuProvider with ChangeNotifier {
     }
   }
 
-  Future<void> fetchWeeklyMenu() async {
+  /// Opens instantly from cache, then silently refreshes from network.
+  /// The screen never shows a blocking spinner if cache exists.
+  Future<void> fetchWeeklyMenuSilent() async {
+    // Step 1 — load from cache immediately (no spinner)
     final cached = await _cache.loadJson(_weeklyCacheKey);
     if (cached != null && _weeklyMenu.isEmpty) {
       _isSubscribed = cached['is_subscribed'] == true;
@@ -148,9 +151,24 @@ class MenuProvider with ChangeNotifier {
       notifyListeners();
     }
 
-    _isLoading = true;
-    _error = null;
-    notifyListeners();
+    // Step 2 — network refresh (only show spinner if truly empty)
+    await fetchWeeklyMenu(silent: true);
+  }
+
+  Future<void> fetchWeeklyMenu({bool silent = false}) async {
+    final cached = await _cache.loadJson(_weeklyCacheKey);
+    if (cached != null && _weeklyMenu.isEmpty) {
+      _isSubscribed = cached['is_subscribed'] == true;
+      _weeklyMenu = (cached['menu'] as List? ?? const []).toList();
+      _subscriptionSummary = (cached['subscription_summary'] as List? ?? const []).toList();
+      notifyListeners();
+    }
+
+    if (!silent) {
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
+    }
 
     try {
       final mealResponse = await _dioClient.dio.get('/api/client/meals/weekly');

@@ -23,7 +23,7 @@ class _ChildrenManagementScreenState extends State<ChildrenManagementScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<ChildrenProvider>().fetchChildren();
+      context.read<ChildrenProvider>().fetchChildren(silent: true);
     });
   }
 

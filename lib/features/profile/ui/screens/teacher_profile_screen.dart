@@ -54,7 +54,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
       
       // Fetch lookup data first so dropdowns are ready
       await lookupProvider.fetchInitialData();
-      await provider.fetchProfiles(force: true);
+      await provider.fetchProfiles(silent: true);
       
       final profile = provider.teacherProfile;
       if (profile != null && mounted) {

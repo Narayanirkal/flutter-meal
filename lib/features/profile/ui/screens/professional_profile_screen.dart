@@ -50,7 +50,7 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
       await lookup.fetchInitialData();
       // Also fetch corporate locations
       await lookup.fetchCorporateLocations();
-      await profileProvider.fetchProfiles(force: true);
+      await profileProvider.fetchProfiles(silent: true);
 
       final profile = profileProvider.professionalProfile;
       if (profile != null && mounted) {

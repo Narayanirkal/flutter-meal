@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -897,13 +897,11 @@ class _HomeScreenState extends State<HomeScreen> {
             Expanded(
               child: InkWell(
                 onTap: () {
-                  context.read<ChildrenProvider>().fetchChildren(silent: true).whenComplete(() {
-                    if (!context.mounted) return;
-                    Navigator.push(
-                      context,
-                      CupertinoPageRoute(builder: (_) => const ChildrenManagementScreen()),
-                    );
-                  });
+                  Navigator.push(
+                    context,
+                    CupertinoPageRoute(builder: (_) => const ChildrenManagementScreen()),
+                  );
+                  context.read<ChildrenProvider>().fetchChildren(silent: true);
                 },
                 borderRadius: const BorderRadius.horizontal(left: Radius.circular(18)),
                 child: Padding(

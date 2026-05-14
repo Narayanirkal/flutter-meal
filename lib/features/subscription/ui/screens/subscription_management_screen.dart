@@ -25,8 +25,8 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<PaymentProvider>().fetchActiveSubscriptions();
-      context.read<PaymentProvider>().fetchPaymentHistory();
+      context.read<PaymentProvider>().fetchActiveSubscriptions(silent: true);
+      context.read<PaymentProvider>().fetchPaymentHistory(silent: true);
     });
   }
 
