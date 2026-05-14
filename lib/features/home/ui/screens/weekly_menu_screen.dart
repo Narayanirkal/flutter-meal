@@ -44,7 +44,7 @@ class _WeeklyMenuScreenState extends State<WeeklyMenuScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(CupertinoIcons.exclamationmark_triangle, size: 48, color: Colors.orange.withOpacity(0.6)),
+                      Icon(CupertinoIcons.exclamationmark_triangle, size: 48, color: Colors.orange.withValues(alpha: 0.6)),
                       const SizedBox(height: 16),
                       Text('Could not load menu', style: TextStyle(fontWeight: FontWeight.w700, color: isDark ? Colors.white : AppTheme.textPrimaryLight)),
                       const SizedBox(height: 8),
@@ -60,7 +60,7 @@ class _WeeklyMenuScreenState extends State<WeeklyMenuScreen> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(CupertinoIcons.lock_fill, size: 48, color: isDark ? Colors.white24 : Colors.grey.withOpacity(0.4)),
+                          Icon(CupertinoIcons.lock_fill, size: 48, color: isDark ? Colors.white24 : Colors.grey.withValues(alpha: 0.4)),
                           const SizedBox(height: 16),
                           Text('Subscription Required', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: isDark ? Colors.white : AppTheme.textPrimaryLight)),
                           const SizedBox(height: 8),
@@ -73,7 +73,7 @@ class _WeeklyMenuScreenState extends State<WeeklyMenuScreen> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(CupertinoIcons.calendar, size: 48, color: isDark ? Colors.white24 : Colors.grey.withOpacity(0.4)),
+                              Icon(CupertinoIcons.calendar, size: 48, color: isDark ? Colors.white24 : Colors.grey.withValues(alpha: 0.4)),
                               const SizedBox(height: 16),
                               Text('No weekly menu available', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: isDark ? Colors.white : AppTheme.textPrimaryLight)),
                             ],
@@ -116,8 +116,8 @@ class _WeeklyMenuScreenState extends State<WeeklyMenuScreen> {
       decoration: BoxDecoration(
         color: isDark ? AppTheme.surfaceDark : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? Colors.white10 : Colors.grey.withOpacity(0.1)),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 3))],
+        border: Border.all(color: isDark ? Colors.white10 : Colors.grey.withValues(alpha: 0.1)),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 3))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -136,13 +136,13 @@ class _WeeklyMenuScreenState extends State<WeeklyMenuScreen> {
                   fit: BoxFit.cover,
                   placeholder: (_, __) => Container(
                     height: 70,
-                    color: AppTheme.primaryColor.withOpacity(0.05),
-                    child: Center(child: Icon(CupertinoIcons.photo, color: Colors.grey.withOpacity(0.3))),
+                    color: AppTheme.primaryColor.withValues(alpha: 0.05),
+                    child: Center(child: Icon(CupertinoIcons.photo, color: Colors.grey.withValues(alpha: 0.3))),
                   ),
                   errorWidget: (_, __, ___) => Container(
                     height: 70,
-                    color: AppTheme.primaryColor.withOpacity(0.05),
-                    child: Center(child: Icon(CupertinoIcons.photo, color: Colors.grey.withOpacity(0.3))),
+                    color: AppTheme.primaryColor.withValues(alpha: 0.05),
+                    child: Center(child: Icon(CupertinoIcons.photo, color: Colors.grey.withValues(alpha: 0.3))),
                   ),
                 ),
               ),
@@ -160,7 +160,7 @@ class _WeeklyMenuScreenState extends State<WeeklyMenuScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: AppTheme.primaryColor.withOpacity(0.1),
+                        color: AppTheme.primaryColor.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
@@ -195,9 +195,9 @@ class _WeeklyMenuScreenState extends State<WeeklyMenuScreen> {
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                             decoration: BoxDecoration(
-                              color: AppTheme.primaryColor.withOpacity(0.08),
+                              color: AppTheme.primaryColor.withValues(alpha: 0.08),
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: AppTheme.primaryColor.withOpacity(0.2)),
+                              border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.2)),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,

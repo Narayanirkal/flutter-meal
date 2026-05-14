@@ -3,8 +3,6 @@ import 'package:meal_app/core/network/meal_repository.dart';
 import 'package:meal_app/core/storage/cache_store.dart';
 import 'package:meal_app/core/storage/local_cache.dart';
 import 'package:meal_app/core/utils/error_handler.dart';
-import 'package:meal_app/core/utils/meal_date.dart';
-import 'package:meal_app/core/utils/subscription_status_normalize.dart';
 
 /// Centralized provider for meals, skips, subscription alerts,
 /// and remaining-meal status tracking.
@@ -29,9 +27,6 @@ class MealProvider with ChangeNotifier {
 
   bool _isSubscribed = false;
   bool get isSubscribed => _isSubscribed;
-
-  bool get hasUpcomingSubscription =>
-      _subscriptionStatusData?['has_upcoming_subscription'] == true;
 
   // Today's menu
   Map<String, dynamic>? _todayMenu;
@@ -78,8 +73,8 @@ class MealProvider with ChangeNotifier {
       }
       final subStatusCache = await CacheStore.getJson('subscription_status');
       if (subStatusCache is Map<String, dynamic>) {
-        _subscriptionStatusData = SubscriptionStatusNormalizer.normalize(subStatusCache);
-        _syncSubscribedFromStatusMap(_subscriptionStatusData!);
+        _subscriptionStatusData = subStatusCache;
+        _syncSubscribedFromStatusMap(subStatusCache);
       }
       _hasInitiallyLoaded = true;
       notifyListeners();
@@ -90,18 +85,22 @@ class MealProvider with ChangeNotifier {
 
   void _syncSubscribedFromStatusMap(Map<String, dynamic> raw) {
     _isSubscribed = false;
-    if (raw['has_active_subscription'] == true) {
+    final direct = raw['has_active_subscription'];
+    if (direct == true) {
       _isSubscribed = true;
       return;
     }
-    final list = raw['entities'] is List
-        ? raw['entities'] as List
-        : (raw['data'] is List ? raw['data'] as List : const []);
-    final today = MealDate.formatYmd(DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day));
-    for (final row in list) {
-      if (row is Map && SubscriptionStatusNormalizer.rowIsServingToday(Map<String, dynamic>.from(row as Map), today)) {
-        _isSubscribed = true;
-        return;
+    final nested = raw['data'];
+    if (nested is Map && nested['has_active_subscription'] == true) {
+      _isSubscribed = true;
+      return;
+    }
+    if (nested is List && nested.isNotEmpty) {
+      for (final row in nested) {
+        if (row is Map && row['subscription_status'] == true) {
+          _isSubscribed = true;
+          return;
+        }
       }
     }
   }
@@ -273,9 +272,7 @@ class MealProvider with ChangeNotifier {
       notifyListeners();
     }
     try {
-      _subscriptionStatusData = SubscriptionStatusNormalizer.normalize(
-        await _repository.fetchSubscriptionStatus(),
-      );
+      _subscriptionStatusData = await _repository.fetchSubscriptionStatus();
       final statusMap = _subscriptionStatusData;
       if (statusMap is Map<String, dynamic>) {
         _syncSubscribedFromStatusMap(statusMap);
