@@ -37,7 +37,7 @@ class _WeeklyMenuScreenState extends State<WeeklyMenuScreen> {
     super.initState();
     AppRouteTracker.instance.setCurrent(AppScreen.weeklyMenu);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<MenuProvider>().fetchWeeklyMenu();
+      context.read<MenuProvider>().fetchWeeklyMenuSilent();
     });
   }
 
@@ -181,8 +181,8 @@ class _WeeklyMenuScreenState extends State<WeeklyMenuScreen> {
       decoration: BoxDecoration(
         color: isDark ? AppTheme.surfaceDark : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? Colors.white10 : Colors.grey.withOpacity(0.1)),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 3))],
+        border: Border.all(color: isDark ? Colors.white10 : Colors.grey.withValues(alpha: 0.1)),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, 3))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -196,18 +196,18 @@ class _WeeklyMenuScreenState extends State<WeeklyMenuScreen> {
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
                 child: CachedNetworkImage(
                   imageUrl: imageUrl,
-                  height: 130,
                   width: double.infinity,
-                  fit: BoxFit.cover,
+                  // Use contain so the full image is visible, not cropped
+                  fit: BoxFit.contain,
                   placeholder: (_, __) => Container(
-                    height: 70,
-                    color: AppTheme.primaryColor.withOpacity(0.05),
-                    child: Center(child: Icon(CupertinoIcons.photo, color: Colors.grey.withOpacity(0.3))),
+                    height: 160,
+                    color: AppTheme.primaryColor.withValues(alpha: 0.05),
+                    child: Center(child: Icon(CupertinoIcons.photo, color: Colors.grey.withValues(alpha: 0.3), size: 32)),
                   ),
                   errorWidget: (_, __, ___) => Container(
-                    height: 70,
-                    color: AppTheme.primaryColor.withOpacity(0.05),
-                    child: Center(child: Icon(CupertinoIcons.photo, color: Colors.grey.withOpacity(0.3))),
+                    height: 100,
+                    color: AppTheme.primaryColor.withValues(alpha: 0.05),
+                    child: Center(child: Icon(CupertinoIcons.photo, color: Colors.grey.withValues(alpha: 0.3), size: 32)),
                   ),
                 ),
               ),
@@ -225,7 +225,7 @@ class _WeeklyMenuScreenState extends State<WeeklyMenuScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: AppTheme.primaryColor.withOpacity(0.1),
+                        color: AppTheme.primaryColor.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
@@ -260,9 +260,9 @@ class _WeeklyMenuScreenState extends State<WeeklyMenuScreen> {
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                             decoration: BoxDecoration(
-                              color: AppTheme.primaryColor.withOpacity(0.08),
+                              color: AppTheme.primaryColor.withValues(alpha: 0.08),
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: AppTheme.primaryColor.withOpacity(0.2)),
+                              border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.2)),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,

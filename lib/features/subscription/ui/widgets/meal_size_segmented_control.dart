@@ -188,7 +188,7 @@ class MealVariantCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: isDark ? AppTheme.surfaceDark : Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -208,6 +208,7 @@ class MealVariantCard extends StatelessWidget {
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
                 child: Column(
@@ -287,7 +288,7 @@ class MealVariantCard extends StatelessWidget {
             ],
           ),
           if (features.isNotEmpty) ...[
-            const SizedBox(height: 10),
+            const SizedBox(height: 6),
             Builder(
               builder: (context) {
                 const maxCells = 4;
@@ -296,45 +297,47 @@ class MealVariantCard extends StatelessWidget {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    GridView.count(
-                      crossAxisCount: 2,
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      crossAxisSpacing: 6,
-                      mainAxisSpacing: 6,
-                      childAspectRatio: 2.4,
-                      children: [
-                        for (final f in shown)
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: isDark ? Colors.white.withValues(alpha: 0.06) : AppTheme.primaryColor.withValues(alpha: 0.06),
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(
-                                color: isDark ? Colors.white.withValues(alpha: 0.1) : AppTheme.primaryColor.withValues(alpha: 0.12),
-                              ),
-                            ),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Icon(CupertinoIcons.checkmark_circle_fill, size: 13, color: const Color(0xFF16A34A)),
-                                const SizedBox(width: 6),
-                                Expanded(
-                                  child: Text(
-                                    f,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      height: 1.2,
-                                      color: isDark ? Colors.white.withValues(alpha: 0.9) : AppTheme.textPrimaryLight.withValues(alpha: 0.9),
-                                    ),
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final itemWidth = (constraints.maxWidth - 6) / 2;
+                        return Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: [
+                            for (final f in shown)
+                              Container(
+                                width: itemWidth,
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: isDark ? Colors.white.withValues(alpha: 0.06) : AppTheme.primaryColor.withValues(alpha: 0.06),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: isDark ? Colors.white.withValues(alpha: 0.1) : AppTheme.primaryColor.withValues(alpha: 0.12),
                                   ),
                                 ),
-                              ],
-                            ),
-                          ),
-                      ],
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Icon(CupertinoIcons.checkmark_circle_fill, size: 13, color: const Color(0xFF16A34A)),
+                                    const SizedBox(width: 6),
+                                    Expanded(
+                                      child: Text(
+                                        f,
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          height: 1.2,
+                                          color: isDark ? Colors.white.withValues(alpha: 0.9) : AppTheme.textPrimaryLight.withValues(alpha: 0.9),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                          ],
+                        );
+                      }
                     ),
                     if (extra > 0)
                       Padding(
@@ -353,7 +356,7 @@ class MealVariantCard extends StatelessWidget {
               },
             ),
           ],
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           Row(
             children: [
               Expanded(

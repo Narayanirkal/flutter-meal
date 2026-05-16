@@ -198,62 +198,6 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
     }
   }
 
-  bool _teacherHasUnsavedChanges(TeacherProfileModel? baseline) {
-    if (!_isEditing) return false;
-    final draft = TeacherProfileModel(
-      name: _nameController.text.trim(),
-      schoolCollegeName: _schoolController.text.trim(),
-      city: _cityController.text.trim(),
-      state: _stateController.text.trim(),
-      location: '',
-      status: _status,
-      mealSizeId: _selectedMealSize?.id,
-      mealTime: _timeController.text,
-    );
-    if (baseline == null) {
-      return draft.name.isNotEmpty ||
-          draft.schoolCollegeName.isNotEmpty ||
-          draft.city.isNotEmpty ||
-          draft.state.isNotEmpty ||
-          (draft.mealSizeId != null && draft.mealSizeId != 0) ||
-          TimeUtils.normalizeBackendTime(draft.mealTime) != '13:30';
-    }
-    return draft.name != baseline.name.trim() ||
-        draft.schoolCollegeName != baseline.schoolCollegeName.trim() ||
-        draft.city != baseline.city.trim() ||
-        draft.state != baseline.state.trim() ||
-        draft.status != baseline.status ||
-        draft.mealSizeId != baseline.mealSizeId ||
-        TimeUtils.normalizeBackendTime(draft.mealTime) !=
-            TimeUtils.normalizeBackendTime(baseline.mealTime ?? '13:30');
-  }
-
-  Future<void> _promptLeaveTeacherEditor(TeacherProfileModel? baseline) async {
-    if (!_teacherHasUnsavedChanges(baseline)) {
-      if (mounted) Navigator.of(context).pop();
-      return;
-    }
-    final choice = await showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Discard changes?'),
-        content: const Text('You have unsaved changes to your teacher profile.'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, 'stay'), child: const Text('Stay')),
-          TextButton(onPressed: () => Navigator.pop(ctx, 'discard'), child: const Text('Discard')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, 'save'), child: const Text('Save')),
-        ],
-      ),
-    );
-    if (!mounted || choice == null || choice == 'stay') return;
-    if (choice == 'discard') {
-      Navigator.of(context).pop();
-      return;
-    }
-    await _submitForm();
-    if (mounted && !_isEditing) Navigator.of(context).pop();
-  }
-
   @override
   Widget build(BuildContext context) {
     final profileProvider = context.watch<ProfileProvider>();
@@ -261,13 +205,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final profile = profileProvider.teacherProfile;
 
-    return PopScope(
-      canPop: !_teacherHasUnsavedChanges(profile),
-      onPopInvokedWithResult: (didPop, result) async {
-        if (didPop) return;
-        await _promptLeaveTeacherEditor(profile);
-      },
-      child: Scaffold(
+    return Scaffold(
       appBar: AppBar(
         title: Text(
           'Teacher Profile',
@@ -275,7 +213,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
         ),
         leading: IconButton(
           icon: const Icon(CupertinoIcons.back),
-          onPressed: () => _promptLeaveTeacherEditor(profile),
+          onPressed: () => Navigator.pop(context),
         ),
       ),
       body: CartOverlayBody(
@@ -510,12 +448,12 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
               color: isDark ? AppTheme.surfaceDark : Colors.white,
               borderRadius: BorderRadius.circular(24),
               border: Border.all(
-                color: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.05),
+                color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
                 width: 1,
               ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+                  color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
                   blurRadius: 20,
                   offset: const Offset(0, 10),
                 ),
@@ -530,8 +468,8 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: isDark 
-                          ? [AppTheme.primaryColor.withOpacity(0.2), Colors.transparent]
-                          : [AppTheme.primaryColor.withOpacity(0.05), Colors.transparent],
+                          ? [AppTheme.primaryColor.withValues(alpha: 0.2), Colors.transparent]
+                          : [AppTheme.primaryColor.withValues(alpha: 0.05), Colors.transparent],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
@@ -541,7 +479,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: AppTheme.primaryColor.withOpacity(0.1),
+                            color: AppTheme.primaryColor.withValues(alpha: 0.1),
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(CupertinoIcons.person_crop_square_fill, color: AppTheme.primaryColor),
@@ -641,7 +579,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
       child: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Icon(icon, color: color, size: 20),
@@ -659,7 +597,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
             text,
             style: TextStyle(
               fontSize: 15,
-              color: isDark ? Colors.white.withOpacity(0.9) : AppTheme.textPrimaryLight,
+              color: isDark ? Colors.white.withValues(alpha: 0.9) : AppTheme.textPrimaryLight,
               fontWeight: FontWeight.w500,
             ),
           ),

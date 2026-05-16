@@ -31,10 +31,14 @@ class _ChildrenManagementScreenState extends State<ChildrenManagementScreen> {
     super.initState();
     AppRouteTracker.instance.setCurrent(AppScreen.children);
     WidgetsBinding.instance.addPostFrameCallback((_) {
+<<<<<<< HEAD
       context.read<LookupProvider>().fetchInitialData();
       context.read<ChildrenProvider>().fetchChildren();
       context.read<MealProvider>().fetchSubscriptionStatus(silent: true);
       context.read<CartProvider>().fetchCart(silent: true);
+=======
+      context.read<ChildrenProvider>().fetchChildren(silent: true);
+>>>>>>> 818387d3aaed6c89f85575f54f4f460cf9ee3252
     });
   }
 
@@ -139,12 +143,12 @@ class _ChildrenManagementScreenState extends State<ChildrenManagementScreen> {
         color: isDark ? AppTheme.surfaceDark : Colors.white,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: isDark ? Colors.white.withOpacity(0.05) : Colors.black.withOpacity(0.05),
+          color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
+            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -159,8 +163,8 @@ class _ChildrenManagementScreenState extends State<ChildrenManagementScreen> {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: isDark 
-                    ? [AppTheme.primaryColor.withOpacity(0.2), Colors.transparent]
-                    : [AppTheme.primaryColor.withOpacity(0.05), Colors.transparent],
+                    ? [AppTheme.primaryColor.withValues(alpha: 0.2), Colors.transparent]
+                    : [AppTheme.primaryColor.withValues(alpha: 0.05), Colors.transparent],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
@@ -170,7 +174,7 @@ class _ChildrenManagementScreenState extends State<ChildrenManagementScreen> {
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: AppTheme.primaryColor.withOpacity(0.1),
+                      color: AppTheme.primaryColor.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(CupertinoIcons.person_fill, color: AppTheme.primaryColor),
@@ -259,7 +263,7 @@ class _ChildrenManagementScreenState extends State<ChildrenManagementScreen> {
       child: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
         ),
         child: Icon(icon, color: color, size: 20),
@@ -277,7 +281,7 @@ class _ChildrenManagementScreenState extends State<ChildrenManagementScreen> {
             text,
             style: TextStyle(
               fontSize: 14,
-              color: isDark ? AppTheme.textPrimaryDark.withOpacity(0.8) : AppTheme.textPrimaryLight.withOpacity(0.8),
+              color: isDark ? AppTheme.textPrimaryDark.withValues(alpha: 0.8) : AppTheme.textPrimaryLight.withValues(alpha: 0.8),
               fontWeight: FontWeight.w500,
             ),
           ),

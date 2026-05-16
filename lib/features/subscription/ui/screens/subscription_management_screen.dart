@@ -30,10 +30,8 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
     AppRouteTracker.instance.setCurrent(AppScreen.subscriptionManagement);
     _tabController = TabController(length: 2, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<PaymentProvider>().fetchActiveSubscriptions();
-      context.read<PaymentProvider>().fetchPaymentHistory();
-      context.read<ChildrenProvider>().fetchChildren(silent: true);
-      context.read<ProfileProvider>().fetchProfiles(silent: true);
+      context.read<PaymentProvider>().fetchActiveSubscriptions(silent: true);
+      context.read<PaymentProvider>().fetchPaymentHistory(silent: true);
     });
   }
 
@@ -107,14 +105,18 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
   }
 
   Widget _buildActivePlans(PaymentProvider provider, bool isDark) {
-    if (provider.isLoading) return const Center(child: CupertinoActivityIndicator());
-    
-    if (provider.error != null) {
+    // Show spinner only on first load with no cached data
+    if (provider.isLoading && provider.activeSubscriptions.isEmpty) {
+      return const Center(child: CupertinoActivityIndicator());
+    }
+
+    // If error but we have cached data, show cached data with a small banner
+    if (provider.error != null && provider.activeSubscriptions.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(CupertinoIcons.exclamationmark_triangle, size: 48, color: Colors.orange.withOpacity(0.7)),
+            Icon(CupertinoIcons.exclamationmark_triangle, size: 48, color: Colors.orange.withValues(alpha: 0.7)),
             const SizedBox(height: 16),
             Text(
               'Could not load subscriptions',
@@ -138,7 +140,7 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(CupertinoIcons.creditcard, size: 64, color: Colors.grey.withOpacity(0.5)),
+            Icon(CupertinoIcons.creditcard, size: 64, color: Colors.grey.withValues(alpha: 0.5)),
             const SizedBox(height: 16),
             Text(
               'No active subscriptions found.',
@@ -157,7 +159,7 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
         
         // Safe type conversion for all fields
         final planName = _safeString(sub['plan_name'], 'PLAN');
-        final entityName = _resolveActiveEntityName(context, sub);
+        final entityName = _safeString(sub['entity_name'], 'Profile');
         final entityType = _safeString(sub['entity_type'], '');
         final amountPaid = _safeString(sub['amount_paid'], '');
         final remainingMeals = sub['remaining_meals'];
@@ -169,6 +171,12 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
         final startDateStr = _safeString(sub['start_date'], '');
         final startDate = startDateStr.isNotEmpty ? MealDate.parseYmdLocal(startDateStr) : null;
 
+        final expiryStr = _safeString(sub['end_date'] ?? sub['expiry_date'], '');
+        DateTime? expiry;
+        if (expiryStr.isNotEmpty) {
+          expiry = DateTime.tryParse(expiryStr);
+        }
+        
         return AppleCard(
           margin: const EdgeInsets.only(bottom: 12),
           child: Column(
@@ -180,7 +188,7 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: AppTheme.primaryColor.withOpacity(0.1),
+                      color: AppTheme.primaryColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
@@ -217,6 +225,8 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
               // Meta details — compact column of label/value pairs
               if (startDate != null)
                 _buildMetaRow('Start Date', DateFormat('dd MMM yyyy').format(startDate), isDark),
+              if (expiry != null)
+                _buildMetaRow('Expires On', DateFormat('dd MMM yyyy').format(expiry), isDark),
               if (amountPaid.isNotEmpty)
                 _buildMetaRow('Amount Paid', '₹$amountPaid', isDark),
               _buildMetaRow('Variant', includeSaturday ? 'With Saturday' : 'Without Saturday', isDark),
@@ -276,14 +286,16 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
   }
 
   Widget _buildHistory(PaymentProvider provider, bool isDark) {
-    if (provider.isLoading) return const Center(child: CupertinoActivityIndicator());
+    if (provider.isLoading && provider.paymentHistory.isEmpty) {
+      return const Center(child: CupertinoActivityIndicator());
+    }
     
-    if (provider.error != null) {
+    if (provider.error != null && provider.paymentHistory.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(CupertinoIcons.exclamationmark_triangle, size: 48, color: Colors.orange.withOpacity(0.7)),
+            Icon(CupertinoIcons.exclamationmark_triangle, size: 48, color: Colors.orange.withValues(alpha: 0.7)),
             const SizedBox(height: 16),
             Text(
               'Could not load payment history',
@@ -343,7 +355,7 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: (isSuccess ? Colors.green : Colors.orange).withOpacity(0.1),
+                  color: (isSuccess ? Colors.green : Colors.orange).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(
@@ -416,7 +428,7 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
-                      color: (isSuccess ? Colors.green : Colors.orange).withOpacity(0.1),
+                      color: (isSuccess ? Colors.green : Colors.orange).withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
@@ -435,37 +447,6 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
         );
       },
     );
-  }
-
-  /// Pjreferf API `entity_name`; fall back to local child / profile lists.
-  String _resolveActiveEntityName(BuildContext context, dynamic raw) {
-    if (raw is! Map) return 'Profile';
-    final sub = Map<String, dynamic>.from(raw);
-    var n = _safeString(
-      sub['entity_name'] ?? sub['name'] ?? sub['child_name'] ?? sub['profile_name'] ?? sub['entityName'],
-      '',
-    );
-    if (n.isNotEmpty && n != 'Profile') return n;
-    final et = _safeString(sub['entity_type'], '').toLowerCase().trim();
-    final eid = _safeString(sub['entity_id'] ?? sub['entityId'], '').trim();
-    if (eid.isEmpty) return n.isEmpty ? 'Profile' : n;
-
-    final children = context.watch<ChildrenProvider>().children;
-    if (et == 'child') {
-      for (final c in children) {
-        if (c.id?.toString() == eid) return c.name;
-      }
-    }
-    final profiles = context.watch<ProfileProvider>();
-    if (et == 'teacher') {
-      final t = profiles.teacherProfile;
-      if (t != null && t.id?.toString() == eid) return t.name;
-    }
-    if (et == 'professional') {
-      final p = profiles.professionalProfile;
-      if (p != null && p.id?.toString() == eid) return p.name;
-    }
-    return n.isEmpty ? 'Profile' : n;
   }
 
   /// Compact label/value row used inside the active-plan card.
