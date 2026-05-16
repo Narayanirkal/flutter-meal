@@ -577,6 +577,19 @@ class CartProvider with ChangeNotifier {
     return _items.any((i) => i.entityId == entityId);
   }
 
+  bool hasExactCartItem({
+    required String entityType,
+    required String entityId,
+    required String subscriptionId,
+    required bool includeSaturday,
+  }) {
+    return _items.any((i) =>
+        i.entityType == entityType &&
+        i.entityId == entityId &&
+        i.subscriptionId == subscriptionId &&
+        i.includeSaturday == includeSaturday);
+  }
+
   // ─── Cart Checkout via PhonePe SDK ──────────────────────────────────────────
 
   Future<Map<String, dynamic>?> checkoutAll({bool isSandbox = true}) async {

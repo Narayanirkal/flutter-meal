@@ -22,6 +22,8 @@ class _OfflineBannerState extends State<OfflineBanner>
   late final AnimationController _controller;
   late final Animation<double> _fade;
   late final Animation<Offset> _slide;
+  bool _dismissed = false;
+  bool _wasOffline = false;
 
   @override
   void initState() {
@@ -178,20 +180,19 @@ class _OfflineBannerState extends State<OfflineBanner>
                                 color: iconBg,
                                 borderRadius: BorderRadius.circular(10),
                               ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  net.hasDeviceConnectivity
-                                      ? 'Cannot reach the server. We will reconnect automatically.'
-                                      : 'No internet connection. Check your Wi‑Fi or mobile data.',
-                                  style: TextStyle(
-                                    color: textColor.withValues(alpha: 0.94),
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 13,
-                                    height: 1.35,
-                                  ),
-                                  maxLines: 3,
-                                  softWrap: true,
+                              child: Icon(icon, color: iconColor, size: 20),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                net.hasDeviceConnectivity
+                                    ? 'Cannot reach the server. We will reconnect automatically.'
+                                    : 'No internet connection. Check your Wi‑Fi or mobile data.',
+                                style: TextStyle(
+                                  color: textColor.withValues(alpha: 0.94),
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                  height: 1.35,
                                 ),
                                 maxLines: 3,
                                 softWrap: true,
@@ -201,8 +202,7 @@ class _OfflineBannerState extends State<OfflineBanner>
                             IconButton(
                               visualDensity: VisualDensity.compact,
                               padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(
-                                  minWidth: 32, minHeight: 32),
+                              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                               onPressed: _userDismiss,
                               icon: Icon(
                                 CupertinoIcons.xmark_circle_fill,

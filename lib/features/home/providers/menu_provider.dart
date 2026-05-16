@@ -34,6 +34,9 @@ class MenuProvider with ChangeNotifier {
   String? _error;
   String? get error => _error;
 
+  String? _homeMealMessage;
+  String? get homeMealMessage => _homeMealMessage;
+
   bool _hasInitiallyLoaded = false;
   bool get hasInitiallyLoaded => _hasInitiallyLoaded;
 
@@ -93,6 +96,7 @@ class MenuProvider with ChangeNotifier {
           _todayMenu = cached['menu'] != null ? Map<String, dynamic>.from(cached['menu']) : null;
           _subscriptionSummary = cached['subscription_summary'] ?? [];
         }
+        _homeMealMessage = cached['message']?.toString();
         _hasInitiallyLoaded = true;
         notifyListeners();
       }
@@ -138,11 +142,13 @@ class MenuProvider with ChangeNotifier {
         _todayMenu = null;
         _subscriptionSummary = [];
       }
+      _homeMealMessage = data['message']?.toString();
       // Cache the response structure
       await CacheStore.setJson('today_menu', {
         'is_subscribed': _isSubscribed,
         'menu': _todayMenu,
         'subscription_summary': _subscriptionSummary,
+        'message': _homeMealMessage,
       }, ttl: const Duration(hours: 6));
       _hasInitiallyLoaded = true;
     } catch (e) {

@@ -108,8 +108,7 @@ class _PlanPickerSheetState extends State<_PlanPickerSheet> {
     final forSize = _plansForSize(all);
     final regular = forSize.where((p) => p.trialDays == 0).toList();
     final trial = forSize.where((p) => p.trialDays > 0).toList();
-    final loading = forSize.isEmpty &&
-        (subProvider.isLoading || subProvider.isFetchingSubscriptions);
+    final loading = forSize.isEmpty && subProvider.isLoading;
 
     return DraggableScrollableSheet(
       initialChildSize: 0.72,

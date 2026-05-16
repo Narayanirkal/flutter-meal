@@ -31,14 +31,10 @@ class _ChildrenManagementScreenState extends State<ChildrenManagementScreen> {
     super.initState();
     AppRouteTracker.instance.setCurrent(AppScreen.children);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-<<<<<<< HEAD
       context.read<LookupProvider>().fetchInitialData();
       context.read<ChildrenProvider>().fetchChildren();
       context.read<MealProvider>().fetchSubscriptionStatus(silent: true);
       context.read<CartProvider>().fetchCart(silent: true);
-=======
-      context.read<ChildrenProvider>().fetchChildren(silent: true);
->>>>>>> 818387d3aaed6c89f85575f54f4f460cf9ee3252
     });
   }
 

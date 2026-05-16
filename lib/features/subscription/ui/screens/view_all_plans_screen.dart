@@ -6,7 +6,7 @@ import 'package:meal_app/core/providers/subscription_provider.dart';
 import 'package:meal_app/core/theme/app_theme.dart';
 
 /// Read-only catalog of active subscription plans — pricing, duration, features.
-/// Use [SubscriptionScreen] to purchase for a specific profile.
+/// Purchase from Children / Teacher / Professional manage screens.
 class ViewAllPlansScreen extends StatefulWidget {
   const ViewAllPlansScreen({super.key});
 

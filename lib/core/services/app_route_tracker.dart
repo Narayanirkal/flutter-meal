@@ -1,7 +1,6 @@
 /// Tracks which screen the user is on for targeted refresh after reconnect.
 enum AppScreen {
   home,
-  subscriptionBuy,
   subscriptionManagement,
   cart,
   children,

@@ -4,7 +4,6 @@ import 'package:meal_app/core/providers/cart_provider.dart';
 import 'package:meal_app/core/providers/lookup_provider.dart';
 import 'package:meal_app/core/providers/meal_provider.dart';
 import 'package:meal_app/core/providers/payment_provider.dart';
-import 'package:meal_app/core/providers/subscription_provider.dart';
 import 'package:meal_app/core/services/app_route_tracker.dart';
 import 'package:meal_app/core/services/network_status_service.dart';
 import 'package:meal_app/features/auth/providers/auth_provider.dart';
@@ -69,11 +68,7 @@ class _ReconnectRefreshCoordinatorState extends State<ReconnectRefreshCoordinato
             meal.fetchAlerts(),
           ]);
           if (meal.isSubscribed) {
-            await menu.fetchTodayMenu(
-              silent: true,
-              onlyIfSubscribed: true,
-              mealIsSubscribed: meal.isSubscribed,
-            );
+            await menu.fetchTodayMenu(silent: true);
           }
           break;
 
@@ -84,17 +79,6 @@ class _ReconnectRefreshCoordinatorState extends State<ReconnectRefreshCoordinato
             context.read<PaymentProvider>().fetchPaymentHistory(),
             context.read<ChildrenProvider>().fetchChildren(force: true),
             context.read<ProfileProvider>().fetchProfiles(force: true),
-          ]);
-          break;
-
-        case AppScreen.subscriptionBuy:
-          await meal.fetchSubscriptionStatus(silent: true);
-          await Future.wait([
-            context.read<SubscriptionProvider>().fetchSubscriptions(force: true),
-            context.read<ChildrenProvider>().fetchChildren(force: true),
-            context.read<ProfileProvider>().fetchProfiles(force: true),
-            context.read<CartProvider>().fetchCart(force: true, silent: true),
-            context.read<LookupProvider>().fetchInitialData(force: true),
           ]);
           break;
 

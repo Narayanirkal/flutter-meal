@@ -12,7 +12,6 @@ import 'package:meal_app/features/children/ui/screens/children_management_screen
 import 'package:meal_app/features/profile/ui/screens/teacher_profile_screen.dart';
 import 'package:meal_app/features/profile/ui/screens/professional_profile_screen.dart';
 import 'package:meal_app/features/profile/ui/screens/settings_screen.dart';
-import 'package:meal_app/features/home/ui/screens/subscription_screen.dart';
 import 'package:meal_app/features/home/providers/homepage_provider.dart';
 import 'package:meal_app/features/home/data/models/homepage_entry.dart';
 import 'package:meal_app/features/home/providers/menu_provider.dart';
@@ -33,6 +32,7 @@ import 'package:meal_app/core/utils/meal_date.dart';
 import 'package:meal_app/core/utils/subscription_status_normalize.dart';
 import 'package:meal_app/core/services/app_route_tracker.dart';
 import 'package:meal_app/core/services/offline_cache_bootstrap.dart';
+import 'package:meal_app/core/widgets/app_skeleton.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -59,8 +59,6 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-<<<<<<< HEAD
-=======
   /// Refresh home-critical data when connectivity returns (realtime UX).
   void _onBecameOnline() {
     if (!mounted) return;
@@ -80,7 +78,6 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
->>>>>>> 818387d3aaed6c89f85575f54f4f460cf9ee3252
   /// Cold start / return-to-home: cache-first essentials, then meal bundle only when online.
   Future<void> _bootstrapHome() async {
     if (!mounted) return;
@@ -94,11 +91,9 @@ class _HomeScreenState extends State<HomeScreen> {
         context.read<HomepageProvider>().fetchHomepageEntries(force: true, silent: true),
         context.read<MenuProvider>().fetchTodayMenu(silent: true),
         context.read<CartProvider>().fetchCart(force: true, silent: true),
-<<<<<<< HEAD
         context.read<ChildrenProvider>().fetchChildren(force: true, silent: true),
         context.read<ProfileProvider>().fetchProfiles(force: true, silent: true),
-=======
->>>>>>> 818387d3aaed6c89f85575f54f4f460cf9ee3252
+
         context.read<AuthProvider>().refreshMeProfile(silent: true, forceNetwork: true),
         context.read<SubscriptionProvider>().fetchSubscriptions(force: true, silent: true),
       ]);
@@ -108,20 +103,15 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!mounted) return;
     _syncDisplayNameFromAuth();
     await _refreshMealDataBundle();
-<<<<<<< HEAD
     if (!mounted) return;
     await _maybePromptFourMealsLeftDialog();
     if (!mounted) return;
     if (NetworkStatusService.instance.isOnline) {
-      final meal = context.read<MealProvider>();
       await context.read<MenuProvider>().fetchTodayMenu(
         silent: true,
-        onlyIfSubscribed: true,
-        mealIsSubscribed: meal.isSubscribed,
       );
     }
-=======
->>>>>>> 818387d3aaed6c89f85575f54f4f460cf9ee3252
+
     if (mounted) _syncDisplayNameFromAuth();
   }
 
@@ -131,11 +121,9 @@ class _HomeScreenState extends State<HomeScreen> {
       context.read<HomepageProvider>().fetchHomepageEntries(silent: true),
       context.read<MenuProvider>().fetchTodayMenu(silent: true),
       context.read<CartProvider>().fetchCart(silent: true),
-<<<<<<< HEAD
       context.read<ChildrenProvider>().fetchChildren(silent: true),
       context.read<ProfileProvider>().fetchProfiles(silent: true),
-=======
->>>>>>> 818387d3aaed6c89f85575f54f4f460cf9ee3252
+
       context.read<AuthProvider>().refreshMeProfile(silent: true),
     ]);
   }
@@ -352,88 +340,56 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-<<<<<<< HEAD
-  Future<void> _openUpgradeWithFirstProfile(BuildContext context) async {
+  void _navigateToChildrenManage(BuildContext context) {
+    Navigator.push(context, CupertinoPageRoute(builder: (_) => const ChildrenManagementScreen()));
+  }
+
+  void _navigateToTeacherProfile(BuildContext context) {
+    Navigator.push(context, CupertinoPageRoute(builder: (_) => const TeacherProfileScreen()));
+  }
+
+  void _navigateToProfessionalProfile(BuildContext context) {
+    Navigator.push(context, CupertinoPageRoute(builder: (_) => const ProfessionalProfileScreen()));
+  }
+
+  Future<void> _openFirstAvailableManageScreen(BuildContext context) async {
     await Future.wait([
       context.read<ChildrenProvider>().fetchChildren(silent: true),
       context.read<ProfileProvider>().fetchProfiles(silent: true),
     ]);
     if (!context.mounted) return;
     final children = context.read<ChildrenProvider>().children.where((c) => (c.id ?? '').toString().isNotEmpty).toList();
-    final profiles = context.read<ProfileProvider>();
-    final teacher = profiles.teacherProfile;
-    final professional = profiles.professionalProfile;
-
     if (children.isNotEmpty) {
-      final c = children.first;
-      Navigator.push(
-        context,
-        CupertinoPageRoute(
-          builder: (_) => SubscriptionScreen(
-            initialEntityType: 'child',
-            initialEntityId: c.id!,
-            initialEntityName: c.name,
-            initialMealSizeId: c.mealSizeId,
-            openPlansStep: false,
-          ),
-        ),
-      );
+      _navigateToChildrenManage(context);
       return;
     }
+    final teacher = context.read<ProfileProvider>().teacherProfile;
     if (teacher != null && (teacher.id ?? '').toString().isNotEmpty) {
-      Navigator.push(
-        context,
-        CupertinoPageRoute(
-          builder: (_) => SubscriptionScreen(
-            initialEntityType: 'teacher',
-            initialEntityId: teacher.id!,
-            initialEntityName: teacher.name,
-            initialMealSizeId: teacher.mealSizeId,
-            openPlansStep: false,
-          ),
-        ),
-      );
+      _navigateToTeacherProfile(context);
       return;
     }
+    final professional = context.read<ProfileProvider>().professionalProfile;
     if (professional != null && (professional.id ?? '').toString().isNotEmpty) {
-      Navigator.push(
-        context,
-        CupertinoPageRoute(
-          builder: (_) => SubscriptionScreen(
-            initialEntityType: 'professional',
-            initialEntityId: professional.id!,
-            initialEntityName: professional.name,
-            initialMealSizeId: professional.mealSizeId,
-            openPlansStep: false,
-          ),
-        ),
-      );
+      _navigateToProfessionalProfile(context);
       return;
     }
-    Navigator.push(
-      context,
-      CupertinoPageRoute(builder: (_) => const SubscriptionScreen()),
-    );
+    _navigateToChildrenManage(context);
+  }
+
+  Future<void> _openUpgradeWithFirstProfile(BuildContext context) async {
+    await _openFirstAvailableManageScreen(context);
   }
 
   Widget _buildPlansButton(BuildContext context) {
-=======
-  Widget _buildSubscribeButton(BuildContext context) {
->>>>>>> 818387d3aaed6c89f85575f54f4f460cf9ee3252
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 10),
       child: GestureDetector(
         onTap: () {
-<<<<<<< HEAD
           context.read<SubscriptionProvider>().fetchSubscriptions(silent: true);
           Navigator.push(
             context,
             CupertinoPageRoute(builder: (_) => const ViewAllPlansScreen()),
-=======
-          Navigator.push(
-            context,
-            CupertinoPageRoute(builder: (context) => const SubscriptionScreen()),
->>>>>>> 818387d3aaed6c89f85575f54f4f460cf9ee3252
+
           );
         },
         child: Container(
@@ -471,14 +427,11 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
-<<<<<<< HEAD
-    );
-=======
     )
     .animate(onPlay: (controller) => controller.repeat())
     .shimmer(duration: 2500.ms, color: Colors.white.withValues(alpha: 0.4))
     .scale(duration: 2000.ms, begin: const Offset(1, 1), end: const Offset(1.02, 1.02), curve: Curves.easeInOut);
->>>>>>> 818387d3aaed6c89f85575f54f4f460cf9ee3252
+
   }
 
   Widget _buildWelcomeSection(BuildContext context, bool isDark) {
@@ -491,22 +444,17 @@ class _HomeScreenState extends State<HomeScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-<<<<<<< HEAD
-          colors: isDark
-              ? [AppTheme.primaryColor.withOpacity(0.2), Colors.transparent]
-              : [AppTheme.primaryColor.withOpacity(0.05), Colors.transparent],
-=======
           colors: isDark 
             ? [AppTheme.primaryColor.withValues(alpha: 0.2), Colors.transparent]
             : [AppTheme.primaryColor.withValues(alpha: 0.05), Colors.transparent],
->>>>>>> 818387d3aaed6c89f85575f54f4f460cf9ee3252
+
         ),
         borderRadius: BorderRadius.circular(24),
       ),
       child: Row(
         children: [
           Text(
-            'Welcome Back ',
+            'Welcome Back, ',
             style: textTheme.titleMedium?.copyWith(
               fontSize: 18,
               color: colorScheme.onSurface.withValues(alpha: 0.8),
@@ -533,9 +481,8 @@ class _HomeScreenState extends State<HomeScreen> {
   /// Separate card below welcome — upcoming plan start date (industry-style status card).
   Widget _buildUpcomingPlanCard(BuildContext context, bool isDark) {
     final statusData = context.watch<MealProvider>().subscriptionStatusData;
-    final hasActive = statusData?['has_active_subscription'] == true;
     final hasUpcoming = statusData?['has_upcoming_subscription'] == true;
-    if (!hasUpcoming || hasActive) return const SizedBox.shrink();
+    if (!hasUpcoming) return const SizedBox.shrink();
 
     final upcomingStart = SubscriptionStatusNormalizer.earliestUpcomingStartYmd(statusData);
     final upcomingLabel = upcomingStart != null ? MealDate.formatDisplay(upcomingStart) : null;
@@ -888,7 +835,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               TextButton(
-                onPressed: () => Navigator.push(context, CupertinoPageRoute(builder: (_) => const SubscriptionScreen())),
+                onPressed: () => Navigator.push(
+                  context,
+                  CupertinoPageRoute(builder: (_) => const SubscriptionManagementScreen()),
+                ),
                 child: const Text('Renew', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
               ),
             ],
@@ -1047,73 +997,22 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _openSubscribeCartForHomeEntry(BuildContext context, HomepageEntry entry) async {
     await Future.wait([
-      context.read<SubscriptionProvider>().fetchSubscriptions(silent: true),
       context.read<ChildrenProvider>().fetchChildren(silent: true),
       context.read<ProfileProvider>().fetchProfiles(silent: true),
-      context.read<CartProvider>().fetchCart(silent: true),
     ]);
     if (!context.mounted) return;
     switch (entry.entityId) {
       case 'ENT-1':
-        final children = context.read<ChildrenProvider>().children.where((c) => (c.id ?? '').toString().isNotEmpty).toList();
-        if (children.isEmpty) {
-          Navigator.push(context, CupertinoPageRoute(builder: (_) => const SubscriptionScreen(openPlansStep: true)));
-          return;
-        }
-        final c = children.first;
-        Navigator.push(
-          context,
-          CupertinoPageRoute(
-            builder: (_) => SubscriptionScreen(
-              initialEntityType: 'child',
-              initialEntityId: c.id!,
-              initialEntityName: c.name,
-              initialMealSizeId: c.mealSizeId,
-              openPlansStep: true,
-            ),
-          ),
-        );
+        _navigateToChildrenManage(context);
         return;
       case 'ENT-2':
-        final t = context.read<ProfileProvider>().teacherProfile;
-        if (t == null || (t.id ?? '').toString().isEmpty) {
-          Navigator.push(context, CupertinoPageRoute(builder: (_) => const SubscriptionScreen(openPlansStep: true)));
-          return;
-        }
-        Navigator.push(
-          context,
-          CupertinoPageRoute(
-            builder: (_) => SubscriptionScreen(
-              initialEntityType: 'teacher',
-              initialEntityId: t.id!,
-              initialEntityName: t.name,
-              initialMealSizeId: t.mealSizeId,
-              openPlansStep: true,
-            ),
-          ),
-        );
+        _navigateToTeacherProfile(context);
         return;
       case 'ENT-3':
-        final p = context.read<ProfileProvider>().professionalProfile;
-        if (p == null || (p.id ?? '').toString().isEmpty) {
-          Navigator.push(context, CupertinoPageRoute(builder: (_) => const SubscriptionScreen(openPlansStep: true)));
-          return;
-        }
-        Navigator.push(
-          context,
-          CupertinoPageRoute(
-            builder: (_) => SubscriptionScreen(
-              initialEntityType: 'professional',
-              initialEntityId: p.id!,
-              initialEntityName: p.name,
-              initialMealSizeId: p.mealSizeId,
-              openPlansStep: true,
-            ),
-          ),
-        );
+        _navigateToProfessionalProfile(context);
         return;
       default:
-        Navigator.push(context, CupertinoPageRoute(builder: (_) => const ViewAllPlansScreen()));
+        await _openFirstAvailableManageScreen(context);
     }
   }
 
@@ -1214,19 +1113,16 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         const SizedBox(height: 12),
         // Compact, production-grade activity row — children count + plan status pill.
-<<<<<<< HEAD
         _buildActivitySummary(
           context,
           isDark,
           childrenCount: childrenCount,
-          childrenCountLoading: childrenCountLoading,
-          hasActive: hasActive,
-          hasUpcoming: hasUpcoming,
-          statusData: data,
+          childrenCountLoading: context.watch<ChildrenProvider>().isLoading,
+          hasActive: isActive,
+          hasUpcoming: mealProvider.subscriptionStatusData?['has_upcoming_subscription'] == true,
+          statusData: mealProvider.subscriptionStatusData,
         ),
-=======
-        _buildActivitySummary(context, isDark, childrenCount: childrenCount, isActive: isActive),
->>>>>>> 818387d3aaed6c89f85575f54f4f460cf9ee3252
+
       ],
     ).animate().fadeIn(delay: 400.ms);
   }
@@ -1238,14 +1134,11 @@ class _HomeScreenState extends State<HomeScreen> {
     BuildContext context,
     bool isDark, {
     required int childrenCount,
-<<<<<<< HEAD
     required bool childrenCountLoading,
     required bool hasActive,
     required bool hasUpcoming,
     Map<String, dynamic>? statusData,
-=======
-    required bool isActive,
->>>>>>> 818387d3aaed6c89f85575f54f4f460cf9ee3252
+
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -1321,7 +1214,6 @@ class _HomeScreenState extends State<HomeScreen> {
             Container(width: 1, color: isDark ? Colors.white10 : Colors.grey.withValues(alpha: 0.12)),
             // Right: Plan status pill — compact + tappable
             Expanded(
-<<<<<<< HEAD
               child: _buildPlanStatusPill(
                 context,
                 isDark,
@@ -1329,9 +1221,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 hasUpcoming: hasUpcoming,
                 statusData: statusData,
               ),
-=======
-              child: _buildPlanStatusPill(context, isDark, isActive: isActive),
->>>>>>> 818387d3aaed6c89f85575f54f4f460cf9ee3252
+
             ),
           ],
         ),
@@ -1339,7 +1229,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-<<<<<<< HEAD
   Widget _buildPlanStatusPill(
     BuildContext context,
     bool isDark, {
@@ -1352,6 +1241,7 @@ class _HomeScreenState extends State<HomeScreen> {
     final String subtitle;
     final upcomingStart = SubscriptionStatusNormalizer.earliestUpcomingStartYmd(statusData);
     final upcomingLabel = upcomingStart != null ? MealDate.formatDisplay(upcomingStart) : null;
+    
     if (hasActive) {
       color = Colors.green;
       icon = CupertinoIcons.checkmark_seal_fill;
@@ -1365,27 +1255,15 @@ class _HomeScreenState extends State<HomeScreen> {
       icon = CupertinoIcons.exclamationmark_circle_fill;
       subtitle = 'No active plan';
     }
-=======
-  Widget _buildPlanStatusPill(BuildContext context, bool isDark, {required bool isActive}) {
-    final color = isActive ? Colors.green : Colors.red;
-    final icon = isActive ? CupertinoIcons.checkmark_seal_fill : CupertinoIcons.exclamationmark_circle_fill;
->>>>>>> 818387d3aaed6c89f85575f54f4f460cf9ee3252
+
     final title = 'My Subscription';
-    final subtitle = isActive ? 'Active Plan' : 'No Active Plan';
 
     return InkWell(
       onTap: () {
-        if (isActive) {
-          Navigator.push(
-            context,
-            CupertinoPageRoute(builder: (_) => const SubscriptionManagementScreen()),
-          );
-        } else {
-          Navigator.push(
-            context,
-            CupertinoPageRoute(builder: (_) => const SubscriptionScreen()),
-          );
-        }
+        Navigator.push(
+          context,
+          CupertinoPageRoute(builder: (_) => const SubscriptionManagementScreen()),
+        );
       },
       borderRadius: const BorderRadius.horizontal(right: Radius.circular(18)),
       child: Padding(

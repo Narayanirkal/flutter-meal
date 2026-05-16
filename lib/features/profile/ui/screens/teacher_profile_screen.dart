@@ -427,8 +427,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
               ),
             ),
           ),
-      ),
-      ),
+        ),
     );
   }
 

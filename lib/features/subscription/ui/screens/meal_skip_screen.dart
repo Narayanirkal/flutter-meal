@@ -33,11 +33,6 @@ class MealSkipScreen extends StatefulWidget {
 }
 
 class _MealSkipScreenState extends State<MealSkipScreen> {
-  @override
-  void dispose() {
-    AppRouteTracker.instance.clearIfCurrent(AppScreen.mealSkip);
-    super.dispose();
-  }
 
   @override
   void initState() {
@@ -53,6 +48,7 @@ class _MealSkipScreenState extends State<MealSkipScreen> {
   @override
   void dispose() {
     NetworkStatusService.instance.removeBecameOnlineListener(_fetchAll);
+    AppRouteTracker.instance.clearIfCurrent(AppScreen.mealSkip);
     super.dispose();
   }
 

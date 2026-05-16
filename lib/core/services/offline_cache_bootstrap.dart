@@ -45,11 +45,7 @@ class OfflineCacheBootstrap {
       ]);
 
       if (meal.isSubscribed) {
-        await menu.fetchTodayMenu(
-          silent: true,
-          onlyIfSubscribed: true,
-          mealIsSubscribed: meal.isSubscribed,
-        );
+        await menu.fetchTodayMenu(silent: true);
         await menu.fetchWeeklyMenu();
       }
     } catch (_) {
