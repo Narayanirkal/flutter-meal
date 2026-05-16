@@ -13,6 +13,7 @@ import 'package:meal_app/core/utils/time_utils.dart';
 import 'package:meal_app/core/network/api_endpoints.dart';
 import 'package:meal_app/core/utils/error_handler.dart';
 import 'package:meal_app/features/subscription/ui/screens/payment_status_screen.dart';
+import 'package:meal_app/core/services/network_status_service.dart';
 
 class CartScreen extends StatefulWidget {
   const CartScreen({super.key});
@@ -25,7 +26,10 @@ class _CartScreenState extends State<CartScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await NetworkStatusService.instance.refreshNow();
+      if (!mounted) return;
+      context.read<CartProvider>().fetchCart(force: true);
       context.read<CartProvider>().syncOfflineItemsIfAny();
       context.read<SubscriptionProvider>().fetchSubscriptions(force: true, silent: true);
     });
@@ -286,20 +290,22 @@ class _CartScreenState extends State<CartScreen> {
               ],
             ),
           ),
-          TextButton(
+          FilledButton.tonal(
             onPressed: cartProvider.isLoading ? null : () => _changeStartDate(context, item, cartProvider),
-            style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              minimumSize: const Size(72, 0),
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              alignment: Alignment.centerRight,
+            style: FilledButton.styleFrom(
+              backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.15),
+              foregroundColor: AppTheme.primaryColor,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              minimumSize: const Size(88, 0),
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(color: AppTheme.primaryColor.withValues(alpha: 0.45), width: 1.5),
+              ),
             ),
             child: const Text(
               'Change',
-              style: TextStyle(
-                fontWeight: FontWeight.w900,
-                color: AppTheme.primaryColor,
-              ),
+              style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13),
             ),
           ),
         ],
@@ -446,7 +452,10 @@ class _CartScreenState extends State<CartScreen> {
             isDestructiveAction: true,
             onPressed: () async {
               Navigator.pop(context);
-              await cartProvider.removeItem(item.id);
+              final ok = await cartProvider.removeItem(item.id);
+              if (context.mounted && !ok && cartProvider.error != null) {
+                ErrorHandler.showError(context, cartProvider.error);
+              }
             },
             child: const Text('Remove'),
           ),
@@ -463,7 +472,17 @@ class _CartScreenState extends State<CartScreen> {
         content: const Text('Remove all items from your cart?'),
         actions: [
           CupertinoDialogAction(child: const Text('Cancel'), onPressed: () => Navigator.pop(context)),
-          CupertinoDialogAction(isDestructiveAction: true, onPressed: () async { Navigator.pop(context); await cartProvider.clearCart(); }, child: const Text('Clear All')),
+          CupertinoDialogAction(
+            isDestructiveAction: true,
+            onPressed: () async {
+              Navigator.pop(context);
+              final ok = await cartProvider.clearCart();
+              if (context.mounted && !ok && cartProvider.error != null) {
+                ErrorHandler.showError(context, cartProvider.error);
+              }
+            },
+            child: const Text('Clear All'),
+          ),
         ],
       ),
     );

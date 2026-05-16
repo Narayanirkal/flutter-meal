@@ -10,6 +10,12 @@ import 'package:meal_app/core/providers/lookup_provider.dart';
 import 'package:meal_app/core/widgets/searchable_dropdown.dart';
 import 'package:meal_app/core/models/lookup_models.dart';
 import 'package:meal_app/core/utils/time_utils.dart';
+import 'package:meal_app/core/providers/meal_provider.dart';
+import 'package:meal_app/core/utils/meal_size_recommendations.dart';
+import 'package:meal_app/core/widgets/entity_subscription_badge.dart';
+import 'package:meal_app/core/widgets/entity_plan_actions_row.dart';
+import 'package:meal_app/core/providers/cart_provider.dart';
+import 'package:meal_app/core/widgets/cart_overlay_body.dart';
 
 class TeacherProfileScreen extends StatefulWidget {
   const TeacherProfileScreen({super.key});
@@ -54,7 +60,11 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
       
       // Fetch lookup data first so dropdowns are ready
       await lookupProvider.fetchInitialData();
-      await provider.fetchProfiles(force: true);
+      await provider.fetchProfiles(force: true, silent: false);
+      if (mounted) {
+        context.read<MealProvider>().fetchSubscriptionStatus(silent: true);
+        context.read<CartProvider>().fetchCart(silent: true);
+      }
       
       final profile = provider.teacherProfile;
       if (profile != null && mounted) {
@@ -163,8 +173,21 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
 
     if (success) {
       ErrorHandler.showSuccess(context, 'Teacher profile saved successfully');
-      setState(() => _isEditing = false);
-      profileProvider.fetchProfiles(force: true);
+      await profileProvider.fetchProfiles(force: true);
+      if (!mounted) return;
+      final saved = profileProvider.teacherProfile;
+      setState(() {
+        _isEditing = false;
+        if (saved != null) {
+          _nameController.text = saved.name;
+          _schoolController.text = saved.schoolCollegeName;
+          _cityController.text = saved.city;
+          _stateController.text = saved.state;
+          _status = saved.status;
+          _timeController.text = saved.mealTime ?? '13:30';
+          _selectedMealSize = context.read<LookupProvider>().mealSizes.where((m) => m.id == saved.mealSizeId).firstOrNull;
+        }
+      });
     } else {
       ErrorHandler.showError(context, profileProvider.error);
     }
@@ -250,11 +273,12 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
           onPressed: () => _promptLeaveTeacherEditor(profile),
         ),
       ),
-      body: (profileProvider.isLoading || _isInitializing)
-        ? const Center(child: CircularProgressIndicator())
-        : (profile != null && !_isEditing)
-          ? _buildProfileCard(context, profile)
-          : SingleChildScrollView(
+      body: CartOverlayBody(
+        child: (profileProvider.isLoading || _isInitializing)
+              ? const Center(child: CircularProgressIndicator())
+              : (profile != null && !_isEditing)
+                  ? _buildProfileCard(context, profile)
+                  : SingleChildScrollView(
             padding: const EdgeInsets.all(24),
             child: Form(
               key: _formKey,
@@ -387,7 +411,11 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                   SearchableDropdown<MealSizeModel>(
                     label: 'Meal Size',
                     items: lookupProvider.mealSizes,
-                    itemLabel: (m) => m.displayName,
+                    itemLabel: (m) => MealSizeRecommendations.mealSizeLabel(
+                      m,
+                      showRecommended: true,
+                      band: MealSizeRecommendations.recommendedBandForTeacherOrProfessional(),
+                    ),
                     value: _selectedMealSize,
                     isLoading: lookupProvider.isLoading,
                     listenable: lookupProvider,
@@ -448,7 +476,8 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
               ),
             ),
           ),
-    ),
+      ),
+      ),
     );
   }
 
@@ -456,6 +485,8 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final lookup = context.read<LookupProvider>();
     final mealSizeName = lookup.mealSizes.where((m) => m.id == profile.mealSizeId).firstOrNull?.displayName ?? 'Default';
+    final statusMap = context.watch<MealProvider>().subscriptionStatusData;
+    final profileId = profile.id ?? '';
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
@@ -507,13 +538,28 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                profile.name,
-                                style: TextStyle(
-                                  fontSize: 20, 
-                                  fontWeight: FontWeight.w900,
-                                  color: isDark ? Colors.white : AppTheme.textPrimaryLight,
-                                ),
+                              Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      profile.name,
+                                      style: TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.w900,
+                                        color: isDark ? Colors.white : AppTheme.textPrimaryLight,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  if (profileId.isNotEmpty) ...[
+                                    const SizedBox(width: 6),
+                                    EntitySubscriptionBadge(
+                                      statusMap: statusMap,
+                                      entityType: 'teacher',
+                                      entityId: profileId,
+                                    ),
+                                  ],
+                                ],
                               ),
                               Text(
                                 'Teacher Profile',
@@ -545,6 +591,15 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                         _buildInfoRow(CupertinoIcons.clock_fill, 'Meal Time: ${TimeUtils.formatToDisplay(profile.mealTime ?? '12:30:00')}', isDark),
                         const SizedBox(height: 14),
                         _buildInfoRow(CupertinoIcons.square_grid_2x2_fill, 'Meal Size: $mealSizeName', isDark),
+                        if (profileId.isNotEmpty) ...[
+                          const SizedBox(height: 20),
+                          EntityPlanActionsRow(
+                            entityType: 'teacher',
+                            entityId: profileId,
+                            entityName: profile.name,
+                            mealSizeId: profile.mealSizeId,
+                          ),
+                        ],
                       ],
                     ),
                   ),

@@ -24,7 +24,7 @@ class _OfflineBannerState extends State<OfflineBanner> with SingleTickerProvider
   @override
   void initState() {
     super.initState();
-    _wasOffline = !NetworkStatusService.instance.isOnline;
+    _wasOffline = !NetworkStatusService.instance.hasDeviceConnectivity;
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 380),
@@ -45,7 +45,7 @@ class _OfflineBannerState extends State<OfflineBanner> with SingleTickerProvider
     NetworkStatusService.instance.addListener(_onNetworkChange);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      if (!NetworkStatusService.instance.isOnline && !_dismissed) {
+      if (!NetworkStatusService.instance.hasDeviceConnectivity && !_dismissed) {
         _controller.forward();
       }
     });
@@ -61,8 +61,7 @@ class _OfflineBannerState extends State<OfflineBanner> with SingleTickerProvider
 
   void _onNetworkChange() {
     if (!mounted) return;
-    final isOnline = NetworkStatusService.instance.isOnline;
-    final isOffline = !isOnline;
+    final isOffline = !NetworkStatusService.instance.hasDeviceConnectivity;
 
     if (isOffline && !_wasOffline) {
       _autoDismissTimer?.cancel();
@@ -71,7 +70,7 @@ class _OfflineBannerState extends State<OfflineBanner> with SingleTickerProvider
         _wasOffline = true;
       });
       _controller.forward();
-    } else if (isOnline && _wasOffline) {
+    } else if (!isOffline && _wasOffline) {
       _wasOffline = false;
       _autoDismissTimer?.cancel();
       // Smooth dismiss as soon as we are reachable again (no lingering “offline” copy).
@@ -98,7 +97,7 @@ class _OfflineBannerState extends State<OfflineBanner> with SingleTickerProvider
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final isDark = theme.brightness == Brightness.dark;
-    final isOffline = !NetworkStatusService.instance.isOnline;
+    final isOffline = !NetworkStatusService.instance.hasDeviceConnectivity;
     final visible = isOffline && !_dismissed;
 
     final bannerColor = Color.alphaBlend(

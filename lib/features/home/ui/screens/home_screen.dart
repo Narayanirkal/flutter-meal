@@ -20,6 +20,7 @@ import 'package:meal_app/features/home/ui/screens/weekly_menu_screen.dart';
 import 'package:meal_app/core/providers/meal_provider.dart';
 import 'package:meal_app/core/providers/cart_provider.dart';
 import 'package:meal_app/core/providers/subscription_provider.dart';
+import 'package:meal_app/features/subscription/ui/screens/view_all_plans_screen.dart';
 import 'package:meal_app/features/subscription/ui/screens/meal_skip_screen.dart';
 import 'package:meal_app/features/subscription/ui/screens/cart_screen.dart';
 import 'package:meal_app/core/widgets/image_preview_dialog.dart';
@@ -28,6 +29,8 @@ import 'package:meal_app/features/subscription/ui/screens/subscription_managemen
 import 'package:meal_app/core/services/connectivity_service.dart';
 import 'package:meal_app/core/services/network_status_service.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:meal_app/core/utils/meal_date.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -80,6 +83,8 @@ class _HomeScreenState extends State<HomeScreen> {
       );
       if (!mounted) return;
       await _refreshMealDataBundle();
+      if (!mounted) return;
+      await _maybePromptFourMealsLeftDialog();
       if (mounted) _syncDisplayNameFromAuth();
     });
   }
@@ -95,6 +100,7 @@ class _HomeScreenState extends State<HomeScreen> {
         context.read<HomepageProvider>().fetchHomepageEntries(force: true, silent: true),
         context.read<CartProvider>().fetchCart(force: true, silent: true),
         context.read<ChildrenProvider>().fetchChildren(force: true, silent: true),
+        context.read<ProfileProvider>().fetchProfiles(force: true, silent: true),
         context.read<AuthProvider>().refreshMeProfile(silent: true, forceNetwork: true),
         context.read<SubscriptionProvider>().fetchSubscriptions(force: true, silent: true),
         context.read<MealProvider>().fetchSubscriptionStatus(silent: true),
@@ -111,6 +117,8 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!mounted) return;
     _syncDisplayNameFromAuth();
     await _refreshMealDataBundle();
+    if (!mounted) return;
+    await _maybePromptFourMealsLeftDialog();
     if (!mounted) return;
     if (NetworkStatusService.instance.isOnline) {
       final meal = context.read<MealProvider>();
@@ -129,6 +137,7 @@ class _HomeScreenState extends State<HomeScreen> {
       context.read<HomepageProvider>().fetchHomepageEntries(silent: true),
       context.read<CartProvider>().fetchCart(silent: true),
       context.read<ChildrenProvider>().fetchChildren(silent: true),
+      context.read<ProfileProvider>().fetchProfiles(silent: true),
       context.read<AuthProvider>().refreshMeProfile(silent: true),
     ]);
     if (!mounted) return;
@@ -149,6 +158,52 @@ class _HomeScreenState extends State<HomeScreen> {
       meal.fetchAlerts(silent: true),
       meal.fetchMealStatus(silent: true),
     ]);
+  }
+
+  static const _prefFourMealsDialogDay = 'four_meals_left_dialog_shown_ymd';
+
+  /// In-app renewal nudge when any active line has exactly four meals left (once per session day).
+  Future<void> _maybePromptFourMealsLeftDialog() async {
+    if (!mounted || !NetworkStatusService.instance.isOnline) return;
+    final meal = context.read<MealProvider>();
+    final hasFour = meal.mealStatus.any((row) {
+      if (row is! Map) return false;
+      final r = row['remaining_meals'] ?? row['remainingMeals'];
+      final n = int.tryParse('$r');
+      return n == 4;
+    });
+    if (!hasFour) return;
+
+    final ymd = MealDate.sessionTodayYmd();
+    final prefs = await SharedPreferences.getInstance();
+    final key = '$_prefFourMealsDialogDay$ymd';
+    if (prefs.getBool(key) == true) return;
+    await prefs.setBool(key, true);
+
+    if (!mounted) return;
+    showCupertinoDialog<void>(
+      context: context,
+      builder: (ctx) => CupertinoAlertDialog(
+        title: const Text('4 meals remaining'),
+        content: const Text(
+          'You have only four meals left on one of your active plans. Renew now so deliveries are not interrupted.',
+        ),
+        actions: [
+          CupertinoDialogAction(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Not now'),
+          ),
+          CupertinoDialogAction(
+            isDefaultAction: true,
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              _openUpgradeWithFirstProfile(context);
+            },
+            child: const Text('View plans'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _syncDisplayNameFromAuth() {
@@ -196,6 +251,8 @@ class _HomeScreenState extends State<HomeScreen> {
           );
           if (!mounted) return;
           await _refreshMealDataBundle();
+          if (!mounted) return;
+          await _maybePromptFourMealsLeftDialog();
           if (mounted) _syncDisplayNameFromAuth();
         },
         child: Container(
@@ -232,7 +289,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildAppBar(BuildContext context) {
-    final itemCount = context.watch<CartProvider>().itemCount;
     return SliverAppBar(
       floating: true,
       backgroundColor: Colors.transparent,
@@ -247,31 +303,12 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
       actions: [
-        // Always show upgrade button
-        _buildSubscribeButton(context),
-        const SizedBox(width: 6),
-        // Show cart icon only when cart has items
-        AnimatedSwitcher(
-          duration: const Duration(milliseconds: 220),
-          switchInCurve: Curves.easeOutCubic,
-          switchOutCurve: Curves.easeInCubic,
-          transitionBuilder: (child, animation) {
-            return FadeTransition(
-              opacity: animation,
-              child: SizeTransition(sizeFactor: animation, axis: Axis.horizontal, child: child),
-            );
-          },
-          child: itemCount > 0
-              ? Row(
-                  key: const ValueKey('cart-visible'),
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _buildCartActionButton(context),
-                    const SizedBox(width: 6),
-                  ],
-                )
-              : const SizedBox(key: ValueKey('cart-hidden')),
-        ),
+        _buildPlansButton(context),
+        if (context.watch<CartProvider>().itemCount > 0) ...[
+          const SizedBox(width: 6),
+          _buildCartActionButton(context),
+        ],
+        const SizedBox(width: 4),
         IconButton(
           icon: const Icon(CupertinoIcons.settings_solid, size: 24),
           onPressed: () {
@@ -307,17 +344,26 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           if (itemCount > 0)
             Positioned(
-              right: -2,
-              top: -2,
+              right: -8,
+              top: -6,
               child: Container(
-                width: 9,
-                height: 9,
+                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                constraints: const BoxConstraints(minWidth: 16),
                 decoration: BoxDecoration(
                   color: badgeColor,
-                  shape: BoxShape.circle,
+                  borderRadius: BorderRadius.circular(8),
                   border: Border.all(
                     color: Theme.of(context).scaffoldBackgroundColor,
                     width: 1.5,
+                  ),
+                ),
+                child: Text(
+                  itemCount > 99 ? '99+' : '$itemCount',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w900,
+                    color: Colors.white,
                   ),
                 ),
               ),
@@ -391,11 +437,17 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildSubscribeButton(BuildContext context) {
+  Widget _buildPlansButton(BuildContext context) {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 10),
       child: GestureDetector(
-        onTap: () => _openUpgradeWithFirstProfile(context),
+        onTap: () {
+          context.read<SubscriptionProvider>().fetchSubscriptions(silent: true);
+          Navigator.push(
+            context,
+            CupertinoPageRoute(builder: (_) => const ViewAllPlansScreen()),
+          );
+        },
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
           decoration: BoxDecoration(
@@ -413,13 +465,13 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ],
           ),
-          child: Row(
+          child: const Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(CupertinoIcons.sparkles, color: Colors.white, size: 14),
-              const SizedBox(width: 5),
-              const Text(
-                'UPGRADE',
+              Icon(CupertinoIcons.square_list_fill, color: Colors.white, size: 14),
+              SizedBox(width: 5),
+              Text(
+                'Plans',
                 style: TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w900,
@@ -431,10 +483,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
-    )
-    .animate(onPlay: (controller) => controller.repeat())
-    .shimmer(duration: 2500.ms, color: Colors.white.withOpacity(0.4))
-    .scale(duration: 2000.ms, begin: const Offset(1, 1), end: const Offset(1.02, 1.02), curve: Curves.easeInOut);
+    );
   }
 
   Widget _buildWelcomeSection(bool isDark) {
@@ -868,6 +917,7 @@ class _HomeScreenState extends State<HomeScreen> {
       return const Center(child: Text('No features available'));
     }
 
+    final profileProvider = context.watch<ProfileProvider>();
     return Column(
       children: homepageProvider.entries.map((entry) {
         return Padding(
@@ -875,7 +925,7 @@ class _HomeScreenState extends State<HomeScreen> {
           child: _buildFeatureCard(
             context,
             entry.name,
-            entry.description,
+            _featureSubtitle(entry, profileProvider),
             _getIconForEntry(entry),
             _getColorForEntry(entry),
             () => _handleCardTap(context, entry),
@@ -950,7 +1000,106 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Widget _buildFeatureCard(BuildContext context, String title, String subtitle, IconData icon, Color color, VoidCallback onTap) {
+  Future<void> _openSubscribeCartForHomeEntry(BuildContext context, HomepageEntry entry) async {
+    await Future.wait([
+      context.read<SubscriptionProvider>().fetchSubscriptions(silent: true),
+      context.read<ChildrenProvider>().fetchChildren(silent: true),
+      context.read<ProfileProvider>().fetchProfiles(silent: true),
+      context.read<CartProvider>().fetchCart(silent: true),
+    ]);
+    if (!context.mounted) return;
+    switch (entry.entityId) {
+      case 'ENT-1':
+        final children = context.read<ChildrenProvider>().children.where((c) => (c.id ?? '').toString().isNotEmpty).toList();
+        if (children.isEmpty) {
+          Navigator.push(context, CupertinoPageRoute(builder: (_) => const SubscriptionScreen(openPlansStep: true)));
+          return;
+        }
+        final c = children.first;
+        Navigator.push(
+          context,
+          CupertinoPageRoute(
+            builder: (_) => SubscriptionScreen(
+              initialEntityType: 'child',
+              initialEntityId: c.id!,
+              initialEntityName: c.name,
+              initialMealSizeId: c.mealSizeId,
+              openPlansStep: true,
+            ),
+          ),
+        );
+        return;
+      case 'ENT-2':
+        final t = context.read<ProfileProvider>().teacherProfile;
+        if (t == null || (t.id ?? '').toString().isEmpty) {
+          Navigator.push(context, CupertinoPageRoute(builder: (_) => const SubscriptionScreen(openPlansStep: true)));
+          return;
+        }
+        Navigator.push(
+          context,
+          CupertinoPageRoute(
+            builder: (_) => SubscriptionScreen(
+              initialEntityType: 'teacher',
+              initialEntityId: t.id!,
+              initialEntityName: t.name,
+              initialMealSizeId: t.mealSizeId,
+              openPlansStep: true,
+            ),
+          ),
+        );
+        return;
+      case 'ENT-3':
+        final p = context.read<ProfileProvider>().professionalProfile;
+        if (p == null || (p.id ?? '').toString().isEmpty) {
+          Navigator.push(context, CupertinoPageRoute(builder: (_) => const SubscriptionScreen(openPlansStep: true)));
+          return;
+        }
+        Navigator.push(
+          context,
+          CupertinoPageRoute(
+            builder: (_) => SubscriptionScreen(
+              initialEntityType: 'professional',
+              initialEntityId: p.id!,
+              initialEntityName: p.name,
+              initialMealSizeId: p.mealSizeId,
+              openPlansStep: true,
+            ),
+          ),
+        );
+        return;
+      default:
+        Navigator.push(context, CupertinoPageRoute(builder: (_) => const ViewAllPlansScreen()));
+    }
+  }
+
+  String _featureSubtitle(HomepageEntry entry, ProfileProvider profiles) {
+    switch (entry.entityId) {
+      case 'ENT-2':
+        final teacher = profiles.teacherProfile;
+        if (teacher != null && (teacher.id ?? '').toString().isNotEmpty) {
+          return 'Registered • ${teacher.name}';
+        }
+        return entry.description;
+      case 'ENT-3':
+        final pro = profiles.professionalProfile;
+        if (pro != null && (pro.id ?? '').toString().isNotEmpty) {
+          return 'Registered • ${pro.name}';
+        }
+        return entry.description;
+      default:
+        return entry.description;
+    }
+  }
+
+  Widget _buildFeatureCard(
+    BuildContext context,
+    String title,
+    String subtitle,
+    IconData icon,
+    Color color,
+    VoidCallback onTap, {
+    Widget? trailing,
+  }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
     return AppleCard(
@@ -994,6 +1143,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
           ),
+          if (trailing != null) trailing,
           const Icon(CupertinoIcons.chevron_right, color: Colors.grey, size: 18),
         ],
       ),

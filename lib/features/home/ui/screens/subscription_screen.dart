@@ -14,6 +14,7 @@ import 'package:meal_app/features/profile/ui/screens/teacher_profile_screen.dart
 import 'package:meal_app/features/profile/ui/screens/professional_profile_screen.dart';
 import 'package:meal_app/features/subscription/ui/screens/payment_status_screen.dart';
 import 'package:meal_app/features/subscription/ui/screens/cart_screen.dart';
+import 'package:meal_app/features/subscription/ui/screens/view_all_plans_screen.dart';
 import 'package:meal_app/core/utils/error_handler.dart';
 import 'package:meal_app/core/utils/meal_date.dart';
 import 'package:meal_app/core/utils/subscription_status_normalize.dart';
@@ -221,13 +222,10 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
             const Spacer(),
             OutlinedButton.icon(
               onPressed: () {
-                setState(() {
-                  _selectedEntityType = null;
-                  _selectedEntityId = null;
-                  _selectedEntityName = null;
-                  _selectedMealSizeId = null;
-                  _step = 1;
-                });
+                Navigator.push(
+                  context,
+                  CupertinoPageRoute(builder: (_) => const ViewAllPlansScreen()),
+                );
               },
               icon: const Icon(CupertinoIcons.square_grid_2x2, size: 15),
               label: const Text('View All Plans', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12)),
@@ -1169,6 +1167,11 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     final mealTypeLine =
         '${isTrialSection ? 'Trial' : 'Regular'} • ${_mealVariantLabel(plan)} • ${plan.billingCycle}';
 
+    final rec = _variantRecommendationLabel(
+      includeSaturday: includeSaturday,
+      isTrialSection: isTrialSection,
+    );
+
     return MealVariantCard(
       title: title,
       subtitle: subtitle,
@@ -1177,9 +1180,19 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       durationDays: duration,
       features: features,
       isDark: isDark,
+      recommendationLabel: rec,
       onBuy: () => _onPlanBuyTapped(plan, includeSaturday),
       onAddToCart: () => _onPlanAddToCartTapped(plan, includeSaturday),
     ).animate().fadeIn(delay: 150.ms).slideY(begin: 0.05, end: 0);
+  }
+
+  String? _variantRecommendationLabel({
+    required bool includeSaturday,
+    required bool isTrialSection,
+  }) {
+    if (isTrialSection) return includeSaturday ? 'Starter trial' : null;
+    if (includeSaturday) return 'Popular choice';
+    return 'Budget friendly';
   }
 
   Future<void> _onPlanBuyTapped(SubscriptionModel plan, bool includeSaturday) async {
