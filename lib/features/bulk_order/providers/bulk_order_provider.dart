@@ -67,6 +67,49 @@ class BulkOrderProvider with ChangeNotifier {
   int get varietyMealTypeCount =>
       _varietyQty.entries.where((e) => e.value > 0).length;
 
+  static const int varietyCartMaxTotal = 5000;
+
+  /// Returns null when the variety cart can proceed to quote/pay.
+  String? validateVarietyCart(BulkOrderConfig cfg) {
+    final lineSum = varietyLineSum;
+    if (lineSum == 0) return 'Add portions for at least one meal.';
+    if (lineSum < cfg.tierThreshold) {
+      return 'Minimum order for large bulk is ${cfg.tierThreshold} meals (you have $lineSum).';
+    }
+    if (lineSum > varietyCartMaxTotal) {
+      return 'Total cannot exceed $varietyCartMaxTotal meals.';
+    }
+
+    final typeCount = varietyMealTypeCount;
+    if (!cfg.allowMultipleVarietyMeals) {
+      if (typeCount != 1) return 'Select exactly one meal type for this order.';
+      return null;
+    }
+    if (typeCount > cfg.maxVarietyTypes) {
+      return 'You can select at most ${cfg.maxVarietyTypes} different meal types.';
+    }
+    if (typeCount > 1) {
+      var minSum = 0;
+      for (final e in _varietyQty.entries.where((e) => e.value > 0)) {
+        final meal = mealById(e.key);
+        if (meal == null) {
+          return 'Some selected meals need to be refreshed. Re-open each category, then try again.';
+        }
+        final min = meal.minOrderQuantity < 1 ? 1 : meal.minOrderQuantity;
+        minSum += min;
+        if (e.value < min) {
+          return '${meal.items} needs at least $min portions when ordering multiple meals.';
+        }
+      }
+      if (minSum > lineSum) {
+        return 'Your meal minimums require at least $minSum portions total for the types selected.';
+      }
+    }
+    return null;
+  }
+
+  bool varietyCartCanPay(BulkOrderConfig cfg) => validateVarietyCart(cfg) == null;
+
   void setVarietyQty(String mealId, int qty) {
     if (qty <= 0) {
       _varietyQty.remove(mealId);

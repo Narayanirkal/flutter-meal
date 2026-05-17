@@ -26,7 +26,6 @@ class BulkOrderCategoryMealsScreen extends StatefulWidget {
 }
 
 class _BulkOrderCategoryMealsScreenState extends State<BulkOrderCategoryMealsScreen> {
-  static const int _maxTotalMeals = 5000;
   final Map<String, GlobalKey<BulkVarietyMealCardState>> _cardKeys = {};
 
   @override
@@ -53,34 +52,6 @@ class _BulkOrderCategoryMealsScreenState extends State<BulkOrderCategoryMealsScr
     return min < 1 ? 1 : min;
   }
 
-  String? _validate(BulkOrderConfig cfg, BulkOrderProvider p) {
-    final lineSum = p.varietyLineSum;
-    if (lineSum == 0) return 'Add portions for at least one meal.';
-    if (lineSum < cfg.tierThreshold) {
-      return 'Minimum order for large bulk is ${cfg.tierThreshold} meals (you have $lineSum).';
-    }
-    if (lineSum > _maxTotalMeals) return 'Total cannot exceed $_maxTotalMeals meals.';
-
-    final typeCount = p.varietyMealTypeCount;
-    if (!_multiMode(cfg)) {
-      if (typeCount != 1) return 'Select exactly one meal type for this order.';
-      return null;
-    }
-    if (typeCount > cfg.maxVarietyTypes) {
-      return 'You can select at most ${cfg.maxVarietyTypes} different meal types.';
-    }
-    if (typeCount > 1) {
-      for (final e in p.varietyQty.entries.where((e) => e.value > 0)) {
-        final min = _minForMeal(p, e.key);
-        if (e.value < min) {
-          final label = p.mealById(e.key)?.items ?? 'A meal';
-          return '$label needs at least $min portions when ordering multiple meals.';
-        }
-      }
-    }
-    return null;
-  }
-
   bool _setQty(String mealId, int next, BulkOrderConfig cfg, BulkOrderProvider p) {
     if (!_multiMode(cfg)) {
       if (next <= 0) {
@@ -100,6 +71,20 @@ class _BulkOrderCategoryMealsScreenState extends State<BulkOrderCategoryMealsScr
       ErrorHandler.showError(context, 'You can pick at most ${cfg.maxVarietyTypes} different meal types.');
       return false;
     }
+    // Adding a 2nd meal type: existing lines must already meet their per-meal minimums.
+    if (isNew && next > 0 && p.varietyMealTypeCount == 1) {
+      for (final e in p.varietyQty.entries.where((e) => e.key != mealId && e.value > 0)) {
+        final existingMin = _minForMeal(p, e.key);
+        if (e.value < existingMin) {
+          final label = p.mealById(e.key)?.items ?? 'The other meal';
+          ErrorHandler.showError(
+            context,
+            'Set $label to at least $existingMin portions before adding another meal type.',
+          );
+          return false;
+        }
+      }
+    }
     final willHaveMultiple =
         (isNew && p.varietyMealTypeCount >= 1) || (!isNew && p.varietyMealTypeCount > 1);
     final min = _minForMeal(p, mealId);
@@ -108,13 +93,20 @@ class _BulkOrderCategoryMealsScreenState extends State<BulkOrderCategoryMealsScr
       ErrorHandler.showError(context, '$label needs at least $min portions when ordering multiple meals.');
       return false;
     }
+    final previous = p.varietyQtyFor(mealId);
     p.setVarietyQty(mealId, next);
+    final cartErr = p.validateVarietyCart(cfg);
+    if (cartErr != null) {
+      p.setVarietyQty(mealId, previous);
+      ErrorHandler.showError(context, cartErr);
+      return false;
+    }
     return true;
   }
 
   Future<void> _pay(BulkOrderProvider p, BulkOrderConfig cfg) async {
     _commitAll();
-    final err = _validate(cfg, p);
+    final err = p.validateVarietyCart(cfg);
     if (err != null) {
       ErrorHandler.showError(context, err);
       return;
@@ -145,7 +137,8 @@ class _BulkOrderCategoryMealsScreenState extends State<BulkOrderCategoryMealsScr
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final threshold = cfg?.tierThreshold ?? 50;
     final sum = p.varietyLineSum;
-    final meetsMin = sum >= threshold;
+    final validationErr = cfg != null ? p.validateVarietyCart(cfg) : null;
+    final canPay = validationErr == null && sum > 0;
 
     return Scaffold(
       appBar: AppBar(
@@ -219,15 +212,19 @@ class _BulkOrderCategoryMealsScreenState extends State<BulkOrderCategoryMealsScr
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                             Text(
-                              meetsMin
+                              canPay
                                   ? 'Order total: $sum meals'
-                                  : '$sum meals — need ${threshold - sum} more',
-                              style: const TextStyle(fontWeight: FontWeight.w700),
+                                  : (validationErr ??
+                                      '$sum meals — need ${threshold - sum} more (min $threshold)'),
+                              style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                color: canPay ? null : Colors.orange.shade800,
+                              ),
                               textAlign: TextAlign.center,
                             ),
                             const SizedBox(height: 12),
                             FilledButton(
-                              onPressed: (p.isLoading || !meetsMin) ? null : () => _pay(p, cfg),
+                              onPressed: (p.isLoading || !canPay) ? null : () => _pay(p, cfg),
                               child: p.isLoading
                                   ? const SizedBox(
                                       height: 22,

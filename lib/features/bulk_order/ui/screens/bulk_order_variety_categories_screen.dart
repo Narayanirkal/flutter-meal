@@ -48,7 +48,8 @@ class _BulkOrderVarietyCategoriesScreenState extends State<BulkOrderVarietyCateg
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final threshold = cfg?.tierThreshold ?? 50;
     final sum = p.varietyLineSum;
-    final meetsMin = sum >= threshold;
+    final validationErr = cfg != null ? p.validateVarietyCart(cfg) : null;
+    final cartOk = validationErr == null && sum > 0;
 
     return Scaffold(
       appBar: AppBar(
@@ -123,16 +124,20 @@ class _BulkOrderVarietyCategoriesScreenState extends State<BulkOrderVarietyCateg
                       child: Row(
                         children: [
                           Icon(
-                            meetsMin ? CupertinoIcons.checkmark_circle_fill : CupertinoIcons.circle,
-                            color: meetsMin ? Colors.green : Colors.orange.shade700,
+                            cartOk ? CupertinoIcons.checkmark_circle_fill : CupertinoIcons.exclamationmark_triangle_fill,
+                            color: cartOk ? Colors.green : Colors.orange.shade700,
                           ),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
-                              meetsMin
-                                  ? 'Order total: $sum meals'
-                                  : '$sum meals — need ${threshold - sum} more (min $threshold)',
-                              style: const TextStyle(fontWeight: FontWeight.w700),
+                              cartOk
+                                  ? 'Order total: $sum meals — ready to pay in a category'
+                                  : (validationErr ??
+                                      '$sum meals — need ${threshold - sum} more (min $threshold)'),
+                              style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                color: cartOk ? null : Colors.orange.shade800,
+                              ),
                             ),
                           ),
                         ],
