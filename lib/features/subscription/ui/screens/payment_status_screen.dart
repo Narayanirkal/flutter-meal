@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
@@ -5,6 +6,8 @@ import 'package:meal_app/core/providers/payment_provider.dart';
 import 'package:meal_app/core/providers/cart_provider.dart';
 import 'package:meal_app/core/providers/meal_provider.dart';
 import 'package:meal_app/core/providers/subscription_provider.dart';
+import 'package:meal_app/features/children/providers/children_provider.dart';
+import 'package:meal_app/features/profile/providers/profile_provider.dart';
 import 'package:meal_app/core/theme/app_theme.dart';
 import 'package:meal_app/core/widgets/apple_card.dart';
 import 'package:meal_app/core/utils/meal_date.dart';
@@ -96,6 +99,17 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
     final orderType = (_statusData?['orderType']?.toString() ?? widget.orderType ?? '').toLowerCase();
     final isCartOrder = orderType == 'cart';
 
+    final orderStatus = (_statusData?['orderStatus']?.toString() ?? '').toLowerCase();
+    if (orderStatus == 'pending' && widget.txnId.isNotEmpty) {
+      try {
+        await payment.forceSyncPayment(widget.txnId);
+        final synced = await payment.checkStatus(widget.txnId);
+        if (synced != null && mounted) {
+          setState(() => _statusData = synced);
+        }
+      } catch (_) {/* best-effort */}
+    }
+
     if (isCartOrder) {
       // Backend marks the cart as `checked_out` during finalization, so the
       // active GET /cart will return empty. Still call clearCart server-side
@@ -111,16 +125,20 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
       } catch (_) {/* ignore */}
     }
 
-    // Refresh dashboard-relevant data so Home and Subscription screens show
-    // the new active plan immediately when user navigates back.
+  // Refresh dashboard-relevant data so Home and management screens stay in sync.
     try {
-      await Future.wait([
+      final futures = <Future<void>>[
         meal.fetchSubscriptionStatus(),
         meal.fetchMealStatus(),
         meal.fetchAlerts(),
+        meal.fetchTodayMenu(),
         payment.fetchActiveSubscriptions(),
+        payment.fetchPaymentHistory(),
         subscriptions.fetchSubscriptions(force: true),
-      ]);
+        context.read<ProfileProvider>().fetchProfiles(force: true),
+        context.read<ChildrenProvider>().fetchChildren(),
+      ];
+      await Future.wait(futures);
     } catch (_) {/* ignore — these are best-effort refreshes */}
   }
 
@@ -219,6 +237,9 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
     final planName = data['planName']?.toString() ?? '';
     final mealTiming = data['mealTiming']?.toString() ?? '';
     final List cartItems = data['cartItems'] ?? [];
+    final Map<String, dynamic>? bulkOrder =
+        data['bulkOrder'] is Map ? Map<String, dynamic>.from(data['bulkOrder'] as Map) : null;
+    final List bulkItems = bulkOrder?['items'] is List ? bulkOrder!['items'] as List : [];
 
     return SingleChildScrollView(
       child: Column(
@@ -237,6 +258,12 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
           if (orderType == 'cart')
             Text(
               'Your cart order is now active.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: isDark ? Colors.white54 : Colors.grey, fontSize: 16),
+            )
+          else if (orderType == 'bulk')
+            Text(
+              'Your bulk meal order is confirmed.',
               textAlign: TextAlign.center,
               style: TextStyle(color: isDark ? Colors.white54 : Colors.grey, fontSize: 16),
             )
@@ -268,6 +295,70 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
             ),
           ),
 
+          if (bulkOrder != null) ...[
+            const SizedBox(height: 12),
+            AppleCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildStatusRow(
+                    'Delivery',
+                    '${bulkOrder['delivery_date'] ?? ''}'.length >= 10
+                        ? '${bulkOrder['delivery_date']}'.substring(0, 10)
+                        : '${bulkOrder['delivery_date']}',
+                    isDark,
+                  ),
+                  _buildStatusRow('Meals', '${bulkOrder['total_quantity'] ?? ''}', isDark),
+                ],
+              ),
+            ),
+          ],
+          if (bulkItems.isNotEmpty) ...[
+            const SizedBox(height: 20),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                'Bulk order lines',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: isDark ? Colors.white : AppTheme.textPrimaryLight),
+              ),
+            ),
+            const SizedBox(height: 12),
+            ...bulkItems.map((item) {
+              final row = Map<String, dynamic>.from(item as Map);
+              final imageUrl = row['image_url']?.toString() ?? '';
+              final menuItems = row['menu_items']?.toString() ?? '';
+              return AppleCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (imageUrl.isNotEmpty)
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Container(
+                          width: double.infinity,
+                          constraints: const BoxConstraints(minHeight: 100, maxHeight: 200),
+                          color: AppTheme.primaryColor.withValues(alpha: 0.05),
+                          alignment: Alignment.center,
+                          child: CachedNetworkImage(
+                            imageUrl: imageUrl,
+                            width: double.infinity,
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                      ),
+                    if (imageUrl.isNotEmpty) const SizedBox(height: 10),
+                    Text('${row['menu_date']}', style: const TextStyle(fontWeight: FontWeight.w700)),
+                    if (menuItems.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(menuItems, maxLines: 3, overflow: TextOverflow.ellipsis),
+                    ],
+                    const SizedBox(height: 4),
+                    Text('Qty: ${row['quantity']} · ₹${row['line_total']}'),
+                  ],
+                ),
+              );
+            }),
+          ],
           // Show cart items if this was a cart checkout
           if (cartItems.isNotEmpty) ...[
             const SizedBox(height: 20),

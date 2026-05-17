@@ -32,7 +32,10 @@ import 'package:meal_app/core/network/meal_repository.dart';
 import 'package:meal_app/core/providers/meal_provider.dart';
 import 'package:meal_app/core/providers/session_provider.dart';
 import 'package:meal_app/core/services/network_status_service.dart';
+import 'package:meal_app/core/services/reconnect_refresh_service.dart';
 import 'package:meal_app/core/widgets/offline_banner.dart';
+import 'package:meal_app/features/bulk_order/data/repositories/bulk_order_repository.dart';
+import 'package:meal_app/features/bulk_order/providers/bulk_order_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -61,6 +64,7 @@ class MyApp extends StatelessWidget {
     final homepageRepository = HomepageRepository(dioClient);
     final cartRepository = CartRepository(dioClient);
     final mealRepository = MealRepository(dioClient);
+    final bulkOrderRepository = BulkOrderRepository(dioClient);
 
     // Start global online/offline monitor + attach Dio for queue replay.
     NetworkStatusService.instance.attachDioClient(dioClient);
@@ -81,6 +85,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => HomepageProvider(homepageRepository, cache)),
         ChangeNotifierProvider(create: (_) => CartProvider(cartRepository, cache)),
         ChangeNotifierProvider(create: (_) => MealProvider(mealRepository, cache)),
+        ChangeNotifierProvider(create: (_) => BulkOrderProvider(bulkOrderRepository)),
       ],
       child: const MainApp(),
     );
@@ -98,7 +103,9 @@ class MainApp extends StatelessWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: context.watch<ThemeProvider>().themeMode,
-      builder: (context, child) => OfflineBanner(child: child ?? const SizedBox.shrink()),
+      builder: (context, child) => ReconnectRefreshCoordinator(
+        child: OfflineBanner(child: child ?? const SizedBox.shrink()),
+      ),
       // navigatorKey lets us show messages from the network layer if needed.
       home: const AuthWrapper(),
     );

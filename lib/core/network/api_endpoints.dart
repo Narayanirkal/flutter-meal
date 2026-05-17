@@ -85,6 +85,9 @@ class ApiEndpoints {
 
   // Payment
   static const String initiatePayment = '/api/client/payment/initiate';
+  static const String initiateMealSizeUpgrade = '/api/client/payment/meal-size-upgrade/initiate';
+  static const String mealSizeUpgradeOptions = '/api/client/payment/meal-size-upgrade/options';
+  static const String mealSizeUpgradePrices = '/api/client/meals/meal-size-upgrade-prices';
   static const String checkoutCart = '/api/client/payment/checkout-cart';
   static String paymentStatus(String txnId) => '/api/client/payment/status/$txnId';
   static const String paymentHistory = '/api/client/payment/history';
@@ -108,4 +111,12 @@ class ApiEndpoints {
   static String deleteSkip(int skipId) => '/api/client/meals/skip/$skipId/delete';
   static const String clientMenuNutritionToday = '/api/client/menu-nutrition/today';
   static const String clientMenuNutritionWeekly = '/api/client/menu-nutrition/weekly';
+
+  // Bulk orders
+  static const String bulkOrderConfig = '/api/common/bulk-orders/config';
+  static String bulkOrderMenus(String deliveryDate) =>
+      '/api/common/bulk-orders/menus?deliveryDate=$deliveryDate';
+  static const String bulkOrderQuote = '/api/client/bulk-orders/quote';
+  static const String bulkOrderInitiatePayment = '/api/client/bulk-orders/initiate-payment';
+  static String bulkOrderById(String id) => '/api/client/bulk-orders/$id';
 }
