@@ -111,4 +111,12 @@ class ApiEndpoints {
   static String deleteSkip(int skipId) => '/api/client/meals/skip/$skipId/delete';
   static const String clientMenuNutritionToday = '/api/client/menu-nutrition/today';
   static const String clientMenuNutritionWeekly = '/api/client/menu-nutrition/weekly';
+
+  // Bulk orders
+  static const String bulkOrderConfig = '/api/common/bulk-orders/config';
+  static String bulkOrderMenus(String deliveryDate) =>
+      '/api/common/bulk-orders/menus?deliveryDate=$deliveryDate';
+  static const String bulkOrderQuote = '/api/client/bulk-orders/quote';
+  static const String bulkOrderInitiatePayment = '/api/client/bulk-orders/initiate-payment';
+  static String bulkOrderById(String id) => '/api/client/bulk-orders/$id';
 }

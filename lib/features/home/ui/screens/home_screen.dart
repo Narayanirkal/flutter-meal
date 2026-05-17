@@ -20,6 +20,7 @@ import 'package:meal_app/core/providers/meal_provider.dart';
 import 'package:meal_app/core/providers/cart_provider.dart';
 import 'package:meal_app/core/providers/subscription_provider.dart';
 import 'package:meal_app/features/subscription/ui/screens/view_all_plans_screen.dart';
+import 'package:meal_app/features/bulk_order/ui/screens/bulk_order_screen.dart';
 import 'package:meal_app/features/subscription/ui/screens/meal_skip_screen.dart';
 import 'package:meal_app/features/subscription/ui/screens/cart_screen.dart';
 import 'package:meal_app/core/widgets/image_preview_dialog.dart';
@@ -975,6 +976,10 @@ class _HomeScreenState extends State<HomeScreen> {
   /// Backend returns `entity_id` like `ENT-1` (child), `ENT-2` (teacher),
   /// `ENT-3` (professional). Anything else is treated as not-yet-supported.
   void _handleCardTap(BuildContext context, HomepageEntry entry) {
+    if ((entry.entityName ?? '').trim().toLowerCase() == 'bulk') {
+      Navigator.push(context, CupertinoPageRoute(builder: (_) => const BulkOrderHubScreen()));
+      return;
+    }
     switch (entry.entityId) {
       case 'ENT-1':
         Navigator.push(context, CupertinoPageRoute(builder: (_) => const ChildrenManagementScreen()));

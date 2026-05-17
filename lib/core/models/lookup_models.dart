@@ -52,6 +52,14 @@ class StandardModel {
       displayName: json['display_name'],
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'display_name': displayName,
+    };
+  }
 }
 
 class MealSizeModel {
@@ -113,6 +121,16 @@ class CorporateLocationModel {
       state: json['state'] ?? '',
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'address': address,
+      'city': city,
+      'state': state,
+    };
+  }
 }
 
 class StateModel {
@@ -126,6 +144,13 @@ class StateModel {
       id: json['id'],
       name: json['name'],
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+    };
   }
 }
 
@@ -143,6 +168,14 @@ class CityModel {
       name: json['name'],
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'state_id': stateId,
+      'name': name,
+    };
+  }
 }
 
 class CompanyModel {
@@ -158,5 +191,13 @@ class CompanyModel {
       cityId: json['city_id'],
       name: json['name'],
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'city_id': cityId,
+      'name': name,
+    };
   }
 }
