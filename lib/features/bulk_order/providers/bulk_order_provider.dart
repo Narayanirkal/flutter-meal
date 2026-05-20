@@ -78,12 +78,14 @@ class BulkOrderProvider with ChangeNotifier {
     _varietyMealCatalog.clear();
     _mealCategoryNames.clear();
     notifyListeners();
+    _scheduleCartSync();
   }
 
   void clearStandardDraft() {
     _standardQty = null;
     _standardDeliveryDate = null;
     notifyListeners();
+    _scheduleCartSync();
   }
 
   void clearBulkCart() {
