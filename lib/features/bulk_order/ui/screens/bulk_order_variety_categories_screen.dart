@@ -5,11 +5,10 @@ import 'package:provider/provider.dart';
 import 'package:meal_app/core/theme/app_theme.dart';
 import 'package:meal_app/features/bulk_order/data/models/bulk_variety_category.dart';
 import 'package:meal_app/features/bulk_order/providers/bulk_order_provider.dart';
+import 'package:meal_app/features/bulk_order/ui/screens/bulk_order_cart_screen.dart';
 import 'package:meal_app/features/bulk_order/ui/screens/bulk_order_category_meals_screen.dart';
-import 'package:meal_app/features/bulk_order/ui/widgets/bulk_order_address_section.dart';
-import 'package:meal_app/features/bulk_order/ui/widgets/bulk_order_widgets.dart';
 
-/// Large-event bulk: pick delivery date, browse categories, then meals per category.
+/// Large-event bulk: browse categories and build a cart; pay from the cart screen.
 class BulkOrderVarietyCategoriesScreen extends StatefulWidget {
   const BulkOrderVarietyCategoriesScreen({super.key});
 
@@ -18,28 +17,14 @@ class BulkOrderVarietyCategoriesScreen extends StatefulWidget {
 }
 
 class _BulkOrderVarietyCategoriesScreenState extends State<BulkOrderVarietyCategoriesScreen> {
-  String? _deliveryDate;
+  String? _filterCategoryId;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final p = context.read<BulkOrderProvider>();
-      p.clearVarietyCart();
-      final cfg = p.config;
-      if (cfg != null && cfg.earliestDeliveryDate.length >= 10) {
-        setState(() => _deliveryDate = cfg.earliestDeliveryDate);
-        await p.loadVarietyCategories();
-      }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<BulkOrderProvider>().loadVarietyCategories();
     });
-  }
-
-  Future<void> _pickDate() async {
-    final cfg = context.read<BulkOrderProvider>().config;
-    if (cfg == null) return;
-    final ymd = await pickBulkDeliveryDate(context, cfg, _deliveryDate);
-    if (ymd == null || !mounted) return;
-    setState(() => _deliveryDate = ymd);
   }
 
   @override
@@ -47,10 +32,11 @@ class _BulkOrderVarietyCategoriesScreenState extends State<BulkOrderVarietyCateg
     final p = context.watch<BulkOrderProvider>();
     final cfg = p.config;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final threshold = cfg?.tierThreshold ?? 50;
     final sum = p.varietyLineSum;
-    final validationErr = cfg != null ? p.validateVarietyCart(cfg) : null;
-    final cartOk = validationErr == null && sum > 0;
+    final categories = p.varietyCategories;
+    final filtered = _filterCategoryId == null
+        ? categories
+        : categories.where((c) => c.id == _filterCategoryId).toList();
 
     return Scaffold(
       appBar: AppBar(
@@ -59,96 +45,95 @@ class _BulkOrderVarietyCategoriesScreenState extends State<BulkOrderVarietyCateg
           style: TextStyle(color: isDark ? Colors.white : AppTheme.textPrimaryLight),
         ),
       ),
+      floatingActionButton: p.bulkCartTotalMeals > 0
+          ? FloatingActionButton.extended(
+              heroTag: 'variety_cart_fab',
+              onPressed: () => Navigator.push(
+                context,
+                CupertinoPageRoute(builder: (_) => const BulkOrderCartScreen()),
+              ),
+              icon: const Icon(CupertinoIcons.cart_fill),
+              label: Text('Cart (${p.bulkCartTotalMeals})', style: const TextStyle(fontWeight: FontWeight.w800)),
+            )
+          : null,
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: p.isLoading && p.varietyCategories.isEmpty
           ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (cfg?.varietyTierDescription?.isNotEmpty == true)
+                    Text(
+                      cfg!.varietyTierDescription!,
+                      style: TextStyle(
+                        fontSize: 15,
+                        height: 1.4,
+                        color: isDark ? Colors.white70 : AppTheme.textSecondaryLight,
+                      ),
+                    ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Choose categories and add meal portions. Delivery details are collected when you pay.',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? Colors.white70 : AppTheme.textSecondaryLight,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Categories',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 10),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
                       children: [
-                        if (cfg?.varietyTierDescription?.isNotEmpty == true)
-                          Text(
-                            cfg!.varietyTierDescription!,
-                            style: TextStyle(
-                              fontSize: 15,
-                              height: 1.4,
-                              color: isDark ? Colors.white70 : AppTheme.textSecondaryLight,
+                        FilterChip(
+                          label: const Text('All'),
+                          selected: _filterCategoryId == null,
+                          onSelected: (_) => setState(() => _filterCategoryId = null),
+                        ),
+                        ...categories.map(
+                          (c) => Padding(
+                            padding: const EdgeInsets.only(left: 8),
+                            child: FilterChip(
+                              label: Text(c.name),
+                              selected: _filterCategoryId == c.id,
+                              onSelected: (_) => setState(() => _filterCategoryId = c.id),
                             ),
                           ),
-                        const SizedBox(height: 12),
-                        BulkDeliveryDateTile(
-                          deliveryDate: _deliveryDate,
-                          onTap: _pickDate,
                         ),
-                        const SizedBox(height: 16),
-                        const BulkOrderAddressSection(),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Choose a category to add meals',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        const SizedBox(height: 12),
-                        if (p.varietyCategories.isEmpty)
-                          Text(
-                            'No categories available yet.',
-                            style: TextStyle(color: Colors.orange.shade700),
-                          ),
-                        ...p.varietyCategories.map((c) => _CategoryCard(
-                              category: c,
-                              isDark: isDark,
-                              onTap: () {
-                                if (_deliveryDate == null) return;
-                                Navigator.push(
-                                  context,
-                                  CupertinoPageRoute(
-                                    builder: (_) => BulkOrderCategoryMealsScreen(
-                                      categoryId: c.id,
-                                      categoryName: c.name,
-                                      deliveryDate: _deliveryDate!,
-                                    ),
-                                  ),
-                                );
-                              },
-                            )),
                       ],
                     ),
                   ),
-                ),
-                Material(
-                  elevation: 8,
-                  color: isDark ? AppTheme.surfaceDark : Colors.white,
-                  child: SafeArea(
-                    top: false,
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
-                      child: Row(
-                        children: [
-                          Icon(
-                            cartOk ? CupertinoIcons.checkmark_circle_fill : CupertinoIcons.exclamationmark_triangle_fill,
-                            color: cartOk ? Colors.green : Colors.orange.shade700,
-                          ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              cartOk
-                                  ? 'Order total: $sum meals — ready to pay in a category'
-                                  : (validationErr ??
-                                      '$sum meals — need ${threshold - sum} more (min $threshold)'),
-                              style: TextStyle(
-                                fontWeight: FontWeight.w700,
-                                color: cartOk ? null : Colors.orange.shade800,
+                  const SizedBox(height: 12),
+                  if (filtered.isEmpty)
+                    Text(
+                      'No categories available yet.',
+                      style: TextStyle(color: Colors.orange.shade700),
+                    ),
+                  ...filtered.map((c) => _CategoryCard(
+                        category: c,
+                        isDark: isDark,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            CupertinoPageRoute(
+                              builder: (_) => BulkOrderCategoryMealsScreen(
+                                categoryId: c.id,
+                                categoryName: c.name,
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
+                          );
+                        },
+                      )),
+                  // Extra bottom padding for FAB
+                  if (sum > 0) const SizedBox(height: 72),
+                ],
+              ),
             ),
     );
   }
