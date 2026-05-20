@@ -3,6 +3,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:meal_app/core/theme/app_theme.dart';
+import 'package:meal_app/core/utils/error_handler.dart';
+import 'package:meal_app/features/bulk_order/data/models/bulk_order_config.dart';
 import 'package:meal_app/features/bulk_order/data/models/bulk_variety_category.dart';
 import 'package:meal_app/features/bulk_order/providers/bulk_order_provider.dart';
 import 'package:meal_app/features/bulk_order/ui/screens/bulk_order_cart_screen.dart';
@@ -126,6 +128,7 @@ class _BulkOrderVarietyCategoriesScreenState extends State<BulkOrderVarietyCateg
                                 categoryId: c.id,
                                 categoryName: c.name,
                               ),
+                              textAlign: TextAlign.center,
                             ),
                           );
                         },

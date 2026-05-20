@@ -177,7 +177,7 @@ class BulkOrderProvider with ChangeNotifier {
       return forPayment ? 'Add portions for at least one meal.' : null;
     }
     if (lineSum < cfg.tierThreshold) {
-      return 'Minimum order for large bulk is ${cfg.tierThreshold} meals (you have $lineSum).';
+      return 'Order at least ${cfg.tierThreshold} meals in total (you have $lineSum).';
     }
     if (lineSum > varietyCartMaxTotal) {
       return 'Total cannot exceed $varietyCartMaxTotal meals.';
@@ -186,32 +186,40 @@ class BulkOrderProvider with ChangeNotifier {
     final typeCount = varietyMealTypeCount;
     if (!cfg.allowMultipleVarietyMeals) {
       if (typeCount != 1) return 'Select exactly one meal type for this order.';
-      return null;
+      return validateVarietyLineUpdate(cfg, _varietyQty.keys.first, varietyQtyFor(_varietyQty.keys.first));
     }
     if (typeCount > cfg.maxVarietyTypes) {
       return 'You can select at most ${cfg.maxVarietyTypes} different meal types.';
     }
     if (typeCount > 1) {
-      var minSum = 0;
       for (final e in _varietyQty.entries.where((e) => e.value > 0)) {
-        final meal = mealById(e.key);
-        if (meal == null) {
-          return 'Some selected meals need to be refreshed. Re-open each category, then try again.';
-        }
-        final min = meal.minOrderQuantity < 1 ? 1 : meal.minOrderQuantity;
-        minSum += min;
-        if (e.value < min) {
-          return '${meal.items} needs at least $min portions when ordering multiple meals.';
-        }
-      }
-      if (minSum > lineSum) {
-        return 'Your meal minimums require at least $minSum portions total for the types selected.';
+        final err = validateVarietyLineUpdate(cfg, e.key, e.value);
+        if (err != null) return err;
       }
     }
     return null;
   }
 
-  bool varietyCartCanPay(BulkOrderConfig cfg) => validateVarietyCart(cfg, forPayment: true) == null;
+  /// @deprecated Use [validateVarietyCartForCheckout].
+  String? validateVarietyCart(BulkOrderConfig cfg) => validateVarietyCartForCheckout(cfg);
+
+  bool varietyCartCanCheckout(BulkOrderConfig cfg) =>
+      validateVarietyCartForCheckout(cfg) == null;
+
+  /// Footer copy while browsing (does not block adding lines below tier total).
+  String varietyCartStatusMessage(BulkOrderConfig cfg) {
+    final sum = varietyLineSum;
+    if (sum == 0) return 'Cart is empty — pick a category to add meals';
+    final checkoutErr = validateVarietyCartForCheckout(cfg);
+    if (checkoutErr == null) return '$sum meals in cart — ready to pay';
+    if (sum < cfg.tierThreshold) {
+      return '$sum in cart · need ${cfg.tierThreshold - sum} more meals (min ${cfg.tierThreshold} total)';
+    }
+    return checkoutErr;
+  }
+
+  List<MapEntry<String, int>> get varietyCartLines =>
+      _varietyQty.entries.where((e) => e.value > 0).toList();
 
   void setVarietyQty(String mealId, int qty, {String? categoryName}) {
     if (qty <= 0) {

@@ -24,8 +24,6 @@ class BulkOrderCategoryMealsScreen extends StatefulWidget {
 }
 
 class _BulkOrderCategoryMealsScreenState extends State<BulkOrderCategoryMealsScreen> {
-  final Map<String, GlobalKey<BulkVarietyMealCardState>> _cardKeys = {};
-
   @override
   void initState() {
     super.initState();
@@ -34,8 +32,7 @@ class _BulkOrderCategoryMealsScreenState extends State<BulkOrderCategoryMealsScr
     });
   }
 
-  GlobalKey<BulkVarietyMealCardState> _cardKey(String mealId) =>
-      _cardKeys.putIfAbsent(mealId, GlobalKey<BulkVarietyMealCardState>.new);
+  bool _multiMode(BulkOrderConfig cfg) => cfg.allowMultipleVarietyMeals;
 
   void _commitAll({String? exceptMealId}) {
     for (final e in _cardKeys.entries) {
