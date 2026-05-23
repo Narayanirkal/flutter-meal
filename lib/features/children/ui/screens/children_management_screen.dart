@@ -21,9 +21,12 @@ import 'package:meal_app/core/widgets/unsaved_form_guard.dart';
 import 'package:meal_app/core/providers/cart_provider.dart';
 import 'package:meal_app/core/widgets/cart_overlay_body.dart';
 import 'package:meal_app/core/services/app_route_tracker.dart';
+import 'package:meal_app/features/subscription/ui/widgets/plan_picker_bottom_sheet.dart';
 
 class ChildrenManagementScreen extends StatefulWidget {
-  const ChildrenManagementScreen({super.key});
+  final String? renewChildId;
+
+  const ChildrenManagementScreen({super.key, this.renewChildId});
 
   @override
   State<ChildrenManagementScreen> createState() => _ChildrenManagementScreenState();
@@ -36,10 +39,30 @@ class _ChildrenManagementScreenState extends State<ChildrenManagementScreen> {
     AppRouteTracker.instance.setCurrent(AppScreen.children);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<LookupProvider>().fetchInitialData();
-      context.read<ChildrenProvider>().fetchChildren();
+      context.read<ChildrenProvider>().fetchChildren().then((_) {
+        _triggerRenewIfRequested();
+      });
       context.read<MealProvider>().fetchSubscriptionStatus(silent: true);
       context.read<CartProvider>().fetchCart(silent: true);
     });
+  }
+
+  void _triggerRenewIfRequested() {
+    if (widget.renewChildId != null && widget.renewChildId!.isNotEmpty) {
+      final childrenProvider = context.read<ChildrenProvider>();
+      final children = childrenProvider.children;
+      final targetChild = children.where((c) => c.id == widget.renewChildId).firstOrNull;
+      
+      if (targetChild != null && mounted) {
+        PlanPickerBottomSheet.show(
+          context,
+          entityType: 'child',
+          entityId: targetChild.id!,
+          entityName: targetChild.name,
+          mealSizeId: targetChild.mealSizeId ?? 0,
+        );
+      }
+    }
   }
 
   @override

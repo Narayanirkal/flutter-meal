@@ -20,8 +20,12 @@ import 'package:meal_app/core/services/app_route_tracker.dart';
 import 'package:meal_app/core/utils/subscription_status_normalize.dart';
 import 'package:meal_app/core/widgets/meal_size_blocked_banner.dart';
 
+import 'package:meal_app/core/widgets/unsaved_form_guard.dart';
+import 'package:meal_app/features/subscription/ui/widgets/plan_picker_bottom_sheet.dart';
+
 class TeacherProfileScreen extends StatefulWidget {
-  const TeacherProfileScreen({super.key});
+  final bool renew;
+  const TeacherProfileScreen({super.key, this.renew = false});
 
   @override
   State<TeacherProfileScreen> createState() => _TeacherProfileScreenState();
@@ -48,6 +52,26 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
 
   // Switch to onUserInteraction after first submit attempt
   AutovalidateMode _autovalidateMode = AutovalidateMode.disabled;
+  late String _initialSnapshot;
+  bool _schoolLocksLocation = false;
+
+  String _snapshot() {
+    return [
+      _nameController.text.trim(),
+      _schoolController.text.trim(),
+      _selectedSchool?.id ?? '',
+      _selectedMealSize?.id ?? '',
+      _selectedState?.id ?? '',
+      _selectedCity?.id ?? '',
+      TimeUtils.normalizeBackendTime(_timeController.text),
+    ].join('|');
+  }
+
+  bool get _isDirty => _snapshot() != _initialSnapshot;
+
+  void _captureSnapshot() {
+    _initialSnapshot = _snapshot();
+  }
 
   String _mealSizeBlockedMessage(ProfileProvider profileProvider, LookupProvider lookup) {
     final savedId = profileProvider.teacherProfile?.mealSizeId;
@@ -114,7 +138,22 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
             _selectedMealSize = lookupProvider.mealSizes.where((m) => m.id == profile.mealSizeId).firstOrNull;
             _isEditing = false;
             _isInitializing = false;
+            _schoolLocksLocation = _selectedSchool != null;
           });
+          _captureSnapshot();
+          if (widget.renew && profile.id != null) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                PlanPickerBottomSheet.show(
+                  context,
+                  entityType: 'teacher',
+                  entityId: profile.id!,
+                  entityName: profile.name,
+                  mealSizeId: profile.mealSizeId ?? 0,
+                );
+              }
+            });
+          }
         }
       } else if (mounted) {
         final band = MealSizeRecommendations.recommendedBandForTeacherOrProfessional();
@@ -122,7 +161,9 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
           _isEditing = true;
           _isInitializing = false;
           _selectedMealSize = MealSizeRecommendations.pickForBand(lookupProvider.mealSizes, band);
+          _schoolLocksLocation = false;
         });
+        _captureSnapshot();
       }
     });
   }
@@ -179,6 +220,19 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
       return;
     }
 
+    if (_selectedSchool != null) {
+      final selectedStateName = _selectedState?.name ?? '';
+      final selectedCityName = _selectedCity?.name ?? '';
+      if (selectedStateName.toLowerCase() != _selectedSchool!.state.toLowerCase()) {
+        ErrorHandler.showError(context, 'Selected state does not match this school. Expected: ${_selectedSchool!.state}');
+        return;
+      }
+      if (selectedCityName.toLowerCase() != _selectedSchool!.city.toLowerCase()) {
+        ErrorHandler.showError(context, 'Selected city does not match this school. Expected: ${_selectedSchool!.city}');
+        return;
+      }
+    }
+
     final existing = profileProvider.teacherProfile;
     if (existing != null &&
         _blocksMealSizeChange &&
@@ -223,8 +277,10 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
           _status = saved.status;
           _timeController.text = saved.mealTime ?? '13:30';
           _selectedMealSize = context.read<LookupProvider>().mealSizes.where((m) => m.id == saved.mealSizeId).firstOrNull;
+          _schoolLocksLocation = _selectedSchool != null;
         }
       });
+      _captureSnapshot();
     } else {
       ErrorHandler.showError(context, profileProvider.error);
     }
@@ -253,7 +309,15 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
               ? const Center(child: CircularProgressIndicator())
               : (profile != null && !_isEditing)
                   ? _buildProfileCard(context, profile)
-                  : SingleChildScrollView(
+                  : UnsavedFormGuard(
+                      isDirty: _isDirty,
+                      onDiscard: () {
+                        setState(() {
+                          _isEditing = false;
+                          // restore from original profile next time edit is opened
+                        });
+                      },
+                      child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
             child: Form(
               key: _formKey,
@@ -303,8 +367,8 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                       setState(() {
                         _selectedSchool = v;
                         _schoolController.text = v?.name ?? '';
-                        // Auto-fill state and city from school data
                         if (v != null) {
+                          _schoolLocksLocation = true;
                           _selectedState = lookupProvider.states.where((s) => s.name.toLowerCase() == v.state.toLowerCase()).firstOrNull;
                           _stateController.text = v.state;
                           if (_selectedState != null) {
@@ -317,18 +381,21 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                               }
                             });
                           }
+                        } else {
+                          _schoolLocksLocation = false;
                         }
                       });
                     },
                   ),
                   const SizedBox(height: 20),
 
-                  // 3. State (auto-filled from school, but can be manually changed)
+                  // 3. State
                   SearchableDropdown<StateModel>(
                     label: 'State',
                     items: lookupProvider.states,
                     itemLabel: (s) => s.name,
                     value: _selectedState,
+                    enabled: !_schoolLocksLocation,
                     isLoading: lookupProvider.isLoading,
                     listenable: lookupProvider,
                     itemsGetter: () => lookupProvider.states,
@@ -360,6 +427,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                     items: lookupProvider.cities,
                     itemLabel: (s) => s.name,
                     value: _selectedCity,
+                    enabled: !_schoolLocksLocation,
                     isLoading: lookupProvider.isLoading,
                     listenable: lookupProvider,
                     itemsGetter: () => lookupProvider.cities,
@@ -467,7 +535,13 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                   if (_isEditing && profile != null) ...[
                     const SizedBox(height: 16),
                     TextButton(
-                      onPressed: () => setState(() => _isEditing = false),
+                      onPressed: () {
+                        if (_isDirty) {
+                          _showDiscardDialog();
+                        } else {
+                          setState(() => _isEditing = false);
+                        }
+                      },
                       style: TextButton.styleFrom(minimumSize: const Size(double.infinity, 50)),
                       child: const Text('Cancel Edit'),
                     ),
@@ -476,7 +550,48 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
               ),
             ),
           ),
+                  ),
         ),
+    );
+  }
+
+  void _showDiscardDialog() {
+    showCupertinoDialog(
+      context: context,
+      builder: (ctx) => CupertinoAlertDialog(
+        title: const Text('Discard Changes?'),
+        content: const Text('You have unsaved changes. Are you sure you want to discard them?'),
+        actions: [
+          CupertinoDialogAction(
+            child: const Text('Keep Editing'),
+            onPressed: () => Navigator.pop(ctx),
+          ),
+          CupertinoDialogAction(
+            isDestructiveAction: true,
+            onPressed: () {
+              Navigator.pop(ctx);
+              setState(() {
+                _isEditing = false;
+                final provider = context.read<ProfileProvider>();
+                final profile = provider.teacherProfile;
+                if (profile != null) {
+                  _nameController.text = profile.name;
+                  _schoolController.text = profile.schoolCollegeName;
+                  _cityController.text = profile.city;
+                  _stateController.text = profile.state;
+                  _status = profile.status;
+                  _timeController.text = profile.mealTime ?? '13:30';
+                  _selectedMealSize = context.read<LookupProvider>().mealSizes.where((m) => m.id == profile.mealSizeId).firstOrNull;
+                  _selectedSchool = context.read<LookupProvider>().schools.where((s) => s.name == profile.schoolCollegeName).firstOrNull;
+                  _schoolLocksLocation = _selectedSchool != null;
+                  _captureSnapshot();
+                }
+              });
+            },
+            child: const Text('Discard'),
+          ),
+        ],
+      ),
     );
   }
 

@@ -35,7 +35,7 @@ class _BulkOrderStandardScreenState extends State<BulkOrderStandardScreen> {
     }
   }
 
-  int _maxQty(BulkOrderConfig cfg) => cfg.standardMaxQuantity;
+  int _maxQty(BulkOrderConfig cfg) => cfg.tierThreshold - 1;
 
   Future<void> _pickDate(BulkOrderConfig cfg) async {
     final ymd = await pickBulkDeliveryDate(context, cfg, _selectedDate);
@@ -59,10 +59,6 @@ class _BulkOrderStandardScreenState extends State<BulkOrderStandardScreen> {
     }
     if (_qty < cfg.minQuantity) {
       ErrorHandler.showValidationError(context, 'Minimum order is ${cfg.minQuantity} meals');
-      return;
-    }
-    if (_qty > cfg.standardMaxQuantity) {
-      ErrorHandler.showValidationError(context, 'Maximum for standard bulk is ${cfg.standardMaxQuantity} meals.');
       return;
     }
     if (_qty >= cfg.tierThreshold) {
@@ -132,7 +128,7 @@ class _BulkOrderStandardScreenState extends State<BulkOrderStandardScreen> {
                   ),
                   bulkInfoBanner(
                     isDark: isDark,
-                    message: 'Order between ${cfg.minQuantity} and $maxQty meals. Same-day delivery is not available.',
+                    message: 'Order ${cfg.minQuantity} or more meals. For ${cfg.tierThreshold}+ meals use large event bulk.',
                   ),
                   const SizedBox(height: 20),
                   Text('Menu for selected date', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
@@ -202,7 +198,7 @@ class _BulkOrderStandardScreenState extends State<BulkOrderStandardScreen> {
                         ),
                         const SizedBox(height: 10),
                         Text(
-                          'Min ${cfg.minQuantity} · Max $maxQty',
+                          'Min ${cfg.minQuantity} · Below ${cfg.tierThreshold}',
                           style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: isDark ? Colors.white54 : AppTheme.textSecondaryLight),
                         ),
                       ],

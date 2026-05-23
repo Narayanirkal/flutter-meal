@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:meal_app/core/providers/cart_provider.dart';
-import 'package:meal_app/core/providers/lookup_provider.dart';
+
+
 import 'package:meal_app/core/providers/meal_provider.dart';
 import 'package:meal_app/features/auth/providers/auth_provider.dart';
 import 'package:meal_app/features/home/providers/homepage_provider.dart';
@@ -25,8 +26,10 @@ class OfflineCacheBootstrap {
 
       await context.read<AuthProvider>().refreshMeProfile(silent: true);
 
+      // Lookup data (schools, cities, standards, corporate locations) is only
+      // needed when the user opens a profile/form screen — each of those screens
+      // fetches it on demand. Fetching it here on every cold-start is wasteful.
       await Future.wait([
-        context.read<LookupProvider>().fetchInitialData(force: true),
         meal.fetchSubscriptionStatus(silent: true),
         context.read<CartProvider>().fetchCart(silent: true),
         context.read<HomepageProvider>().fetchHomepageEntries(force: true, silent: true),

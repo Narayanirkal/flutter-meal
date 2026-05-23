@@ -203,13 +203,17 @@ class _WeeklyMenuScreenState extends State<WeeklyMenuScreen> {
               onTap: () => ImagePreviewDialog.show(context, imageUrl, title: '$dayLabel — $items'),
               child: ClipRRect(
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                child: CachedNetworkImage(
-                  imageUrl: imageUrl,
-                  width: double.infinity,
-                  height: 112,
-                  fit: BoxFit.cover,
-                  placeholder: (_, __) => const WeeklyMealCardSkeleton(imageHeight: 112),
-                  errorWidget: (_, __, ___) => const WeeklyMealCardSkeleton(imageHeight: 112),
+                child: ColoredBox(
+                  color: isDark
+                      ? AppTheme.surfaceDark
+                      : AppTheme.primaryColor.withValues(alpha: 0.05),
+                  child: CachedNetworkImage(
+                    imageUrl: imageUrl,
+                    width: double.infinity,
+                    fit: BoxFit.contain,
+                    placeholder: (_, __) => const WeeklyMealCardSkeleton(imageHeight: 112),
+                    errorWidget: (_, __, ___) => const WeeklyMealCardSkeleton(imageHeight: 112),
+                  ),
                 ),
               ),
             ),

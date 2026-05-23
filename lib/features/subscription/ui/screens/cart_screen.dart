@@ -12,6 +12,7 @@ import 'package:meal_app/core/utils/time_utils.dart';
 import 'package:meal_app/core/network/api_endpoints.dart';
 import 'package:meal_app/core/utils/error_handler.dart';
 import 'package:meal_app/features/subscription/ui/screens/payment_status_screen.dart';
+import 'package:meal_app/features/subscription/ui/screens/payment_webview_screen.dart';
 import 'package:meal_app/core/services/network_status_service.dart';
 import 'package:meal_app/core/services/app_route_tracker.dart';
 
@@ -337,24 +338,17 @@ class _CartScreenState extends State<CartScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text('${cartProvider.itemCount} ${cartProvider.itemCount == 1 ? 'item' : 'items'}', style: TextStyle(fontSize: 14, color: isDark ? Colors.white54 : AppTheme.textSecondaryLight)),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text('Total: ', style: TextStyle(fontSize: 14, color: isDark ? Colors.white54 : AppTheme.textSecondaryLight)),
-                  Text('₹${cartProvider.totalAmount.toStringAsFixed(0)}', style: TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: isDark ? Colors.white : AppTheme.textPrimaryLight)),
-                ],
-              ),
+              Text('Total Amount', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondaryLight)),
+              Text('₹${cartProvider.totalAmount.toStringAsFixed(0)}', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: isDark ? Colors.white : AppTheme.textPrimaryLight)),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
               onPressed: cartProvider.isLoading ? null : () => _handleCheckout(context, cartProvider),
               style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 18), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18))),
-              child: cartProvider.isLoading
-                  ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : const Row(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(CupertinoIcons.lock_fill, size: 18), SizedBox(width: 10), Text('Checkout & Pay', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800))]),
+              child: const Text('Checkout & Pay', style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
             ),
           ),
         ],
@@ -377,28 +371,51 @@ class _CartScreenState extends State<CartScreen> {
 
     final result = await cartProvider.checkoutAll(isSandbox: ApiEndpoints.isSandboxPayment);
     if (context.mounted) Navigator.of(context, rootNavigator: true).pop();
-    if (!context.mounted) return;
+    if (!context.mounted || result == null) return;
 
-    if (result != null) {
-      final sdkStatus = result['sdkStatus']?.toString() ?? 'FAILURE';
-      final txnId = result['merchantTransactionId']?.toString() ?? '';
-      final orderId = result['orderId']?.toString() ?? '';
+    final sdkStatus = result['sdkStatus']?.toString() ?? 'FAILURE';
+    final txnId = result['merchantTransactionId']?.toString() ?? '';
+    final orderId = result['orderId']?.toString() ?? '';
+    final paymentUrl = result['paymentUrl']?.toString() ?? '';
+
+    if (sdkStatus == 'SUCCESS') {
       if (txnId.isNotEmpty) {
         Navigator.pushReplacement(
           context,
           CupertinoPageRoute(
-            builder: (_) => PaymentStatusScreen(
-              txnId: txnId,
-              orderId: orderId,
-              orderType: 'cart',
-            ),
+            builder: (_) => PaymentStatusScreen(txnId: txnId, orderId: orderId, orderType: 'cart'),
           ),
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: const Text('Payment failed or was cancelled.'), backgroundColor: Colors.red.shade700, behavior: SnackBarBehavior.floating, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: const Text('Payment failed or was cancelled.'), backgroundColor: Colors.red.shade700, behavior: SnackBarBehavior.floating));
       }
-    } else if (cartProvider.error != null) {
-      ErrorHandler.showError(context, cartProvider.error);
+    } else {
+      if (paymentUrl.isNotEmpty && txnId.isNotEmpty) {
+        final webViewResult = await Navigator.push(
+          context,
+          CupertinoPageRoute(
+            builder: (_) => PaymentWebViewScreen(url: paymentUrl, txnId: txnId, orderId: orderId),
+          ),
+        );
+        if (webViewResult == true && context.mounted) {
+          Navigator.pushReplacement(
+            context,
+            CupertinoPageRoute(
+              builder: (_) => PaymentStatusScreen(txnId: txnId, orderId: orderId, orderType: 'cart'),
+            ),
+          );
+        } else if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: const Text('Payment cancelled or failed.'), backgroundColor: Colors.red.shade700, behavior: SnackBarBehavior.floating));
+        }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['sdkError']?.toString() ?? 'Payment failed or was cancelled.'),
+            backgroundColor: Colors.red.shade700,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     }
   }
 

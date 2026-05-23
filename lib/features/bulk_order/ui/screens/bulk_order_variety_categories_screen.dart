@@ -128,7 +128,6 @@ class _BulkOrderVarietyCategoriesScreenState extends State<BulkOrderVarietyCateg
                                 categoryId: c.id,
                                 categoryName: c.name,
                               ),
-                              textAlign: TextAlign.center,
                             ),
                           );
                         },

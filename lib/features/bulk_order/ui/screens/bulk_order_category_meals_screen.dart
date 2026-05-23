@@ -24,6 +24,8 @@ class BulkOrderCategoryMealsScreen extends StatefulWidget {
 }
 
 class _BulkOrderCategoryMealsScreenState extends State<BulkOrderCategoryMealsScreen> {
+  final Map<String, GlobalKey<BulkVarietyMealCardState>> _cardKeys = {};
+
   @override
   void initState() {
     super.initState();
@@ -32,7 +34,7 @@ class _BulkOrderCategoryMealsScreenState extends State<BulkOrderCategoryMealsScr
     });
   }
 
-  bool _multiMode(BulkOrderConfig cfg) => cfg.allowMultipleVarietyMeals;
+  bool _multiMode(BulkOrderConfig? cfg) => cfg != null && cfg.allowMultipleVarietyMeals;
 
   void _commitAll({String? exceptMealId}) {
     for (final e in _cardKeys.entries) {
@@ -40,7 +42,9 @@ class _BulkOrderCategoryMealsScreenState extends State<BulkOrderCategoryMealsScr
     }
   }
 
-  bool _multiMode(BulkOrderConfig? cfg) => cfg != null && cfg.allowMultipleVarietyMeals;
+  GlobalKey<BulkVarietyMealCardState> _cardKey(String mealId) {
+    return _cardKeys.putIfAbsent(mealId, () => GlobalKey<BulkVarietyMealCardState>());
+  }
 
   int _minForMeal(BulkOrderProvider p, String id) {
     final min = p.mealById(id)?.minOrderQuantity ?? 1;
@@ -135,13 +139,14 @@ class _BulkOrderCategoryMealsScreenState extends State<BulkOrderCategoryMealsScr
                           key: _cardKey(m.id),
                           meal: m,
                           cfg: config,
-                          quantity: q,
+                          cartQuantity: q,
                           isDark: isDark,
                           menuImage: bulkMenuImage(m.imageUrl),
-                          minQuantity: perMealMin,
+                          perMealMin: perMealMin,
+                          orderMinTotal: cfg?.tierThreshold ?? 50,
                           singleMealOnly: !_multiMode(config),
                           onBeforeEdit: () => _commitAll(exceptMealId: m.id),
-                          onQuantityChanged: (n) => _setQty(m.id, n, config, p),
+                          onAddToCart: (n) => _setQty(m.id, n, config, p),
                         ),
                       );
                     }),
