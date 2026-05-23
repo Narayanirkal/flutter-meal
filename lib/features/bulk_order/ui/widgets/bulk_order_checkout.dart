@@ -4,6 +4,7 @@ import 'package:meal_app/core/network/api_endpoints.dart';
 import 'package:meal_app/core/utils/error_handler.dart';
 import 'package:meal_app/features/bulk_order/providers/bulk_order_provider.dart';
 import 'package:meal_app/features/subscription/ui/screens/payment_status_screen.dart';
+import 'package:meal_app/features/subscription/ui/screens/payment_webview_screen.dart';
 
 class BulkOrderCheckout {
   BulkOrderCheckout._();
@@ -94,18 +95,60 @@ class BulkOrderCheckout {
           );
     if (!context.mounted) return;
     if (result != null) {
+      final sdkStatus = result['sdkStatus']?.toString() ?? 'FAILURE';
       final txnId = result['merchantTransactionId']?.toString() ?? '';
-      if (txnId.isNotEmpty) {
-        Navigator.pushReplacement(
-          context,
-          CupertinoPageRoute(
-            builder: (_) => PaymentStatusScreen(
-              txnId: txnId,
-              orderId: result['orderId']?.toString() ?? '',
-              orderType: 'bulk',
+      final orderId = result['orderId']?.toString() ?? '';
+      final paymentUrl = result['paymentUrl']?.toString() ?? '';
+
+      if (sdkStatus == 'SUCCESS') {
+        if (txnId.isNotEmpty) {
+          Navigator.pushReplacement(
+            context,
+            CupertinoPageRoute(
+              builder: (_) => PaymentStatusScreen(
+                txnId: txnId,
+                orderId: orderId,
+                orderType: 'bulk',
+              ),
             ),
-          ),
-        );
+          );
+        }
+      } else {
+        if (paymentUrl.isNotEmpty && txnId.isNotEmpty) {
+          final webViewResult = await Navigator.push(
+            context,
+            CupertinoPageRoute(
+              builder: (_) => PaymentWebViewScreen(
+                url: paymentUrl,
+                txnId: txnId,
+                orderId: orderId,
+              ),
+            ),
+          );
+          if (webViewResult == true && context.mounted) {
+            Navigator.pushReplacement(
+              context,
+              CupertinoPageRoute(
+                builder: (_) => PaymentStatusScreen(
+                  txnId: txnId,
+                  orderId: orderId,
+                  orderType: 'bulk',
+                ),
+              ),
+            );
+          } else if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text('Payment cancelled or failed.'),
+                backgroundColor: Colors.red.shade700,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            );
+          }
+        } else {
+          ErrorHandler.showError(context, result['sdkError'] ?? 'Payment failed or was cancelled.');
+        }
       }
     } else if (provider.error != null) {
       ErrorHandler.showError(context, provider.error);

@@ -311,7 +311,7 @@ class _StandardCartCard extends StatelessWidget {
             child: SizedBox(
               width: 90, height: 90,
               child: imageUrl != null && imageUrl!.isNotEmpty
-                  ? CachedNetworkImage(imageUrl: imageUrl!, fit: BoxFit.cover,
+                  ? CachedNetworkImage(imageUrl: imageUrl!, fit: BoxFit.contain,
                       placeholder: (_, __) => Container(color: AppTheme.primaryColor.withValues(alpha: 0.08), child: const Center(child: CupertinoActivityIndicator())),
                       errorWidget: (_, __, ___) => _placeholderIcon())
                   : _placeholderIcon(),
@@ -393,7 +393,7 @@ class _VarietyCartCard extends StatelessWidget {
             child: SizedBox(
               width: 80, height: 80,
               child: imageUrl != null && imageUrl!.isNotEmpty
-                  ? CachedNetworkImage(imageUrl: imageUrl!, fit: BoxFit.cover,
+                  ? CachedNetworkImage(imageUrl: imageUrl!, fit: BoxFit.contain,
                       placeholder: (_, __) => Container(color: Colors.deepOrange.withValues(alpha: 0.06), child: const Center(child: CupertinoActivityIndicator())),
                       errorWidget: (_, __, ___) => _placeholderIcon())
                   : _placeholderIcon(),

@@ -628,15 +628,21 @@ class CartProvider with ChangeNotifier {
         throw Exception('Payment information not received from gateway');
       }
 
-      final sdkResult = await PhonePeService.pay(
-        orderId: orderId,
-        paymentUrl: paymentUrl,
-        backendToken: backendToken,
-        backendMerchantId: backendMerchantId,
-        isSandbox: isSandbox,
-      );
-
-      final status = sdkResult['status'] ?? 'FAILURE';
+      String status = 'FAILURE';
+      String? sdkError;
+      try {
+        final sdkResult = await PhonePeService.pay(
+          orderId: orderId,
+          paymentUrl: paymentUrl,
+          backendToken: backendToken,
+          backendMerchantId: backendMerchantId,
+          isSandbox: isSandbox,
+        );
+        status = sdkResult['status'] ?? 'FAILURE';
+        sdkError = sdkResult['error'];
+      } catch (sdkEx) {
+        sdkError = sdkEx.toString();
+      }
 
       // IMPORTANT: do NOT clear local cart here. The cart must remain intact
       // until the backend confirms the payment as SUCCESS in PaymentStatusScreen.
@@ -647,7 +653,7 @@ class CartProvider with ChangeNotifier {
       return {
         ...paymentData,
         'sdkStatus': status,
-        'sdkError': sdkResult['error'],
+        'sdkError': sdkError,
       };
     } catch (e) {
       _error = _extractErrorMessage(e);

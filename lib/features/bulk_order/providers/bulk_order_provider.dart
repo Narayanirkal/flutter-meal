@@ -59,12 +59,25 @@ class BulkOrderProvider with ChangeNotifier {
   Map<String, dynamic>? _lastQuote;
   Map<String, dynamic>? get lastQuote => _lastQuote;
 
+  DateTime? _lastConfigFetchTime;
+  DateTime? _lastCategoriesFetchTime;
+  final Map<String, DateTime> _lastMealsFetchTime = {};
+
+  bool _isCacheValid(DateTime? lastFetchTime) {
+    if (lastFetchTime == null) return false;
+    return DateTime.now().difference(lastFetchTime).inMinutes < 5;
+  }
+
   Future<void> loadConfig() async {
+    if (_config != null && _isCacheValid(_lastConfigFetchTime)) {
+      return;
+    }
     _loading = true;
     _error = null;
     notifyListeners();
     try {
       _config = await _repository.fetchConfig();
+      _lastConfigFetchTime = DateTime.now();
     } catch (e) {
       _error = ErrorHandler.getErrorMessage(e);
     } finally {
@@ -158,14 +171,20 @@ class BulkOrderProvider with ChangeNotifier {
     if (qty < cfg.minQuantity) {
       return 'Minimum order is ${cfg.minQuantity} meals.';
     }
-    if (qty > cfg.standardMaxQuantity) {
-      return 'Maximum for standard bulk is ${cfg.standardMaxQuantity} meals.';
-    }
-    if (qty >= cfg.tierThreshold) {
-      return 'For ${cfg.tierThreshold} or more meals, use the large event bulk option.';
-    }
     if (_deliveryMenu == null) {
       return 'Menu preview is not available yet. Try again shortly.';
+    }
+    return null;
+  }
+
+  /// Validates a single line quantity update (used in multi-meal mode).
+  String? validateVarietyLineUpdate(BulkOrderConfig cfg, String mealId, int qty) {
+    if (qty <= 0) return null;
+    final meal = mealById(mealId);
+    if (meal == null) return 'Meal not found.';
+    final minQty = meal.minOrderQuantity;
+    if (qty < minQty) {
+      return '${meal.items} requires at least $minQty portions.';
     }
     return null;
   }
@@ -200,17 +219,14 @@ class BulkOrderProvider with ChangeNotifier {
     return null;
   }
 
-  /// @deprecated Use [validateVarietyCartForCheckout].
-  String? validateVarietyCart(BulkOrderConfig cfg) => validateVarietyCartForCheckout(cfg);
-
   bool varietyCartCanCheckout(BulkOrderConfig cfg) =>
-      validateVarietyCartForCheckout(cfg) == null;
+      validateVarietyCart(cfg, forPayment: true) == null;
 
   /// Footer copy while browsing (does not block adding lines below tier total).
   String varietyCartStatusMessage(BulkOrderConfig cfg) {
     final sum = varietyLineSum;
     if (sum == 0) return 'Cart is empty — pick a category to add meals';
-    final checkoutErr = validateVarietyCartForCheckout(cfg);
+    final checkoutErr = validateVarietyCart(cfg, forPayment: true);
     if (checkoutErr == null) return '$sum meals in cart — ready to pay';
     if (sum < cfg.tierThreshold) {
       return '$sum in cart · need ${cfg.tierThreshold - sum} more meals (min ${cfg.tierThreshold} total)';
@@ -337,11 +353,15 @@ class BulkOrderProvider with ChangeNotifier {
   int varietyQtyFor(String mealId) => _varietyQty[mealId] ?? 0;
 
   Future<void> loadVarietyCategories() async {
+    if (_varietyCategories.isNotEmpty && _isCacheValid(_lastCategoriesFetchTime)) {
+      return;
+    }
     _loading = true;
     _error = null;
     notifyListeners();
     try {
       _varietyCategories = await _repository.fetchVarietyCategories();
+      _lastCategoriesFetchTime = DateTime.now();
     } catch (e) {
       _error = ErrorHandler.getErrorMessage(e);
     } finally {
@@ -351,11 +371,15 @@ class BulkOrderProvider with ChangeNotifier {
   }
 
   Future<void> loadMealsForCategory(String categoryId, {String? categoryName}) async {
+    if (_categoryMeals.isNotEmpty && _isCacheValid(_lastMealsFetchTime[categoryId])) {
+      return;
+    }
     _loading = true;
     _error = null;
     notifyListeners();
     try {
       _categoryMeals = await _repository.fetchMealsByCategory(categoryId);
+      _lastMealsFetchTime[categoryId] = DateTime.now();
       for (final m in _categoryMeals) {
         _varietyMealCatalog[m.id] = m;
         if (categoryName != null && categoryName.isNotEmpty) {
@@ -471,18 +495,26 @@ class BulkOrderProvider with ChangeNotifier {
         throw Exception('Payment information not received from gateway');
       }
 
-      final sdkResult = await PhonePeService.pay(
-        orderId: orderId,
-        paymentUrl: paymentUrl,
-        backendToken: backendToken,
-        backendMerchantId: backendMerchantId,
-        isSandbox: isSandbox,
-      );
+      String status = 'FAILURE';
+      String? sdkError;
+      try {
+        final sdkResult = await PhonePeService.pay(
+          orderId: orderId,
+          paymentUrl: paymentUrl,
+          backendToken: backendToken,
+          backendMerchantId: backendMerchantId,
+          isSandbox: isSandbox,
+        );
+        status = sdkResult['status'] ?? 'FAILURE';
+        sdkError = sdkResult['error'];
+      } catch (sdkEx) {
+        sdkError = sdkEx.toString();
+      }
 
       return {
         ...paymentData,
-        'sdkStatus': sdkResult['status'] ?? 'FAILURE',
-        'sdkError': sdkResult['error'],
+        'sdkStatus': status,
+        'sdkError': sdkError,
         'merchantTransactionId': merchantTransactionId,
       };
     } catch (e) {
@@ -525,18 +557,26 @@ class BulkOrderProvider with ChangeNotifier {
         throw Exception('Payment information not received from gateway');
       }
 
-      final sdkResult = await PhonePeService.pay(
-        orderId: orderId,
-        paymentUrl: paymentUrl,
-        backendToken: backendToken,
-        backendMerchantId: backendMerchantId,
-        isSandbox: isSandbox,
-      );
+      String status = 'FAILURE';
+      String? sdkError;
+      try {
+        final sdkResult = await PhonePeService.pay(
+          orderId: orderId,
+          paymentUrl: paymentUrl,
+          backendToken: backendToken,
+          backendMerchantId: backendMerchantId,
+          isSandbox: isSandbox,
+        );
+        status = sdkResult['status'] ?? 'FAILURE';
+        sdkError = sdkResult['error'];
+      } catch (sdkEx) {
+        sdkError = sdkEx.toString();
+      }
 
       return {
         ...paymentData,
-        'sdkStatus': sdkResult['status'] ?? 'FAILURE',
-        'sdkError': sdkResult['error'],
+        'sdkStatus': status,
+        'sdkError': sdkError,
         'merchantTransactionId': merchantTransactionId,
       };
     } catch (e) {

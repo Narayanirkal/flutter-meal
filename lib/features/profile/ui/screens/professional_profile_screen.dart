@@ -21,8 +21,12 @@ import 'package:meal_app/core/utils/subscription_status_normalize.dart';
 import 'package:meal_app/core/widgets/meal_size_blocked_banner.dart';
 
 
+import 'package:meal_app/core/widgets/unsaved_form_guard.dart';
+import 'package:meal_app/features/subscription/ui/widgets/plan_picker_bottom_sheet.dart';
+
 class ProfessionalProfileScreen extends StatefulWidget {
-  const ProfessionalProfileScreen({super.key});
+  final bool renew;
+  const ProfessionalProfileScreen({super.key, this.renew = false});
 
   @override
   State<ProfessionalProfileScreen> createState() => _ProfessionalProfileScreenState();
@@ -45,6 +49,25 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
 
   // Switch to onUserInteraction after first submit attempt
   AutovalidateMode _autovalidateMode = AutovalidateMode.disabled;
+  late String _initialSnapshot;
+  bool _corporateLocksLocation = false;
+
+  String _snapshot() {
+    return [
+      _nameController.text.trim(),
+      _selectedCorporateLocation?.id ?? '',
+      _selectedMealSize?.id ?? '',
+      _selectedState?.id ?? '',
+      _selectedCity?.id ?? '',
+      TimeUtils.normalizeBackendTime(_timeController.text),
+    ].join('|');
+  }
+
+  bool get _isDirty => _snapshot() != _initialSnapshot;
+
+  void _captureSnapshot() {
+    _initialSnapshot = _snapshot();
+  }
 
   String _mealSizeBlockedMessage(ProfileProvider profileProvider, LookupProvider lookup) {
     final savedId = profileProvider.professionalProfile?.mealSizeId;
@@ -112,14 +135,31 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
           
           _isEditing = false;
           _isInitializing = false;
+          _corporateLocksLocation = _selectedCorporateLocation != null;
         });
+        _captureSnapshot();
+        if (widget.renew && profile.id != null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              PlanPickerBottomSheet.show(
+                context,
+                entityType: 'professional',
+                entityId: profile.id!,
+                entityName: profile.name,
+                mealSizeId: profile.mealSizeId ?? 0,
+              );
+            }
+          });
+        }
       } else if (mounted) {
         final band = MealSizeRecommendations.recommendedBandForTeacherOrProfessional();
         setState(() {
           _isEditing = true;
           _isInitializing = false;
           _selectedMealSize = MealSizeRecommendations.pickForBand(lookup.mealSizes, band);
+          _corporateLocksLocation = false;
         });
+        _captureSnapshot();
       }
     });
   }
@@ -175,6 +215,19 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
       return;
     }
 
+    if (_selectedCorporateLocation != null) {
+      final selectedStateName = _selectedState?.name ?? '';
+      final selectedCityName = _selectedCity?.name ?? '';
+      if (selectedStateName.toLowerCase() != _selectedCorporateLocation!.state.toLowerCase()) {
+        ErrorHandler.showError(context, 'Selected state does not match this company location. Expected: ${_selectedCorporateLocation!.state}');
+        return;
+      }
+      if (selectedCityName.toLowerCase() != _selectedCorporateLocation!.city.toLowerCase()) {
+        ErrorHandler.showError(context, 'Selected city does not match this company location. Expected: ${_selectedCorporateLocation!.city}');
+        return;
+      }
+    }
+
     final profileProvider = context.read<ProfileProvider>();
     final existing = profileProvider.professionalProfile;
     if (existing != null &&
@@ -215,8 +268,10 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
           _nameController.text = saved.name;
           _timeController.text = saved.lunchTime;
           _selectedMealSize = context.read<LookupProvider>().mealSizes.where((m) => m.id == saved.mealSizeId).firstOrNull;
+          _corporateLocksLocation = _selectedCorporateLocation != null;
         }
       });
+      _captureSnapshot();
     } else {
       ErrorHandler.showError(context, profileProvider.error);
     }
@@ -245,7 +300,15 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
               ? const Center(child: CircularProgressIndicator())
               : (profile != null && !_isEditing)
                   ? _buildProfileCard(context, profile)
-                  : SingleChildScrollView(
+                  : UnsavedFormGuard(
+                      isDirty: _isDirty,
+                      onDiscard: () {
+                        setState(() {
+                          _isEditing = false;
+                          // restore from original profile next time edit is opened
+                        });
+                      },
+                      child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
             child: Form(
               key: _formKey,
@@ -292,18 +355,20 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
                     onChanged: (v) {
                       setState(() {
                         _selectedCorporateLocation = v;
-                        // Auto-fill state and city from corporate location
                         if (v != null) {
-                          _selectedState = lookup.states.where((s) => s.name == v.state).firstOrNull;
+                          _corporateLocksLocation = true;
+                          _selectedState = lookup.states.where((s) => s.name.toLowerCase() == v.state.toLowerCase()).firstOrNull;
                           if (_selectedState != null) {
                             lookup.fetchCitiesByState(_selectedState!.id).then((_) {
                               if (mounted) {
                                 setState(() {
-                                  _selectedCity = lookup.cities.where((c) => c.name == v.city).firstOrNull;
+                                  _selectedCity = lookup.cities.where((c) => c.name.toLowerCase() == v.city.toLowerCase()).firstOrNull;
                                 });
                               }
                             });
                           }
+                        } else {
+                          _corporateLocksLocation = false;
                         }
                       });
                     },
@@ -315,6 +380,7 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
                     items: lookup.states,
                     itemLabel: (s) => s.name,
                     value: _selectedState,
+                    enabled: !_corporateLocksLocation,
                     isLoading: lookup.isLoading,
                     listenable: lookup,
                     itemsGetter: () => lookup.states,
@@ -343,6 +409,7 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
                     items: lookup.cities,
                     itemLabel: (c) => c.name,
                     value: _selectedCity,
+                    enabled: !_corporateLocksLocation,
                     isLoading: lookup.isLoading,
                     listenable: lookup,
                     itemsGetter: () => lookup.cities,
@@ -444,7 +511,13 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
                   if (_isEditing && profile != null) ...[
                     const SizedBox(height: 16),
                     TextButton(
-                      onPressed: () => setState(() => _isEditing = false),
+                      onPressed: () {
+                        if (_isDirty) {
+                          _showDiscardDialog();
+                        } else {
+                          setState(() => _isEditing = false);
+                        }
+                      },
                       style: TextButton.styleFrom(minimumSize: const Size(double.infinity, 50)),
                       child: const Text('Cancel Edit'),
                     ),
@@ -453,7 +526,50 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
               ),
             ),
           ),
+                  ),
         ),
+    );
+  }
+
+  void _showDiscardDialog() {
+    showCupertinoDialog(
+      context: context,
+      builder: (ctx) => CupertinoAlertDialog(
+        title: const Text('Discard Changes?'),
+        content: const Text('You have unsaved changes. Are you sure you want to discard them?'),
+        actions: [
+          CupertinoDialogAction(
+            child: const Text('Keep Editing'),
+            onPressed: () => Navigator.pop(ctx),
+          ),
+          CupertinoDialogAction(
+            isDestructiveAction: true,
+            onPressed: () {
+              Navigator.pop(ctx);
+              setState(() {
+                _isEditing = false;
+                final provider = context.read<ProfileProvider>();
+                final profile = provider.professionalProfile;
+                if (profile != null) {
+                  _nameController.text = profile.name;
+                  _timeController.text = profile.lunchTime;
+                  
+                  final lookup = context.read<LookupProvider>();
+                  _selectedCorporateLocation = lookup.corporateLocations
+                      .where((c) => c.name == profile.companyName || c.id == profile.corporateLocationId)
+                      .firstOrNull;
+                  _selectedState = lookup.states.where((s) => s.name == profile.state).firstOrNull;
+                  _selectedCity = lookup.cities.where((c) => c.name == profile.city).firstOrNull;
+                  _selectedMealSize = lookup.mealSizes.where((m) => m.id == profile.mealSizeId).firstOrNull;
+                  _corporateLocksLocation = _selectedCorporateLocation != null;
+                  _captureSnapshot();
+                }
+              });
+            },
+            child: const Text('Discard'),
+          ),
+        ],
+      ),
     );
   }
 

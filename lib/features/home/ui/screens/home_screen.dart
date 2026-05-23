@@ -27,7 +27,8 @@ import 'package:meal_app/features/subscription/ui/screens/meal_skip_screen.dart'
 import 'package:meal_app/features/subscription/ui/screens/cart_screen.dart';
 import 'package:meal_app/core/widgets/image_preview_dialog.dart';
 import 'package:meal_app/features/subscription/ui/screens/subscription_management_screen.dart';
-import 'package:meal_app/core/services/connectivity_service.dart';
+
+
 import 'package:meal_app/core/services/network_status_service.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -46,8 +47,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   String _displayName = '';
-  ConnectivityService? _connectivityService;
-  bool _wasOnline = true;
 
   @override
   void initState() {
@@ -62,24 +61,6 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  /// Refresh home-critical data when connectivity returns (realtime UX).
-  void _onBecameOnline() {
-    if (!mounted) return;
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (!mounted) return;
-      await Future.wait([
-        context.read<HomepageProvider>().fetchHomepageEntries(force: true, silent: true),
-        context.read<MenuProvider>().fetchTodayMenu(silent: true),
-        context.read<CartProvider>().fetchCart(force: true, silent: true),
-        // C4/D2: subscription prices can change server-side; refresh catalog after reconnect.
-        context.read<SubscriptionProvider>().fetchSubscriptions(force: true, silent: true),
-        context.read<AuthProvider>().refreshMeProfile(silent: true),
-      ]);
-      if (!mounted) return;
-      await _refreshMealDataBundle();
-      if (mounted) _syncDisplayNameFromAuth();
-    });
-  }
 
   /// Cold start / return-to-home: cache-first essentials, then meal bundle only when online.
   Future<void> _bootstrapHome() async {
@@ -140,13 +121,13 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _maybePromptFourMealsLeftDialog() async {
     if (!mounted || !NetworkStatusService.instance.isOnline) return;
     final meal = context.read<MealProvider>();
-    final hasFour = meal.mealStatus.any((row) {
+    final hasFourRow = meal.mealStatus.where((row) {
       if (row is! Map) return false;
       final r = row['remaining_meals'] ?? row['remainingMeals'];
       final n = int.tryParse('$r');
       return n == 4;
-    });
-    if (!hasFour) return;
+    }).firstOrNull;
+    if (hasFourRow == null) return;
 
     final ymd = MealDate.sessionTodayYmd();
     final prefs = await SharedPreferences.getInstance();
@@ -171,7 +152,32 @@ class _HomeScreenState extends State<HomeScreen> {
             isDefaultAction: true,
             onPressed: () {
               Navigator.of(ctx).pop();
-              _openUpgradeWithFirstProfile(context);
+              final entityType = hasFourRow['entity_type']?.toString();
+              final entityId = hasFourRow['entity_id']?.toString();
+              if (entityType == 'child') {
+                Navigator.push(
+                  context,
+                  CupertinoPageRoute(
+                    builder: (_) => ChildrenManagementScreen(renewChildId: entityId),
+                  ),
+                );
+              } else if (entityType == 'teacher') {
+                Navigator.push(
+                  context,
+                  CupertinoPageRoute(
+                    builder: (_) => const TeacherProfileScreen(renew: true),
+                  ),
+                );
+              } else if (entityType == 'professional') {
+                Navigator.push(
+                  context,
+                  CupertinoPageRoute(
+                    builder: (_) => const ProfessionalProfileScreen(renew: true),
+                  ),
+                );
+              } else {
+                _openUpgradeWithFirstProfile(context);
+              }
             },
             child: const Text('View plans'),
           ),
@@ -840,13 +846,17 @@ class _HomeScreenState extends State<HomeScreen> {
     if (imageUrl != null && imageUrl.isNotEmpty) {
       return ClipRRect(
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        child: CachedNetworkImage(
-          imageUrl: imageUrl,
-          height: height,
-          width: double.infinity,
-          fit: BoxFit.cover,
-          placeholder: (_, __) => _buildMealPlaceholder(height),
-          errorWidget: (_, __, ___) => _buildMealPlaceholder(height),
+        child: ColoredBox(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? AppTheme.surfaceDark
+              : AppTheme.primaryColor.withValues(alpha: 0.05),
+          child: CachedNetworkImage(
+            imageUrl: imageUrl,
+            width: double.infinity,
+            fit: BoxFit.contain,
+            placeholder: (_, __) => _buildMealPlaceholder(height),
+            errorWidget: (_, __, ___) => _buildMealPlaceholder(height),
+          ),
         ),
       );
     }
@@ -909,10 +919,37 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
               TextButton(
-                onPressed: () => Navigator.push(
-                  context,
-                  CupertinoPageRoute(builder: (_) => const SubscriptionManagementScreen()),
-                ),
+                onPressed: () {
+                  final entityType = alert['entity_type']?.toString();
+                  final entityId = alert['entity_id']?.toString();
+                  if (entityType == 'child') {
+                    Navigator.push(
+                      context,
+                      CupertinoPageRoute(
+                        builder: (_) => ChildrenManagementScreen(renewChildId: entityId),
+                      ),
+                    );
+                  } else if (entityType == 'teacher') {
+                    Navigator.push(
+                      context,
+                      CupertinoPageRoute(
+                        builder: (_) => const TeacherProfileScreen(renew: true),
+                      ),
+                    );
+                  } else if (entityType == 'professional') {
+                    Navigator.push(
+                      context,
+                      CupertinoPageRoute(
+                        builder: (_) => const ProfessionalProfileScreen(renew: true),
+                      ),
+                    );
+                  } else {
+                    Navigator.push(
+                      context,
+                      CupertinoPageRoute(builder: (_) => const SubscriptionManagementScreen()),
+                    );
+                  }
+                },
                 child: const Text('Renew', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
               ),
             ],

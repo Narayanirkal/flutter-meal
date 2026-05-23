@@ -62,6 +62,19 @@ class MealProvider with ChangeNotifier {
   bool _hasInitiallyLoaded = false;
   bool get hasInitiallyLoaded => _hasInitiallyLoaded;
 
+  // Staleness guards for skip data — avoid redundant re-fetches when the user
+  // navigates back and forth between MealSkipScreen within a short window.
+  DateTime? _lastSkipsFetchedAt;
+  DateTime? _lastSkipPolicyFetchedAt;
+
+  bool _isSkipsFresh() =>
+      _lastSkipsFetchedAt != null &&
+      DateTime.now().difference(_lastSkipsFetchedAt!).inMinutes < 3;
+
+  bool _isSkipPolicyFresh() =>
+      _lastSkipPolicyFetchedAt != null &&
+      DateTime.now().difference(_lastSkipPolicyFetchedAt!).inMinutes < 3;
+
   Future<void> _loadCachedData() async {
     try {
       final alertsCache = await CacheStore.getJson('meal_alerts');
@@ -212,7 +225,7 @@ class MealProvider with ChangeNotifier {
         startDate: startDate,
         endDate: endDate,
       );
-      await fetchSkips(); // refresh list
+      await fetchSkips(force: true); // always refresh after mutation
       return true;
     } catch (e) {
       _error = ErrorHandler.getErrorMessage(e);
@@ -223,7 +236,11 @@ class MealProvider with ChangeNotifier {
     }
   }
 
-  Future<void> fetchSkips() async {
+  Future<void> fetchSkips({bool force = false}) async {
+    // Skip the network call if data is fresh and caller is not forcing a refresh.
+    // Mutations (skipMeal, cancelSkip, deleteSkip) always pass force:true.
+    if (!force && _skips.isNotEmpty && _isSkipsFresh()) return;
+
     final cached = await _cache.loadJson(_skipHistoryCacheKey);
     if (cached != null && _skips.isEmpty) {
       _skips = (cached['items'] as List? ?? const []).toList();
@@ -231,6 +248,7 @@ class MealProvider with ChangeNotifier {
     }
     try {
       _skips = await _repository.fetchMealSkips();
+      _lastSkipsFetchedAt = DateTime.now();
       await _cache.saveJson(_skipHistoryCacheKey, {'items': _skips});
       notifyListeners();
     } catch (e) {
@@ -239,11 +257,15 @@ class MealProvider with ChangeNotifier {
     }
   }
 
-  Future<void> fetchSkipPolicy() async {
+  Future<void> fetchSkipPolicy({bool force = false}) async {
+    // Skip the network call if the policy is already fresh.
+    if (!force && _isSkipPolicyFresh()) return;
+
     try {
       final data = await _repository.fetchMealSkipPolicy();
       if (data.isNotEmpty) {
         _skipPolicy = data;
+        _lastSkipPolicyFetchedAt = DateTime.now();
         notifyListeners();
       }
     } catch (e) {
@@ -254,7 +276,7 @@ class MealProvider with ChangeNotifier {
   Future<bool> cancelSkip(int skipId) async {
     try {
       final success = await _repository.cancelSkip(skipId);
-      if (success) await fetchSkips();
+      if (success) await fetchSkips(force: true);
       return success;
     } catch (e) {
       _error = ErrorHandler.getErrorMessage(e);
@@ -265,7 +287,7 @@ class MealProvider with ChangeNotifier {
   Future<bool> deleteSkip(int skipId) async {
     try {
       final success = await _repository.deleteSkip(skipId);
-      if (success) await fetchSkips();
+      if (success) await fetchSkips(force: true);
       return success;
     } catch (e) {
       _error = ErrorHandler.getErrorMessage(e);

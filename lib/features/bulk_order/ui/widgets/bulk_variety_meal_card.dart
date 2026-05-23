@@ -16,6 +16,7 @@ class BulkVarietyMealCard extends StatefulWidget {
     required this.perMealMin,
     required this.orderMinTotal,
     required this.singleMealOnly,
+    required this.onBeforeEdit,
     required this.onAddToCart,
   });
 
@@ -29,6 +30,7 @@ class BulkVarietyMealCard extends StatefulWidget {
   /// Order-wide minimum (e.g. 50) for single-meal-only mode.
   final int orderMinTotal;
   final bool singleMealOnly;
+  final VoidCallback onBeforeEdit;
   final bool Function(int quantity) onAddToCart;
 
   @override
@@ -47,8 +49,8 @@ class BulkVarietyMealCardState extends State<BulkVarietyMealCard> {
   @override
   void didUpdateWidget(covariant BulkVarietyMealCard oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.quantity != oldWidget.quantity) {
-      final nextText = _textForQty(widget.quantity);
+    if (widget.cartQuantity != oldWidget.cartQuantity) {
+      final nextText = _textForQty(widget.cartQuantity);
       if (_controller.text != nextText) {
         _controller.text = nextText;
       }
@@ -89,6 +91,13 @@ class BulkVarietyMealCardState extends State<BulkVarietyMealCard> {
     if (ok && mounted) {
       _controller.text = _textForQty(widget.cartQuantity);
       setState(() {});
+    }
+  }
+
+  void commitNow() {
+    final parsed = _readQty();
+    if (parsed != null && parsed != widget.cartQuantity) {
+      widget.onAddToCart(parsed);
     }
   }
 
