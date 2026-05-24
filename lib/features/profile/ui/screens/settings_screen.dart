@@ -11,6 +11,8 @@ import 'package:meal_app/features/subscription/ui/screens/cart_screen.dart';
 import 'package:meal_app/features/subscription/ui/screens/meal_size_upgrade_screen.dart';
 import 'package:meal_app/features/bulk_order/ui/screens/bulk_delivery_address_settings_screen.dart';
 import 'package:meal_app/core/providers/cart_provider.dart';
+import 'package:meal_app/core/utils/error_handler.dart';
+import 'package:meal_app/features/profile/ui/screens/contact_us_screen.dart';
 import 'package:meal_app/features/profile/ui/screens/legal_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -112,7 +114,10 @@ class SettingsScreen extends StatelessWidget {
             CupertinoIcons.mail_solid,
             'Contact Us',
             isDark,
-            () => _launchUrl('mailto:contact@buuttii.com'),
+            () => Navigator.push(
+              context,
+              CupertinoPageRoute(builder: (_) => const ContactUsScreen()),
+            ),
           ),
           const SizedBox(height: 8),
           _buildNavigationTile(
@@ -120,7 +125,7 @@ class SettingsScreen extends StatelessWidget {
             CupertinoIcons.globe,
             'Visit Website',
             isDark,
-            () => _launchUrl('https://buuttii.com/'),
+            () => _launchUrl(context, 'https://buuttii.com/'),
           ),
           const SizedBox(height: 30),
 
@@ -450,14 +455,30 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _launchUrl(String urlString) async {
+  Future<void> _launchUrl(BuildContext context, String urlString) async {
     final Uri url = Uri.parse(urlString);
     try {
       if (await canLaunchUrl(url)) {
         await launchUrl(url, mode: LaunchMode.externalApplication);
+        return;
       }
+      if (!context.mounted) return;
+      final isEmail = url.scheme == 'mailto';
+      ErrorHandler.showError(
+        context,
+        isEmail
+            ? 'No email app is available on this device.'
+            : 'Could not open this link right now.',
+      );
     } catch (_) {
-      // Safely ignore failures
+      if (!context.mounted) return;
+      final isEmail = url.scheme == 'mailto';
+      ErrorHandler.showError(
+        context,
+        isEmail
+            ? 'No email app is available on this device.'
+            : 'Could not open this link right now.',
+      );
     }
   }
 }
