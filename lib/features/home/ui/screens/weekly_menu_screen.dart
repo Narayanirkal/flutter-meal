@@ -229,8 +229,14 @@ class _WeeklyMenuScreenState extends State<WeeklyMenuScreen> {
                     width: double.infinity,
                     height: 160,
                     fit: BoxFit.contain,
-                    placeholder: (_, __) => const WeeklyMealCardSkeleton(imageHeight: 112),
-                    errorWidget: (_, __, ___) => const WeeklyMealCardSkeleton(imageHeight: 112),
+                    placeholder: (_, __) => const SkeletonBone(
+                      height: 160,
+                      borderRadius: BorderRadius.zero,
+                    ),
+                    errorWidget: (_, __, ___) => const SkeletonBone(
+                      height: 160,
+                      borderRadius: BorderRadius.zero,
+                    ),
                   ),
                 ),
               ),
