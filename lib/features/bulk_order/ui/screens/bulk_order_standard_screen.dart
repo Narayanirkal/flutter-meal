@@ -165,74 +165,57 @@ class _BulkOrderStandardScreenState extends State<BulkOrderStandardScreen> {
                     )
                   else
                     Text('No menu available for this date.', style: TextStyle(color: Colors.red.shade700)),
-                  const SizedBox(height: 20),
-                  AppleCard(
-                    child: Column(
-                      children: [
-                        Text('Number of Meals', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: isDark ? Colors.white : AppTheme.textPrimaryLight)),
-                        const SizedBox(height: 16),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            _StepperButton(
-                              icon: CupertinoIcons.minus,
-                              onTap: (_selectedDate != null && _qty > cfg.minQuantity) ? () => _decrement(cfg) : null,
-                            ),
-                            const SizedBox(width: 24),
-                            Container(
-                              constraints: const BoxConstraints(minWidth: 80),
-                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                              decoration: BoxDecoration(
-                                color: _selectedDate != null
-                                    ? AppTheme.primaryColor.withValues(alpha: 0.08)
-                                    : Colors.grey.withValues(alpha: 0.05),
-                                borderRadius: BorderRadius.circular(14),
-                                border: Border.all(
-                                  color: _selectedDate != null
-                                      ? AppTheme.primaryColor.withValues(alpha: 0.2)
-                                      : Colors.grey.withValues(alpha: 0.15),
+                  // ── Quantity & price: only shown after a date is selected AND menu loaded ──
+                  if (_selectedDate != null && p.deliveryMenu != null) ...[
+                    const SizedBox(height: 20),
+                    AppleCard(
+                      child: Column(
+                        children: [
+                          Text('Number of Meals', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15, color: isDark ? Colors.white : AppTheme.textPrimaryLight)),
+                          const SizedBox(height: 16),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              _StepperButton(
+                                icon: CupertinoIcons.minus,
+                                onTap: _qty > cfg.minQuantity ? () => _decrement(cfg) : null,
+                              ),
+                              const SizedBox(width: 24),
+                              Container(
+                                constraints: const BoxConstraints(minWidth: 80),
+                                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primaryColor.withValues(alpha: 0.08),
+                                  borderRadius: BorderRadius.circular(14),
+                                  border: Border.all(
+                                    color: AppTheme.primaryColor.withValues(alpha: 0.2),
+                                  ),
+                                ),
+                                child: Text(
+                                  '$_qty',
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    fontSize: 28,
+                                    fontWeight: FontWeight.w900,
+                                    color: AppTheme.primaryColor,
+                                  ),
                                 ),
                               ),
-                              child: Text(
-                                '$_qty',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.w900,
-                                  color: _selectedDate != null ? AppTheme.primaryColor : Colors.grey,
-                                ),
+                              const SizedBox(width: 24),
+                              _StepperButton(
+                                icon: CupertinoIcons.plus,
+                                onTap: _qty < maxQty ? () => _increment(cfg) : null,
                               ),
-                            ),
-                            const SizedBox(width: 24),
-                            _StepperButton(
-                              icon: CupertinoIcons.plus,
-                              onTap: (_selectedDate != null && _qty < maxQty) ? () => _increment(cfg) : null,
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        if (_selectedDate == null)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 8.0),
-                            child: Text(
-                              'Please select a delivery date first',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: Colors.orange.shade700,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          )
-                        else
+                            ],
+                          ),
+                          const SizedBox(height: 10),
                           Text(
                             'Min ${cfg.minQuantity} · Below ${cfg.tierThreshold}',
                             style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: isDark ? Colors.white54 : AppTheme.textSecondaryLight),
                           ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  if (_qty > 0 && p.deliveryMenu != null) ...[
                     const SizedBox(height: 16),
                     Container(
                       padding: const EdgeInsets.all(14),
@@ -261,26 +244,27 @@ class _BulkOrderStandardScreenState extends State<BulkOrderStandardScreen> {
               ),
             ),
           ),
-          Material(
-            elevation: 12,
-            color: isDark ? AppTheme.surfaceDark : Colors.white,
-            child: SafeArea(
-              top: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
-                child: SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: FilledButton.icon(
-                    onPressed: canAdd ? () => _addToCart(p, cfg) : null,
-                    icon: const Icon(CupertinoIcons.cart_badge_plus, size: 20),
-                    label: Text('Add $_qty Meals to Cart', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
-                    style: FilledButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+          if (canAdd)
+            Material(
+              elevation: 12,
+              color: isDark ? AppTheme.surfaceDark : Colors.white,
+              child: SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: FilledButton.icon(
+                      onPressed: () => _addToCart(p, cfg),
+                      icon: const Icon(CupertinoIcons.cart_badge_plus, size: 20),
+                      label: Text('Add $_qty Meals to Cart', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+                      style: FilledButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
         ],
       ),
     );

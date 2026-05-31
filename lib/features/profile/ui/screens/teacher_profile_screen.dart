@@ -42,6 +42,8 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
   SchoolModel? _selectedSchool;
   StateModel? _selectedState;
   CityModel? _selectedCity;
+  StandardModel? _selectedStandard;
+  DivisionModel? _selectedDivision;
   MealSizeModel? _selectedMealSize;
   
   String _status = 'active';
@@ -60,6 +62,8 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
       _nameController.text.trim(),
       _schoolController.text.trim(),
       _selectedSchool?.id ?? '',
+      _selectedStandard?.id ?? '',
+      _selectedDivision?.id ?? '',
       _selectedMealSize?.id ?? '',
       _selectedState?.id ?? '',
       _selectedCity?.id ?? '',
@@ -80,7 +84,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
         .map((m) => m.displayName)
         .firstOrNull;
     final label = sizeName?.isNotEmpty == true ? sizeName! : 'your current size';
-    return 'You cannot change meal size because you are actively subscribed with $label. Use Upgrade meal size in Settings.';
+    return 'You cannot change meal size because you are actively subscribed with $label. Use Resize meal pack in Settings.';
   }
 
   bool get _blocksMealSizeChange {
@@ -118,6 +122,8 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
         // Match existing selections from lookup data
         _selectedSchool = lookupProvider.schools.where((s) => s.name == profile.schoolCollegeName).firstOrNull;
         _selectedState = lookupProvider.states.where((s) => s.name.toLowerCase() == profile.state.toLowerCase()).firstOrNull;
+        _selectedStandard = lookupProvider.standards.where((s) => s.id == profile.standardId).firstOrNull;
+        _selectedDivision = lookupProvider.divisions.where((d) => d.id == profile.divisionId).firstOrNull;
 
         // Trigger dependent fetches if values exist
         if (_selectedState != null) {
@@ -136,6 +142,8 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
             _status = profile.status;
             _timeController.text = profile.mealTime ?? '13:30';
             _selectedMealSize = lookupProvider.mealSizes.where((m) => m.id == profile.mealSizeId).firstOrNull;
+            _selectedStandard = lookupProvider.standards.where((s) => s.id == profile.standardId).firstOrNull;
+            _selectedDivision = lookupProvider.divisions.where((d) => d.id == profile.divisionId).firstOrNull;
             _isEditing = false;
             _isInitializing = false;
             _schoolLocksLocation = _selectedSchool != null;
@@ -251,7 +259,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
       if (_blocksMealSizeChange && _selectedMealSize!.id != existing.mealSizeId) {
         ErrorHandler.showError(
           context,
-          'Meal size cannot be changed while a subscription is active or upcoming. Use Upgrade meal size in Settings.',
+          'Meal size cannot be changed while a subscription is active or upcoming. Use Resize meal pack in Settings.',
         );
         return;
       }
@@ -268,6 +276,8 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
       status: _status,
       mealSizeId: _selectedMealSize!.id,
       mealTime: _timeController.text,
+      standardId: _selectedStandard?.id,
+      divisionId: _selectedDivision?.id,
     );
     
     final success = await profileProvider.saveTeacherProfile(profile);
@@ -290,6 +300,8 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
           _status = saved.status;
           _timeController.text = saved.mealTime ?? '13:30';
           _selectedMealSize = context.read<LookupProvider>().mealSizes.where((m) => m.id == saved.mealSizeId).firstOrNull;
+          _selectedStandard = context.read<LookupProvider>().standards.where((s) => s.id == saved.standardId).firstOrNull;
+          _selectedDivision = context.read<LookupProvider>().divisions.where((d) => d.id == saved.divisionId).firstOrNull;
           _schoolLocksLocation = _selectedSchool != null;
         }
       });
@@ -398,6 +410,50 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                           } else {
                             _schoolLocksLocation = false;
                           }
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 20),
+
+                    // 2.5 Standard (Optional)
+                    SearchableDropdown<StandardModel>(
+                      label: 'Standard (Optional)',
+                      items: lookupProvider.standards,
+                      itemLabel: (s) => s.displayName,
+                      value: _selectedStandard,
+                      isLoading: lookupProvider.isLoading,
+                      listenable: lookupProvider,
+                      itemsGetter: () => lookupProvider.standards,
+                      loadingGetter: () => lookupProvider.isLoading,
+                      onInteraction: () {
+                        FocusScope.of(context).unfocus();
+                        lookupProvider.fetchInitialData();
+                      },
+                      onChanged: (v) {
+                        setState(() {
+                          _selectedStandard = v;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 20),
+
+                    // 2.6 Division (Optional)
+                    SearchableDropdown<DivisionModel>(
+                      label: 'Division (Optional)',
+                      items: lookupProvider.divisions,
+                      itemLabel: (d) => d.name,
+                      value: _selectedDivision,
+                      isLoading: lookupProvider.isLoading,
+                      listenable: lookupProvider,
+                      itemsGetter: () => lookupProvider.divisions,
+                      loadingGetter: () => lookupProvider.isLoading,
+                      onInteraction: () {
+                        FocusScope.of(context).unfocus();
+                        lookupProvider.fetchInitialData();
+                      },
+                      onChanged: (v) {
+                        setState(() {
+                          _selectedDivision = v;
                         });
                       },
                     ),
@@ -598,6 +654,8 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                   _timeController.text = profile.mealTime ?? '13:30';
                   _selectedMealSize = context.read<LookupProvider>().mealSizes.where((m) => m.id == profile.mealSizeId).firstOrNull;
                   _selectedSchool = context.read<LookupProvider>().schools.where((s) => s.name == profile.schoolCollegeName).firstOrNull;
+                  _selectedStandard = context.read<LookupProvider>().standards.where((s) => s.id == profile.standardId).firstOrNull;
+                  _selectedDivision = context.read<LookupProvider>().divisions.where((d) => d.id == profile.divisionId).firstOrNull;
                   _schoolLocksLocation = _selectedSchool != null;
                   _captureSnapshot();
                 }
@@ -715,6 +773,14 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                         const SizedBox(height: 20),
                         _buildInfoRow(CupertinoIcons.building_2_fill, profile.schoolCollegeName, isDark),
                         const SizedBox(height: 14),
+                        if (profile.standardName != null && profile.standardName!.isNotEmpty) ...[
+                          _buildInfoRow(
+                            CupertinoIcons.book_fill, 
+                            'Standard: ${profile.standardName}${profile.divisionName != null && profile.divisionName!.isNotEmpty ? ' - Div: ${profile.divisionName}' : ''}', 
+                            isDark,
+                          ),
+                          const SizedBox(height: 14),
+                        ],
                         _buildInfoRow(CupertinoIcons.location_solid, '${profile.city}, ${profile.state}', isDark),
                         const SizedBox(height: 14),
                         _buildInfoRow(CupertinoIcons.clock_fill, 'Meal Time: ${TimeUtils.formatToDisplay(profile.mealTime ?? '12:30:00')}', isDark),

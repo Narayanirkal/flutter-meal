@@ -4,6 +4,8 @@ class SchoolModel {
   final String address;
   final String city;
   final String state;
+  final bool hasLunchBoxPickup;
+  final String? lunchBoxPickupTime;
 
   SchoolModel({
     required this.id,
@@ -11,15 +13,19 @@ class SchoolModel {
     required this.address,
     required this.city,
     required this.state,
+    this.hasLunchBoxPickup = false,
+    this.lunchBoxPickupTime,
   });
 
   factory SchoolModel.fromJson(Map<String, dynamic> json) {
     return SchoolModel(
-      id: json['id'],
+      id: json['id'] is int ? json['id'].toString() : json['id'],
       name: json['name'],
       address: json['address'] ?? '',
       city: json['city'] ?? '',
       state: json['state'] ?? '',
+      hasLunchBoxPickup: json['has_lunch_box_pickup'] ?? false,
+      lunchBoxPickupTime: json['lunch_box_pickup_time'],
     );
   }
 
@@ -30,6 +36,8 @@ class SchoolModel {
       'address': address,
       'city': city,
       'state': state,
+      'has_lunch_box_pickup': hasLunchBoxPickup,
+      'lunch_box_pickup_time': lunchBoxPickupTime,
     };
   }
 }
@@ -198,6 +206,66 @@ class CompanyModel {
       'id': id,
       'city_id': cityId,
       'name': name,
+    };
+  }
+}
+
+class DivisionModel {
+  final int id;
+  final String name;
+
+  DivisionModel({
+    required this.id,
+    required this.name,
+  });
+
+  factory DivisionModel.fromJson(Map<String, dynamic> json) {
+    return DivisionModel(
+      id: json['id'] is String ? int.parse(json['id']) : json['id'],
+      name: json['name'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+    };
+  }
+}
+
+class ContactUsModel {
+  final String title;
+  final String subtitle;
+  final String email;
+  final String phone;
+  final String footer;
+
+  ContactUsModel({
+    required this.title,
+    required this.subtitle,
+    required this.email,
+    required this.phone,
+    required this.footer,
+  });
+
+  factory ContactUsModel.fromJson(Map<String, dynamic> json) {
+    return ContactUsModel(
+      title: json['title'] ?? '',
+      subtitle: json['subtitle'] ?? '',
+      email: json['email'] ?? '',
+      phone: json['phone'] ?? '',
+      footer: json['footer'] ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'title': title,
+      'subtitle': subtitle,
+      'email': email,
+      'phone': phone,
+      'footer': footer,
     };
   }
 }

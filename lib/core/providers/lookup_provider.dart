@@ -24,6 +24,10 @@ class LookupProvider with ChangeNotifier {
       if (standards is List) {
         _standards = standards.map((e) => StandardModel.fromJson(Map<String, dynamic>.from(e as Map))).toList();
       }
+      final divisions = raw['divisions'];
+      if (divisions is List) {
+        _divisions = divisions.map((e) => DivisionModel.fromJson(Map<String, dynamic>.from(e as Map))).toList();
+      }
       final mealSizes = raw['mealSizes'];
       if (mealSizes is List) {
         _mealSizes = mealSizes.map((e) => MealSizeModel.fromJson(Map<String, dynamic>.from(e as Map))).toList();
@@ -52,6 +56,7 @@ class LookupProvider with ChangeNotifier {
       'standards': _standards
           .map((e) => {'id': e.id, 'name': e.name, 'display_name': e.displayName})
           .toList(),
+      'divisions': _divisions.map((e) => e.toJson()).toList(),
       'mealSizes': _mealSizes
           .map((e) => {
                 'id': e.id,
@@ -76,6 +81,7 @@ class LookupProvider with ChangeNotifier {
 
   List<SchoolModel> _schools = [];
   List<StandardModel> _standards = [];
+  List<DivisionModel> _divisions = [];
   List<MealSizeModel> _mealSizes = [];
   List<CorporateLocationModel> _corporateLocations = [];
   List<Map<String, dynamic>> _subscriptions = [];
@@ -89,6 +95,7 @@ class LookupProvider with ChangeNotifier {
 
   List<SchoolModel> get schools => _schools;
   List<StandardModel> get standards => _standards;
+  List<DivisionModel> get divisions => _divisions;
   List<MealSizeModel> get mealSizes => _mealSizes;
   List<CorporateLocationModel> get corporateLocations => _corporateLocations;
   List<Map<String, dynamic>> get subscriptions => _subscriptions;
@@ -131,6 +138,7 @@ class LookupProvider with ChangeNotifier {
         _repository.getCorporateLocations(),
         _repository.getSubscriptions(),
         _repository.getStates(),
+        _repository.getDivisions(),
       ]);
 
       _schools = results[0] as List<SchoolModel>;
@@ -139,6 +147,7 @@ class LookupProvider with ChangeNotifier {
       _corporateLocations = results[3] as List<CorporateLocationModel>;
       _subscriptions = results[4] as List<Map<String, dynamic>>;
       _states = results[5] as List<StateModel>;
+      _divisions = results[6] as List<DivisionModel>;
       _cities = [];
       _companies = [];
       _lastFetchedAt = DateTime.now();
@@ -190,5 +199,9 @@ class LookupProvider with ChangeNotifier {
     } catch (e) {
       // Handle error silently
     }
+  }
+
+  Future<ContactUsModel?> fetchContactUsInfo() async {
+    return await _repository.getContactUsInfo();
   }
 }

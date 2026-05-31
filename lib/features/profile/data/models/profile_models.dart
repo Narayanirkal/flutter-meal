@@ -8,6 +8,10 @@ class TeacherProfileModel {
   final String status;
   final int? mealSizeId;
   final String? mealTime;
+  final int? standardId;
+  final String? standardName;
+  final int? divisionId;
+  final String? divisionName;
 
   TeacherProfileModel({
     this.id,
@@ -19,6 +23,10 @@ class TeacherProfileModel {
     this.status = 'active',
     this.mealSizeId,
     this.mealTime,
+    this.standardId,
+    this.standardName,
+    this.divisionId,
+    this.divisionName,
   });
 
   factory TeacherProfileModel.fromJson(Map<String, dynamic> json) {
@@ -40,6 +48,14 @@ class TeacherProfileModel {
           ? json['meal_size_id'] as int
           : int.tryParse('${json['meal_size_id'] ?? json['mealSizeId'] ?? ''}'),
       mealTime: json['meal_time']?.toString() ?? json['mealTiming']?.toString(),
+      standardId: json['standard_id'] is int
+          ? json['standard_id'] as int
+          : int.tryParse('${json['standard_id'] ?? json['standardId'] ?? ''}'),
+      standardName: json['standard_name']?.toString(),
+      divisionId: json['division_id'] is int
+          ? json['division_id'] as int
+          : int.tryParse('${json['division_id'] ?? json['divisionId'] ?? ''}'),
+      divisionName: json['division_name']?.toString(),
     );
   }
 
@@ -54,6 +70,10 @@ class TeacherProfileModel {
       'status': status,
       'meal_size_id': mealSizeId,
       'meal_time': mealTime,
+      'standard_id': standardId,
+      'standardId': standardId,
+      'division_id': divisionId,
+      'divisionId': divisionId,
     };
   }
 }

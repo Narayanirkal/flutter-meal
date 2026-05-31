@@ -76,7 +76,7 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
         .map((m) => m.displayName)
         .firstOrNull;
     final label = sizeName?.isNotEmpty == true ? sizeName! : 'your current size';
-    return 'You cannot change meal size because you are actively subscribed with $label. Use Upgrade meal size in Settings.';
+    return 'You cannot change meal size because you are actively subscribed with $label. Use Resize meal pack in Settings.';
   }
 
   bool get _blocksMealSizeChange {
@@ -251,7 +251,7 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
       if (_blocksMealSizeChange && _selectedMealSize!.id != existing.mealSizeId) {
         ErrorHandler.showError(
           context,
-          'Meal size cannot be changed while a subscription is active or upcoming. Use Upgrade meal size in Settings.',
+          'Meal size cannot be changed while a subscription is active or upcoming. Use Resize meal pack in Settings.',
         );
         return;
       }

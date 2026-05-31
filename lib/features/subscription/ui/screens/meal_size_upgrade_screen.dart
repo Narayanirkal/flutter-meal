@@ -224,7 +224,7 @@ class _MealSizeUpgradeScreenState extends State<MealSizeUpgradeScreen> {
       out.add({
         'to_id': t,
         'label': toName,
-        'subtitle': 'One-time upgrade fee',
+        'subtitle': 'One-time fee',
         'price': MoneyFormat.display(m['price']),
       });
     }
@@ -254,7 +254,7 @@ class _MealSizeUpgradeScreenState extends State<MealSizeUpgradeScreen> {
                   children: [
                     const Expanded(
                       child: Text(
-                        'Who is upgrading?',
+                        'Who is resizing?',
                         style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
                       ),
                     ),
@@ -421,7 +421,7 @@ class _MealSizeUpgradeScreenState extends State<MealSizeUpgradeScreen> {
 
       appBar: AppBar(
 
-        title: const Text('Upgrade meal size', style: TextStyle(fontWeight: FontWeight.w800)),
+        title: const Text('Resize meal pack', style: TextStyle(fontWeight: FontWeight.w800)),
 
         leading: IconButton(
 
@@ -484,7 +484,7 @@ class _MealSizeUpgradeScreenState extends State<MealSizeUpgradeScreen> {
 
                   Text(
 
-                    'Pay a one-time fee to move to a larger meal pack. Active and upcoming subscriptions qualify.',
+                    'Change your meal pack size. Active and upcoming subscriptions qualify.',
 
                     style: TextStyle(
 
@@ -504,7 +504,7 @@ class _MealSizeUpgradeScreenState extends State<MealSizeUpgradeScreen> {
 
                     Text(
 
-                      'No active or upcoming subscriptions found. Subscribe first, then you can upgrade meal size.',
+                      'No active or upcoming subscriptions found. Subscribe first, then you can resize your meal pack.',
 
                       style: TextStyle(
 
@@ -518,7 +518,7 @@ class _MealSizeUpgradeScreenState extends State<MealSizeUpgradeScreen> {
 
                   else ...[
 
-                    _sectionTitle(context, 'Who is upgrading?'),
+                    _sectionTitle(context, 'Who is resizing?'),
 
                     const SizedBox(height: 8),
 
@@ -686,7 +686,7 @@ class _MealSizeUpgradeScreenState extends State<MealSizeUpgradeScreen> {
 
                         child: Text(
 
-                          'No upgrade path is published from your current size yet. Contact support if you need a larger pack.',
+                          'No resizing path is published from your current size yet. Contact support if you need to change your pack.',
 
                           style: TextStyle(fontWeight: FontWeight.w700, color: isDark ? Colors.white70 : AppTheme.textPrimaryLight),
 
@@ -842,7 +842,7 @@ class _MealSizeUpgradeScreenState extends State<MealSizeUpgradeScreen> {
 
                     const SizedBox(height: 32),
 
-                    _sectionTitle(context, 'Upgrade payment history'),
+                    _sectionTitle(context, 'Resize history'),
 
                     const SizedBox(height: 8),
 
@@ -866,7 +866,7 @@ class _MealSizeUpgradeScreenState extends State<MealSizeUpgradeScreen> {
 
                           title: Text(who.isNotEmpty ? who : plan, style: const TextStyle(fontWeight: FontWeight.w700)),
 
-                          subtitle: Text(when.isNotEmpty ? when : 'Meal size upgrade'),
+                          subtitle: Text(when.isNotEmpty ? when : 'Meal size resize'),
 
                           trailing: Column(
 

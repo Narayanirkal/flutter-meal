@@ -123,7 +123,7 @@ class _CartScreenState extends State<CartScreen> {
           const SizedBox(height: 24),
           Text('Your cart is empty', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: isDark ? Colors.white : AppTheme.textPrimaryLight)),
           const SizedBox(height: 8),
-          Text('Add subscriptions from the Upgrade screen', style: TextStyle(color: isDark ? Colors.white54 : AppTheme.textSecondaryLight)),
+          Text('Add subscriptions from the Resize meal pack screen', style: TextStyle(color: isDark ? Colors.white54 : AppTheme.textSecondaryLight)),
         ],
       ),
     );
