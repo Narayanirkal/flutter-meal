@@ -95,8 +95,8 @@ class EntityPlanActionsRow extends StatelessWidget {
                 ),
               );
             },
-            icon: const Icon(CupertinoIcons.arrow_up_circle, size: 18),
-            label: const Text('Upgrade size'),
+            icon: const Icon(CupertinoIcons.arrow_up_down_circle, size: 18),
+            label: const Text('Resize pack'),
             style: OutlinedButton.styleFrom(
               foregroundColor: AppTheme.primaryColor,
               side: const BorderSide(color: AppTheme.primaryColor, width: 1.5),

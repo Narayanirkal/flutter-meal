@@ -74,8 +74,8 @@ class SettingsScreen extends StatelessWidget {
           const SizedBox(height: 8),
           _buildNavigationTile(
             context,
-            CupertinoIcons.arrow_up_circle_fill,
-            'Upgrade your meal size',
+            CupertinoIcons.arrow_up_down_circle_fill,
+            'Resize your meal pack',
             isDark,
             () => Navigator.push(context, CupertinoPageRoute(builder: (_) => const MealSizeUpgradeScreen())),
           ),

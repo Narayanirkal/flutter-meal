@@ -349,7 +349,7 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
             .toLowerCase() ==
             'meal_size_upgrade';
         final planName = isUpgrade
-            ? 'Meal size upgrade'
+            ? 'Meal pack resize'
             : _safeString(payment['plan_name'] ?? payment['entity_name'], 'Subscription');
         final entityName = _safeString(payment['entity_name'], '');
         final amount = _safeNumString(payment['amount']);

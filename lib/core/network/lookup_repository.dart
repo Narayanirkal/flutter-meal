@@ -127,4 +127,29 @@ class LookupRepository {
       return [];
     }
   }
+
+  Future<List<DivisionModel>> getDivisions() async {
+    try {
+      final response = await _dioClient.dio.get(ApiEndpoints.divisions);
+      if (response.data['success'] == true) {
+        final List divisions = response.data['data']['divisions'];
+        return divisions.map((d) => DivisionModel.fromJson(d)).toList();
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<ContactUsModel?> getContactUsInfo() async {
+    try {
+      final response = await _dioClient.dio.get(ApiEndpoints.contactUsInfo);
+      if (response.data['success'] == true) {
+        return ContactUsModel.fromJson(response.data['data']);
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
 }

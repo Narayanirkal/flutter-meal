@@ -13,7 +13,6 @@ import 'package:meal_app/core/utils/validators.dart';
 import 'package:meal_app/core/providers/meal_provider.dart';
 import 'package:meal_app/core/widgets/entity_subscription_badge.dart';
 import 'package:meal_app/core/widgets/entity_plan_actions_row.dart';
-import 'package:meal_app/core/providers/meal_provider.dart';
 import 'package:meal_app/core/utils/meal_size_recommendations.dart';
 import 'package:meal_app/core/utils/subscription_status_normalize.dart';
 import 'package:meal_app/core/widgets/meal_size_blocked_banner.dart';
@@ -59,7 +58,7 @@ class _ChildrenManagementScreenState extends State<ChildrenManagementScreen> {
           entityType: 'child',
           entityId: targetChild.id!,
           entityName: targetChild.name,
-          mealSizeId: targetChild.mealSizeId ?? 0,
+          mealSizeId: targetChild.mealSizeId,
         );
       }
     }
@@ -166,7 +165,11 @@ class _ChildrenManagementScreenState extends State<ChildrenManagementScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final statusMap = context.watch<MealProvider>().subscriptionStatusData;
     final childId = child.id ?? '';
-    
+    final lookup = context.watch<LookupProvider>();
+    final school = lookup.schools.where((s) => s.id == child.schoolId).firstOrNull;
+    final hasPickup = school?.hasLunchBoxPickup == true;
+    final pickupTime = school?.lunchBoxPickupTime;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
       decoration: BoxDecoration(
@@ -260,11 +263,24 @@ class _ChildrenManagementScreenState extends State<ChildrenManagementScreen> {
                 children: [
                   const Divider(height: 1),
                   const SizedBox(height: 16),
-                  _buildInfoRow(CupertinoIcons.building_2_fill, child.schoolName ?? 'School ID: ${child.schoolId}', isDark),
+                  _buildInfoRow(CupertinoIcons.building_2_fill, child.schoolName ?? 'School/College ID: ${child.schoolId}', isDark),
                   const SizedBox(height: 10),
-                  _buildInfoRow(CupertinoIcons.book_fill, child.standardName ?? 'Standard ID: ${child.standardId}', isDark),
+                  _buildInfoRow(
+                    CupertinoIcons.book_fill, 
+                    '${child.standardName ?? 'Standard ID: ${child.standardId}'}${child.divisionName != null && child.divisionName!.isNotEmpty ? ' - Div: ${child.divisionName}' : ''}', 
+                    isDark,
+                  ),
                   const SizedBox(height: 10),
                   _buildInfoRow(CupertinoIcons.clock_fill, 'Meal Delivery: ${TimeUtils.formatToDisplay(child.mealTime)}', isDark),
+                  if (hasPickup) ...[
+                    const SizedBox(height: 10),
+                    _buildPickupTimingRow(
+                      pickupTime != null && pickupTime.isNotEmpty
+                          ? 'Pickup Time: ${TimeUtils.formatToDisplay(pickupTime)}'
+                          : 'Lunch Box Pickup: Available',
+                      isDark,
+                    ),
+                  ],
                   if (child.mealSizeName != null && child.mealSizeName!.isNotEmpty) ...[
                     const SizedBox(height: 10),
                     _buildInfoRow(CupertinoIcons.square_grid_2x2_fill, 'Meal Size: ${child.mealSizeName}', isDark),
@@ -317,6 +333,33 @@ class _ChildrenManagementScreenState extends State<ChildrenManagementScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildPickupTimingRow(String text, bool isDark) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: Colors.orange.withValues(alpha: isDark ? 0.15 : 0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          Icon(CupertinoIcons.bag_fill, size: 15, color: Colors.orange.shade700),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.orange.shade800,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -377,6 +420,7 @@ class _ChildFormState extends State<_ChildForm> {
   
   SchoolModel? _selectedSchool;
   StandardModel? _selectedStandard;
+  DivisionModel? _selectedDivision;
   MealSizeModel? _selectedMealSize;
   StateModel? _selectedState;
   CityModel? _selectedCity;
@@ -397,7 +441,7 @@ class _ChildFormState extends State<_ChildForm> {
         .map((m) => m.displayName)
         .firstOrNull;
     final label = sizeName?.isNotEmpty == true ? sizeName! : (widget.child?.mealSizeName ?? 'your current size');
-    return 'You cannot change meal size because you are actively subscribed with $label. Use Upgrade meal size in Settings.';
+    return 'You cannot change meal size because you are actively subscribed with $label. Use Resize meal pack in Settings.';
   }
 
   bool get _blocksMealSizeChange {
@@ -414,6 +458,7 @@ class _ChildFormState extends State<_ChildForm> {
       _rollController.text.trim(),
       _selectedSchool?.id ?? '',
       _selectedStandard?.id ?? '',
+      _selectedDivision?.id ?? '',
       _selectedMealSize?.id ?? '',
       _selectedState?.id ?? '',
       _selectedCity?.id ?? '',
@@ -454,6 +499,7 @@ class _ChildFormState extends State<_ChildForm> {
         
         SchoolModel? school;
         StandardModel? standard;
+        DivisionModel? division;
         MealSizeModel? mealSize;
         StateModel? state;
         CityModel? city;
@@ -461,6 +507,7 @@ class _ChildFormState extends State<_ChildForm> {
         if (mounted) {
           school = lookup.schools.where((s) => s.id == widget.child!.schoolId).firstOrNull;
           standard = lookup.standards.where((s) => s.id == widget.child!.standardId).firstOrNull;
+          division = lookup.divisions.where((d) => d.id == widget.child!.divisionId).firstOrNull;
           mealSize = lookup.mealSizes.where((s) => s.id == widget.child!.mealSizeId).firstOrNull;
           
           if (school != null) {
@@ -478,6 +525,7 @@ class _ChildFormState extends State<_ChildForm> {
           setState(() {
             _selectedSchool = school;
             _selectedStandard = standard;
+            _selectedDivision = division;
             _selectedMealSize = mealSize;
             _selectedState = state;
             _selectedCity = city;
@@ -573,7 +621,7 @@ class _ChildFormState extends State<_ChildForm> {
     if (widget.child != null && _blocksMealSizeChange) {
       final before = widget.child!;
       if (_selectedMealSize != null && _selectedMealSize!.id != before.mealSizeId) {
-        final msg = 'Meal size cannot be changed while a subscription is active or upcoming. Use Upgrade meal size in Settings.';
+        final msg = 'Meal size cannot be changed while a subscription is active or upcoming. Use Resize meal pack in Settings.';
         setState(() => _formError = msg);
         ErrorHandler.showError(context, msg);
         return false;
@@ -587,6 +635,7 @@ class _ChildFormState extends State<_ChildForm> {
           before.rollNumber.trim() == _rollController.text.trim() &&
           before.schoolId == _selectedSchool!.id &&
           before.standardId == _selectedStandard!.id &&
+          before.divisionId == _selectedDivision?.id &&
           before.mealSizeId == _selectedMealSize!.id &&
           TimeUtils.normalizeBackendTime(before.mealTime) == TimeUtils.normalizeBackendTime(_timeController.text);
       if (same) {
@@ -596,7 +645,7 @@ class _ChildFormState extends State<_ChildForm> {
           if (_blocksMealSizeChange && _selectedMealSize?.id != before.mealSizeId) {
             ErrorHandler.showError(
               context,
-              'Meal size cannot be changed while a subscription is active or upcoming. Use Upgrade meal size in Settings.',
+              'Meal size cannot be changed while a subscription is active or upcoming. Use Resize meal pack in Settings.',
             );
           } else if (_selectedState != null &&
               school.state.trim().toLowerCase() != _selectedState!.name.trim().toLowerCase()) {
@@ -633,6 +682,7 @@ class _ChildFormState extends State<_ChildForm> {
       standardId: _selectedStandard!.id,
       mealSizeId: _selectedMealSize!.id,
       mealTime: _timeController.text,
+      divisionId: _selectedDivision?.id,
     );
 
     bool success;
@@ -659,7 +709,6 @@ class _ChildFormState extends State<_ChildForm> {
   @override
   Widget build(BuildContext context) {
     final lookup = context.watch<LookupProvider>();
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     final formBody = Container(
       height: MediaQuery.of(context).size.height * 0.85,
@@ -752,7 +801,7 @@ class _ChildFormState extends State<_ChildForm> {
               const SizedBox(height: 16),
               // 3. School — shows ALL active schools from GET /api/client/schools
               SearchableDropdown<SchoolModel>(
-                label: 'School',
+                label: 'School/College',
                 items: lookup.schools,
                 itemLabel: (s) => '${s.name} (${s.city})',
                 value: _selectedSchool,
@@ -760,7 +809,7 @@ class _ChildFormState extends State<_ChildForm> {
                 listenable: lookup,
                 itemsGetter: () => lookup.schools,
                 loadingGetter: () => lookup.isLoading,
-                validator: (v) => Validators.requiredField(v, 'School'),
+                validator: (v) => Validators.requiredField(v, 'School/College'),
                 onInteraction: () {
                   FocusScope.of(context).unfocus();
                   lookup.fetchInitialData();
@@ -788,6 +837,40 @@ class _ChildFormState extends State<_ChildForm> {
                   });
                 },
               ),
+              // Show school pickup timing info after school is selected
+              if (_selectedSchool != null && _selectedSchool!.hasLunchBoxPickup) ...[
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.orange.withValues(alpha: 0.35)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(CupertinoIcons.bag_fill, size: 16, color: Colors.orange.shade700),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: RichText(
+                          text: TextSpan(
+                            style: TextStyle(fontSize: 13, color: Colors.orange.shade800, fontWeight: FontWeight.w600),
+                            children: [
+                              const TextSpan(text: 'Lunch Box Pickup: '),
+                              TextSpan(
+                                text: (_selectedSchool!.lunchBoxPickupTime != null && _selectedSchool!.lunchBoxPickupTime!.isNotEmpty)
+                                    ? TimeUtils.formatToDisplay(_selectedSchool!.lunchBoxPickupTime)
+                                    : 'Available at this school',
+                                style: const TextStyle(fontWeight: FontWeight.w700),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const SizedBox(height: 16),
               // 4. Standard
               SearchableDropdown<StandardModel>(
@@ -815,6 +898,27 @@ class _ChildFormState extends State<_ChildForm> {
                       final pick = MealSizeRecommendations.pickForBand(lookup.mealSizes, band);
                       if (pick != null) _selectedMealSize = pick;
                     }
+                  });
+                },
+              ),
+              const SizedBox(height: 16),
+              // Division
+              SearchableDropdown<DivisionModel>(
+                label: 'Division',
+                items: lookup.divisions,
+                itemLabel: (d) => d.name,
+                value: _selectedDivision,
+                isLoading: lookup.isLoading,
+                listenable: lookup,
+                itemsGetter: () => lookup.divisions,
+                loadingGetter: () => lookup.isLoading,
+                onInteraction: () {
+                  FocusScope.of(context).unfocus();
+                  lookup.fetchInitialData();
+                },
+                onChanged: (v) {
+                  setState(() {
+                    _selectedDivision = v;
                   });
                 },
               ),

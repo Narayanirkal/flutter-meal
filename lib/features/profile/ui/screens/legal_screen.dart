@@ -88,7 +88,7 @@ class LegalScreen extends StatelessWidget {
         ),
         _buildSectionCard(
           title: '4. Meal Skips & Customization',
-          content: 'Our app supports temporary subscription pauses ("Meal Skips") for planned absences. Skip requests must comply with the minimum consecutive day rules and advance-notice cutoff times configured in the application settings. Standard meal sizes and delivery preferences can be upgraded within the app, subject to additional pricing tiers.',
+          content: 'Our app supports temporary subscription pauses ("Meal Skips") for planned absences. Skip requests must comply with the minimum consecutive day rules and advance-notice cutoff times configured in the application settings. Standard meal sizes and delivery preferences can be resized within the app, subject to adjusted pricing tiers.',
           isDark: isDark,
         ),
         _buildSectionCard(
