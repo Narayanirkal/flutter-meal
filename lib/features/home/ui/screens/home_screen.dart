@@ -203,8 +203,8 @@ class _HomeScreenState extends State<HomeScreen> {
         statusBarColor: Colors.transparent,
         statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
         statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
-        systemNavigationBarColor: isDark ? AppTheme.backgroundDark : AppTheme.backgroundLight,
-        systemNavigationBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+        systemNavigationBarColor: AppTheme.backgroundDark,
+        systemNavigationBarIconBrightness: Brightness.light,
         systemNavigationBarDividerColor: Colors.transparent,
       ),
       child: Scaffold(
@@ -246,6 +246,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       _buildFeatureCards(context),
                       const SizedBox(height: 20),
                       _buildQuickStatus(context),
+                      const SizedBox(height: 18),
+                      _buildAboutBuuttiiCard(context, isDark),
                       const SizedBox(height: 30),
                     ]),
                   ),
@@ -1305,6 +1307,81 @@ class _HomeScreenState extends State<HomeScreen> {
     ).animate().fadeIn(delay: 400.ms);
   }
 
+  Widget _buildAboutBuuttiiCard(BuildContext context, bool isDark) {
+    return AppleCard(
+      margin: EdgeInsets.zero,
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+      borderRadius: 20,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(
+                  CupertinoIcons.info_circle_fill,
+                  color: AppTheme.primaryColor,
+                  size: 21,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'About Buuttii',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w900,
+                        color: isDark ? Colors.white : AppTheme.textPrimaryLight,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Healthy meals made simple',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondaryLight,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Text(
+            'Buuttii helps families, teachers, professionals, and teams manage fresh meal plans with simple subscriptions, daily menu updates, nutrition highlights, and easy bulk ordering in one place.',
+            style: TextStyle(
+              fontSize: 13,
+              height: 1.5,
+              color: isDark ? Colors.white70 : AppTheme.textSecondaryLight,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: const [
+              _AboutTag(icon: CupertinoIcons.calendar_today, label: 'Daily menus'),
+              _AboutTag(icon: CupertinoIcons.leaf_arrow_circlepath, label: 'Nutrition info'),
+              _AboutTag(icon: CupertinoIcons.person_3_fill, label: 'Multi-profile plans'),
+              _AboutTag(icon: CupertinoIcons.bag_fill, label: 'Bulk orders'),
+            ],
+          ),
+        ],
+      ),
+    ).animate().fadeIn(delay: 500.ms).slideY(begin: 0.08, end: 0);
+  }
+
   /// Compact single-card activity summary: children + plan status side by side.
   /// Tapping the plan-status side navigates to subscription management when
   /// active, or opens upgrade flow when inactive — never blocks the user.
@@ -1488,6 +1565,46 @@ class _HomeScreenState extends State<HomeScreen> {
             Icon(CupertinoIcons.chevron_right, size: 14, color: isDark ? Colors.white38 : Colors.grey),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _AboutTag extends StatelessWidget {
+  const _AboutTag({
+    required this.icon,
+    required this.label,
+  });
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.white.withValues(alpha: 0.04) : AppTheme.primaryColor.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDark ? Colors.white.withValues(alpha: 0.08) : AppTheme.primaryColor.withValues(alpha: 0.14),
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: AppTheme.primaryColor),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: isDark ? Colors.white70 : AppTheme.textPrimaryLight,
+            ),
+          ),
+        ],
       ),
     );
   }
