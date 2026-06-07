@@ -92,7 +92,7 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
   void initState() {
     super.initState();
     _nameController = TextEditingController();
-    _timeController = TextEditingController(text: '13:30');
+    _timeController = TextEditingController();
 
     AppRouteTracker.instance.setCurrent(AppScreen.professionalProfile);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -393,6 +393,21 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
                     ),
                     const SizedBox(height: 20),
                     // 2. Company Name (from Corporate Locations API)
+                    ElevatedButton.icon(
+                      onPressed: () => _openSupportWhatsApp(context),
+                      icon: const Icon(CupertinoIcons.phone_fill, color: Colors.white, size: 16),
+                      label: const Text("Can't find company? Chat on WhatsApp"),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF25D366),
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size(double.infinity, 48),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
                     SearchableDropdown<CorporateLocationModel>(
                       label: 'Company Name',
                       items: lookup.corporateLocations,
@@ -587,22 +602,7 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
             ],
           ),
         ),
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-        child: ElevatedButton.icon(
-          onPressed: () => _openSupportWhatsApp(context),
-          icon: const Icon(CupertinoIcons.phone_fill, color: Colors.white),
-          label: const Text("Can't find company? Chat on WhatsApp"),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF25D366),
-            foregroundColor: Colors.white,
-            minimumSize: const Size(double.infinity, 60),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(30),
-            ),
-          ),
-        ),
-      ),
+      bottomNavigationBar: null,
     );
   }
 
@@ -830,7 +830,7 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
                 ErrorHandler.showSuccess(this.context, 'Professional profile deleted successfully');
                 // No need to pop, provider update will trigger build and show empty form
               } else {
-                ErrorHandler.showError(this.context, 'Failed to delete — profile may have active subscriptions');
+                ErrorHandler.showError(this.context, 'Cannot delete — you have an active subscription on this profile. Please wait for it to expire.');
               }
             },
             child: const Text('Delete'),

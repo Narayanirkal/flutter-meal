@@ -802,13 +802,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Text(
-                        'Freshly prepared daily for our subscribers',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: isDark ? Colors.white54 : AppTheme.textSecondaryLight,
-                        ),
-                      ),
                     ],
                   ),
                 ),

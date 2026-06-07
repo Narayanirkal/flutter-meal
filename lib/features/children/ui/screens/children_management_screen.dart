@@ -176,22 +176,7 @@ class _ChildrenManagementScreenState extends State<ChildrenManagementScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-        child: ElevatedButton.icon(
-          onPressed: () => _openSupportWhatsApp(context),
-          icon: const Icon(CupertinoIcons.phone_fill, color: Colors.white),
-          label: const Text("Can't find school? Chat on WhatsApp"),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF25D366),
-            foregroundColor: Colors.white,
-            minimumSize: const Size(double.infinity, 60),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(30),
-            ),
-          ),
-        ),
-      ),
+      bottomNavigationBar: null,
     );
   }
 
@@ -528,7 +513,7 @@ class _ChildFormState extends State<_ChildForm> {
     _nameController = TextEditingController(text: widget.child?.name);
     _rollController = TextEditingController(text: widget.child?.rollNumber);
     final backendTime = TimeUtils.tryParseToBackend(widget.child?.mealTime);
-    _timeController = TextEditingController(text: backendTime);
+    _timeController = TextEditingController(text: backendTime ?? '');
     _timeDisplayController = TextEditingController(text: TimeUtils.formatToDisplay(backendTime));
     _initialSnapshot = '';
 
@@ -597,8 +582,8 @@ class _ChildFormState extends State<_ChildForm> {
   Future<void> _selectTime(BuildContext context) async {
     FocusScope.of(context).unfocus();
     final parts = _timeController.text.split(':');
-    final initHour = int.tryParse(parts.first) ?? 13;
-    final initMin = parts.length > 1 ? int.tryParse(parts[1]) ?? 30 : 30;
+    final initHour = int.tryParse(parts.first) ?? TimeOfDay.now().hour;
+    final initMin = parts.length > 1 ? int.tryParse(parts[1]) ?? TimeOfDay.now().minute : TimeOfDay.now().minute;
     final TimeOfDay? picked = await showTimePicker(
       context: context,
       initialTime: TimeOfDay(hour: initHour.clamp(0, 23), minute: initMin.clamp(0, 59)),
@@ -845,6 +830,21 @@ class _ChildFormState extends State<_ChildForm> {
               ),
               const SizedBox(height: 16),
               // 3. School — shows ALL active schools from GET /api/client/schools
+              ElevatedButton.icon(
+                onPressed: () => _openSupportWhatsApp(context),
+                icon: const Icon(CupertinoIcons.phone_fill, color: Colors.white, size: 16),
+                label: const Text("Can't find school? Chat on WhatsApp"),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF25D366),
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(double.infinity, 48),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                ),
+              ),
+              const SizedBox(height: 10),
               SearchableDropdown<SchoolModel>(
                 label: 'School/College',
                 items: lookup.schools,

@@ -101,7 +101,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
     _schoolController = TextEditingController();
     _cityController = TextEditingController();
     _stateController = TextEditingController();
-    _timeController = TextEditingController(text: '13:30');
+    _timeController = TextEditingController();
     
     AppRouteTracker.instance.setCurrent(AppScreen.teacherProfile);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -138,7 +138,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
             _cityController.text = profile.city;
             _stateController.text = profile.state;
             _status = profile.status;
-            _timeController.text = profile.mealTime ?? '13:30';
+            _timeController.text = profile.mealTime ?? '';
             _selectedMealSize = lookupProvider.mealSizes.where((m) => m.id == profile.mealSizeId).firstOrNull;
 
             _isEditing = false;
@@ -187,8 +187,8 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
   Future<void> _selectTime(BuildContext context) async {
     FocusScope.of(context).unfocus();
     final parts = _timeController.text.split(':');
-    final initHour = int.tryParse(parts.first) ?? 13;
-    final initMin = parts.length > 1 ? int.tryParse(parts[1]) ?? 30 : 30;
+    final initHour = int.tryParse(parts.first) ?? TimeOfDay.now().hour;
+    final initMin = parts.length > 1 ? int.tryParse(parts[1]) ?? TimeOfDay.now().minute : TimeOfDay.now().minute;
     final TimeOfDay? picked = await showTimePicker(
       context: context,
       initialTime: TimeOfDay(hour: initHour.clamp(0, 23), minute: initMin.clamp(0, 59)),
@@ -295,7 +295,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
           _cityController.text = saved.city;
           _stateController.text = saved.state;
           _status = saved.status;
-          _timeController.text = saved.mealTime ?? '13:30';
+          _timeController.text = saved.mealTime ?? '';
           _selectedMealSize = context.read<LookupProvider>().mealSizes.where((m) => m.id == saved.mealSizeId).firstOrNull;
 
           _schoolLocksLocation = _selectedSchool != null;
@@ -407,6 +407,21 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                     const SizedBox(height: 20),
 
                     // 2. School/College — ALL active schools from GET /api/client/schools
+                    ElevatedButton.icon(
+                      onPressed: () => _openSupportWhatsApp(context),
+                      icon: const Icon(CupertinoIcons.phone_fill, color: Colors.white, size: 16),
+                      label: const Text("Can't find school/college? Chat on WhatsApp"),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF25D366),
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size(double.infinity, 48),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
                     SearchableDropdown<SchoolModel>(
                       label: 'School/College Name',
                       items: lookupProvider.schools,
@@ -614,22 +629,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
             ],
           ),
         ),
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
-        child: ElevatedButton.icon(
-          onPressed: () => _openSupportWhatsApp(context),
-          icon: const Icon(CupertinoIcons.phone_fill, color: Colors.white),
-          label: const Text("Can't find school/college? Chat on WhatsApp"),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF25D366),
-            foregroundColor: Colors.white,
-            minimumSize: const Size(double.infinity, 60),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(30),
-            ),
-          ),
-        ),
-      ),
+      bottomNavigationBar: null,
     );
   }
 
@@ -658,7 +658,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                   _cityController.text = profile.city;
                   _stateController.text = profile.state;
                   _status = profile.status;
-                  _timeController.text = profile.mealTime ?? '13:30';
+                  _timeController.text = profile.mealTime ?? '';
                   _selectedMealSize = context.read<LookupProvider>().mealSizes.where((m) => m.id == profile.mealSizeId).firstOrNull;
                   _selectedSchool = context.read<LookupProvider>().schools.where((s) => s.name == profile.schoolCollegeName).firstOrNull;
 
@@ -776,7 +776,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                         ],
                         _buildInfoRow(CupertinoIcons.location_solid, '${profile.city}, ${profile.state}', isDark),
                         const SizedBox(height: 14),
-                        _buildInfoRow(CupertinoIcons.clock_fill, 'Meal Time: ${TimeUtils.formatToDisplay(profile.mealTime ?? '12:30:00')}', isDark),
+                        _buildInfoRow(CupertinoIcons.clock_fill, 'Meal Time: ${TimeUtils.formatToDisplay(profile.mealTime)}', isDark),
                         const SizedBox(height: 14),
                         _buildInfoRow(CupertinoIcons.square_grid_2x2_fill, 'Meal Size: $mealSizeName', isDark),
                         if (profileId.isNotEmpty) ...[
@@ -864,7 +864,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                 ErrorHandler.showSuccess(this.context, 'Teacher profile deleted successfully');
                 // Provider update will show empty form
               } else {
-                ErrorHandler.showError(this.context, 'Failed to delete — profile may have active subscriptions');
+                ErrorHandler.showError(this.context, 'Cannot delete — you have an active subscription on this profile. Please wait for it to expire.');
               }
             },
             child: const Text('Delete'),
