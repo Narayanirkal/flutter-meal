@@ -341,32 +341,36 @@ class _WeeklyMenuScreenState extends State<WeeklyMenuScreen> {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
                   if (nutritionPoints.isNotEmpty)
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: nutritionPoints.map((point) {
-                        return Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-                          decoration: BoxDecoration(
-                            color: isDark ? const Color(0xFF2E2420) : const Color(0xFFF2ECE0),
-                            borderRadius: BorderRadius.circular(999),
-                            border: Border.all(
-                              color: isDark ? const Color(0xFF42342C) : const Color(0xFFE6DBC5),
-                              width: 1,
+                    SizedBox(
+                      height: 32,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: nutritionPoints.length,
+                        separatorBuilder: (_, __) => const SizedBox(width: 8),
+                        itemBuilder: (_, i) {
+                          return Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                            decoration: BoxDecoration(
+                              color: isDark ? const Color(0xFF2E2420) : const Color(0xFFF2ECE0),
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(
+                                color: isDark ? const Color(0xFF42342C) : const Color(0xFFE6DBC5),
+                                width: 1,
+                              ),
                             ),
-                          ),
-                          child: Text(
-                            point,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: isDark ? Colors.white : Colors.black87,
+                            child: Text(
+                              nutritionPoints[i],
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: isDark ? Colors.white : Colors.black87,
+                              ),
                             ),
-                          ),
-                        );
-                      }).toList(),
+                          );
+                        },
+                      ),
                     )
                   else if (!isLoading)
                     Text(

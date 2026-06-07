@@ -24,9 +24,29 @@ class AppTheme {
   static const Color segmentedBorderLight = Color(0xFFCBD5E1);
   static const Color segmentedBorderDark = Color(0xFF334155);
 
+  /// Status bar + Android navigation bar colors matching the screen background.
+  /// Pure white for light-mode screens that must match Android system bars.
+  static const Color pageBackgroundLight = Color(0xFFFFFFFF);
+
+  static SystemUiOverlayStyle overlayFor({
+    required Color background,
+    required bool isDark,
+  }) {
+    return SystemUiOverlayStyle(
+      statusBarColor: background,
+      statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+      statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
+      systemNavigationBarColor: background,
+      systemNavigationBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+      systemNavigationBarDividerColor: background,
+      systemStatusBarContrastEnforced: false,
+      systemNavigationBarContrastEnforced: false,
+    );
+  }
+
   static ThemeData get lightTheme => _createTheme(
     brightness: Brightness.light,
-    background: backgroundLight,
+    background: pageBackgroundLight,
     surface: surfaceLight,
     textPrimary: textPrimaryLight,
     textSecondary: textSecondaryLight,
@@ -76,11 +96,9 @@ class AppTheme {
           letterSpacing: -0.5,
         ),
         iconTheme: IconThemeData(color: textPrimary),
-        systemOverlayStyle: SystemUiOverlayStyle(
-          statusBarColor: Colors.transparent,
-          statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
-          statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
-        ),
+        systemOverlayStyle: overlayFor(background: background, isDark: isDark),
+        surfaceTintColor: Colors.transparent,
+        scrolledUnderElevation: 0,
       ),
       textTheme: TextTheme(
         displayLarge: TextStyle(color: textPrimary, fontWeight: FontWeight.w900),

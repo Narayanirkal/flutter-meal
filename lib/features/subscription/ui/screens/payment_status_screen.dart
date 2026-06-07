@@ -13,6 +13,7 @@ import 'package:meal_app/features/children/providers/children_provider.dart';
 import 'package:meal_app/features/profile/providers/profile_provider.dart';
 import 'package:meal_app/features/home/providers/menu_provider.dart';
 import 'package:meal_app/features/bulk_order/providers/bulk_order_provider.dart';
+import 'package:meal_app/features/quick_service/providers/quick_service_provider.dart';
 import 'package:meal_app/core/theme/app_theme.dart';
 import 'package:meal_app/core/widgets/apple_card.dart';
 import 'package:meal_app/core/utils/meal_date.dart';
@@ -159,6 +160,8 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
     final orderType = (_statusData?['orderType']?.toString() ?? widget.orderType ?? '').toLowerCase();
     final isCartOrder = orderType == 'cart';
     final isBulkOrder = orderType == 'bulk';
+    final isOneDayLunch = orderType == 'one_day_lunch';
+    final isSpecialDish = orderType == 'special_dish';
 
     final orderStatus = (_statusData?['orderStatus']?.toString() ?? '').toLowerCase();
     if ((orderStatus == 'pending' || _statusData?['localStatus'] == 'pending') && widget.txnId.isNotEmpty) {
@@ -180,6 +183,15 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
       try {
         context.read<BulkOrderProvider>().clearBulkCart();
         await context.read<BulkOrderProvider>().clearServerCart();
+      } catch (_) {/* ignore */}
+    }
+
+    if (isOneDayLunch || isSpecialDish) {
+      try {
+        await context.read<QuickServiceProvider>().loadOneDayConfig();
+        if (isSpecialDish) {
+          await context.read<QuickServiceProvider>().loadCartFromServer();
+        }
       } catch (_) {/* ignore */}
     }
 

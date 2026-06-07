@@ -20,6 +20,7 @@ class _ViewAllPlansScreenState extends State<ViewAllPlansScreen> {
   final ScrollController _scrollController = ScrollController();
   final Map<int, GlobalKey> _sectionKeys = {};
   int _selectedSizeIndex = 0;
+  bool _programmaticScroll = false;
 
   @override
   void initState() {
@@ -60,21 +61,26 @@ class _ViewAllPlansScreenState extends State<ViewAllPlansScreen> {
 
   Future<void> _scrollToSection(int index, List<_MealSizeSegment> segments) async {
     if (index < 0 || index >= segments.length) return;
+    _programmaticScroll = true;
     setState(() => _selectedSizeIndex = index);
     final ctx = _keyForSection(segments[index].id).currentContext;
     if (ctx != null) {
       await Scrollable.ensureVisible(
         ctx,
-        duration: const Duration(milliseconds: 280),
+        duration: const Duration(milliseconds: 320),
         curve: Curves.easeOutCubic,
-        alignment: 0.08,
+        alignment: 0.0,
       );
-      _syncSelectedSegmentFromScroll();
     }
+    if (mounted) {
+      setState(() => _selectedSizeIndex = index);
+    }
+    await Future.delayed(const Duration(milliseconds: 360));
+    _programmaticScroll = false;
   }
 
   void _syncSelectedSegmentFromScroll() {
-    if (!mounted) return;
+    if (!mounted || _programmaticScroll || !_scrollController.hasClients) return;
 
     final lookup = context.read<LookupProvider>();
     final plans = [...context.read<SubscriptionProvider>().subscriptions]
@@ -83,8 +89,13 @@ class _ViewAllPlansScreenState extends State<ViewAllPlansScreen> {
 
     if (segments.isEmpty) return;
 
-    final viewportTop = _scrollController.offset + 88.0;
-    int nearestIndex = 0;
+    final scrollableCtx = _scrollController.position.context.notificationContext;
+    if (scrollableCtx == null) return;
+    final scrollRender = scrollableCtx.findRenderObject();
+    if (scrollRender is! RenderBox) return;
+
+    const headerInset = 88.0;
+    int nearestIndex = _selectedSizeIndex;
     double nearestDistance = double.infinity;
 
     for (var i = 0; i < segments.length; i++) {
@@ -92,10 +103,10 @@ class _ViewAllPlansScreenState extends State<ViewAllPlansScreen> {
       if (ctx == null) continue;
 
       final renderBox = ctx.findRenderObject();
-      if (renderBox is! RenderBox) continue;
+      if (renderBox is! RenderBox || !renderBox.hasSize) continue;
 
-      final top = renderBox.localToGlobal(Offset.zero).dy;
-      final distance = (top - viewportTop).abs();
+      final top = renderBox.localToGlobal(Offset.zero, ancestor: scrollRender).dy;
+      final distance = (top - headerInset).abs();
       if (distance < nearestDistance) {
         nearestDistance = distance;
         nearestIndex = i;

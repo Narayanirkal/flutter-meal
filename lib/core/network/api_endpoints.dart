@@ -132,4 +132,14 @@ class ApiEndpoints {
   static const String bulkOrderInitiateBundlePayment = '/api/client/bulk-orders/initiate-bundle-payment';
   static const String bulkOrderCart = '/api/client/bulk-orders/cart';
   static String bulkOrderById(String id) => '/api/client/bulk-orders/$id';
+
+  // Quick service
+  static const String oneDayLunchConfig = '/api/client/quick-service/one-day-lunch/config';
+  static const String oneDayLunchQuote = '/api/client/quick-service/one-day-lunch/quote';
+  static const String oneDayLunchInitiatePayment = '/api/client/quick-service/one-day-lunch/initiate-payment';
+  static const String specialDishCategories = '/api/client/quick-service/special-dishes/categories';
+  static String specialDishItems(String categoryId) =>
+      '/api/client/quick-service/special-dishes/categories/$categoryId/items';
+  static const String specialDishCart = '/api/client/quick-service/special-dishes/cart';
+  static const String specialDishInitiatePayment = '/api/client/quick-service/special-dishes/initiate-payment';
 }
