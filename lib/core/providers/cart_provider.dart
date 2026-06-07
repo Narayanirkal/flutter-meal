@@ -103,7 +103,7 @@ class CartProvider with ChangeNotifier {
       if (genAtStart != _localCartMutationGen) return;
       if (cached is Map<String, dynamic>) {
         _cartId = cached['cart_id']?.toString();
-        _totalAmount = (cached['total_amount'] as num?)?.toDouble() ?? 0;
+        _totalAmount = double.tryParse(cached['total_amount']?.toString() ?? '') ?? 0.0;
         final itemsList = cached['items'];
         if (itemsList is List) {
           _items = itemsList.map((json) => CartItem.fromJson(Map<String, dynamic>.from(json as Map))).toList();

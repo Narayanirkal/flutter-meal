@@ -32,8 +32,8 @@ class _QuickOrderSectionState extends State<QuickOrderSection> {
     final hasActive = status?['has_active_subscription'] == true;
     final showSubscriberBadge = !hasActive;
 
-    final todayPrice = (cfg?['today_price'] as num?)?.toDouble() ?? 100;
-    final nextDayPrice = (cfg?['next_day_price'] as num?)?.toDouble() ?? 90;
+    final todayPrice = double.tryParse(cfg?['today_price']?.toString() ?? '') ?? 100.0;
+    final nextDayPrice = double.tryParse(cfg?['next_day_price']?.toString() ?? '') ?? 90.0;
     final cutoff = cfg?['today_cutoff_time']?.toString() ?? '09:00';
 
     final titleColor = isDark ? Colors.white : AppTheme.textPrimaryLight;
@@ -88,14 +88,7 @@ class _QuickOrderSectionState extends State<QuickOrderSection> {
                   nextDayPrice: nextDayPrice,
                   cutoff: cutoff,
                   enabled: cfg != null && !provider.isLoading,
-                  onToday: () => QuickServiceCheckout.payOneDayLunch(
-                    context,
-                    deliveryType: 'today',
-                  ),
-                  onNextDay: () => QuickServiceCheckout.payOneDayLunch(
-                    context,
-                    deliveryType: 'next_day',
-                  ),
+                  onOrder: () => QuickServiceCheckout.chooseOneDayLunch(context),
                 ),
               ),
               const SizedBox(width: 12),
@@ -129,8 +122,7 @@ class _OneDayLunchCard extends StatelessWidget {
     required this.nextDayPrice,
     required this.cutoff,
     required this.enabled,
-    required this.onToday,
-    required this.onNextDay,
+    required this.onOrder,
   });
 
   final bool isDark;
@@ -140,164 +132,84 @@ class _OneDayLunchCard extends StatelessWidget {
   final double nextDayPrice;
   final String cutoff;
   final bool enabled;
-  final VoidCallback onToday;
-  final VoidCallback onNextDay;
+  final VoidCallback onOrder;
 
   @override
   Widget build(BuildContext context) {
     final titleColor = isDark ? Colors.white : AppTheme.textPrimaryLight;
     final subtitleColor = isDark ? Colors.white60 : const Color(0xFF64748B);
+    final purpleColor = const Color(0xFF7C3AED);
 
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: cardBg,
+    return Material(
+      color: cardBg,
+      borderRadius: BorderRadius.circular(18),
+      child: InkWell(
+        onTap: enabled ? onOrder : null,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: borderColor, width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 34,
-                height: 34,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF3E8FF),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: const Color(0xFF8B5CF6).withValues(alpha: 0.3)),
-                ),
-                child: const Icon(CupertinoIcons.bag, size: 16, color: Color(0xFF7C3AED)),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'One Day Lunch',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    color: titleColor,
-                  ),
-                ),
+        child: Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: borderColor, width: 1.5),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
               ),
             ],
           ),
-          const SizedBox(height: 4),
-          Text(
-            'Order a single meal without a subscription.',
-            style: TextStyle(fontSize: 11, height: 1.3, color: subtitleColor),
-          ),
-          const SizedBox(height: 12),
-          _DeliveryOption(
-            label: 'TODAY',
-            labelColor: const Color(0xFFEA580C),
-            icon: CupertinoIcons.sun_max_fill,
-            iconColor: const Color(0xFFEA580C),
-            price: todayPrice,
-            hint: 'Order before $cutoff',
-            enabled: enabled,
-            onTap: onToday,
-          ),
-          const SizedBox(height: 8),
-          _DeliveryOption(
-            label: 'NEXT DAY',
-            labelColor: const Color(0xFF2563EB),
-            icon: CupertinoIcons.calendar,
-            iconColor: const Color(0xFF2563EB),
-            price: nextDayPrice,
-            hint: 'Schedule for tomorrow',
-            enabled: enabled,
-            onTap: onNextDay,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _DeliveryOption extends StatelessWidget {
-  const _DeliveryOption({
-    required this.label,
-    required this.labelColor,
-    required this.icon,
-    required this.iconColor,
-    required this.price,
-    required this.hint,
-    required this.enabled,
-    required this.onTap,
-  });
-
-  final String label;
-  final Color labelColor;
-  final IconData icon;
-  final Color iconColor;
-  final double price;
-  final String hint;
-  final bool enabled;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Material(
-      color: isDark ? Colors.white.withValues(alpha: 0.06) : const Color(0xFFF8FAFC),
-      borderRadius: BorderRadius.circular(12),
-      child: InkWell(
-        onTap: enabled ? onTap : null,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      label,
+              Row(
+                children: [
+                  Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF3E8FF),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: purpleColor.withValues(alpha: 0.3)),
+                    ),
+                    child: Icon(CupertinoIcons.bag, size: 16, color: purpleColor),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'One Day Lunch',
                       style: TextStyle(
-                        fontSize: 10,
+                        fontSize: 14,
                         fontWeight: FontWeight.w800,
-                        letterSpacing: 0.6,
-                        color: labelColor,
+                        color: titleColor,
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(icon, size: 16, color: iconColor),
-                        const SizedBox(width: 4),
-                        Text(
-                          '₹${price.toStringAsFixed(0)} /meal',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w900,
-                            color: isDark ? Colors.white : AppTheme.textPrimaryLight,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      hint,
-                      style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
-                    ),
-                  ],
-                ),
+                  ),
+                  Icon(CupertinoIcons.chevron_right, size: 14, color: Colors.grey.shade500),
+                ],
               ),
-              Icon(
-                CupertinoIcons.chevron_right,
-                size: 14,
-                color: Colors.grey.shade500,
+              const SizedBox(height: 8),
+              Text(
+                'Choose today or tomorrow, size, time, and address.',
+                style: TextStyle(fontSize: 11, height: 1.35, color: subtitleColor),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  color: purpleColor.withValues(alpha: isDark ? 0.2 : 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  'Choose',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: purpleColor,
+                  ),
+                ),
               ),
             ],
           ),

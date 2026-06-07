@@ -26,8 +26,13 @@ class _SpecialDishesScreenState extends State<SpecialDishesScreen> {
       await p.loadCategories();
       await p.loadCartFromServer();
       await context.read<BulkOrderProvider>().loadSavedDeliveryAddress();
-      final bulkAddr = context.read<BulkOrderProvider>().deliveryAddress;
-      if (bulkAddr != null) p.setAddress(bulkAddr);
+      final backendAddr = await p.loadSavedDeliveryAddress();
+      final bulk = context.read<BulkOrderProvider>();
+      final addr = backendAddr ?? bulk.deliveryAddress;
+      if (addr != null) {
+        bulk.setDeliveryAddress(addr);
+        p.setAddress(addr);
+      }
       if (p.categories.isNotEmpty) {
         final id = p.categories.first['id']?.toString();
         if (id != null) {
@@ -97,7 +102,7 @@ class _SpecialDishesScreenState extends State<SpecialDishesScreen> {
                       final item = p.items[i];
                       final id = item['id']?.toString() ?? '';
                       final qty = p.cartQty[id] ?? 0;
-                      final price = (item['price'] as num?)?.toDouble() ?? 0;
+                      final price = double.tryParse(item['price']?.toString() ?? '') ?? 0.0;
                       return Card(
                         margin: const EdgeInsets.only(bottom: 12),
                         child: Padding(

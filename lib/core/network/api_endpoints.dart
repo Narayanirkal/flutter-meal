@@ -134,6 +134,7 @@ class ApiEndpoints {
   static String bulkOrderById(String id) => '/api/client/bulk-orders/$id';
 
   // Quick service
+  static const String quickServiceDeliveryAddress = '/api/client/quick-service/delivery-address';
   static const String oneDayLunchConfig = '/api/client/quick-service/one-day-lunch/config';
   static const String oneDayLunchQuote = '/api/client/quick-service/one-day-lunch/quote';
   static const String oneDayLunchInitiatePayment = '/api/client/quick-service/one-day-lunch/initiate-payment';

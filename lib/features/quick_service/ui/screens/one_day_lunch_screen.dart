@@ -52,8 +52,8 @@ class _OneDayLunchScreenState extends State<OneDayLunchScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final pageBg = isDark ? AppTheme.backgroundDark : Colors.white;
 
-    final todayPrice = (cfg?['today_price'] as num?)?.toDouble() ?? 100;
-    final nextDayPrice = (cfg?['next_day_price'] as num?)?.toDouble() ?? 90;
+    final todayPrice = double.tryParse(cfg?['today_price']?.toString() ?? '') ?? 100.0;
+    final nextDayPrice = double.tryParse(cfg?['next_day_price']?.toString() ?? '') ?? 90.0;
     final cutoff = cfg?['today_cutoff_time']?.toString() ?? '09:00';
     final selectedPrice = _deliveryType == 'today' ? todayPrice : nextDayPrice;
     final total = selectedPrice * _quantity;

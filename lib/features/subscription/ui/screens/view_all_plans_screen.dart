@@ -134,146 +134,106 @@ class _ViewAllPlansScreenState extends State<ViewAllPlansScreen> {
 
     return Scaffold(
       backgroundColor: isDark ? AppTheme.surfaceDark : const Color(0xFFFAF8F5),
-      body: CustomScrollView(
-        controller: _scrollController,
-        slivers: [
-          SliverToBoxAdapter(
-            child: SafeArea(
-              bottom: false,
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                decoration: BoxDecoration(
-                  color: isDark ? Colors.black26 : const Color(0xFFF3EBE0),
-                  borderRadius: const BorderRadius.vertical(bottom: Radius.circular(32)),
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        IconButton(
-                          icon: const Icon(CupertinoIcons.back, color: Color(0xFF8B7A66)),
-                          onPressed: () => Navigator.pop(context),
-                        ),
-                        const Expanded(child: SizedBox()),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'All Plans',
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w800,
-                        color: isDark ? Colors.white : const Color(0xFF5A4D42),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+      appBar: AppBar(
+        backgroundColor: isDark ? AppTheme.surfaceDark : const Color(0xFFF3EBE0),
+        elevation: 0,
+        centerTitle: true,
+        title: Text(
+          'All Plans',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w800,
+            color: isDark ? Colors.white : const Color(0xFF5A4D42),
           ),
-          if (segments.length >= 2)
-            SliverPersistentHeader(
-              pinned: true,
-              delegate: _SegmentHeaderDelegate(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
-                  child: MealSizeSegmentedControl(
-                    options: segments.map((s) => s.label).toList(),
-                    selectedIndex: _selectedSizeIndex.clamp(0, segments.length - 1),
-                    onChanged: (i) => _scrollToSection(i, segments),
-                  ),
-                ),
-                backgroundColor: isDark ? AppTheme.surfaceDark : const Color(0xFFFAF8F5),
-              ),
-            ),
-          if (plans.isEmpty)
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 48, 20, 32),
-                child: Center(
-                  child: Text(
-                    'Plans are unavailable right now. Pull down to retry.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? Colors.white70 : AppTheme.textSecondaryLight,
-                    ),
-                  ),
+        ),
+        leading: IconButton(
+          icon: const Icon(CupertinoIcons.back, color: Color(0xFF8B7A66)),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            if (segments.length >= 2)
+              Container(
+                color: isDark ? AppTheme.surfaceDark : const Color(0xFFFAF8F5),
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+                child: MealSizeSegmentedControl(
+                  options: segments.map((s) => s.label).toList(),
+                  selectedIndex: _selectedSizeIndex.clamp(0, segments.length - 1),
+                  onChanged: (i) => _scrollToSection(i, segments),
                 ),
               ),
-            )
-          else if (segments.isEmpty)
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: _PlanCatalogTile(plan: plans[index], isDark: isDark),
-                  ),
-                  childCount: plans.length,
-                ),
-              ),
-            )
-          else
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-              sliver: SliverList(
-                delegate: SliverChildListDelegate(
-                  segments.expand((seg) {
-                    final sectionPlans = plans
-                        .where((p) => p.mealSizeId == seg.id)
-                        .toList()
-                      ..sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
-                    if (sectionPlans.isEmpty) return <Widget>[];
-                    return [
-                      KeyedSubtree(
-                        key: _keyForSection(seg.id),
+            Expanded(
+              child: plans.isEmpty
+                  ? SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 48, 20, 32),
+                        child: Center(
+                          child: Text(
+                            'Plans are unavailable right now. Pull down to retry.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              color: isDark ? Colors.white70 : AppTheme.textSecondaryLight,
+                            ),
+                          ),
+                        ),
+                      ),
+                    )
+                  : RefreshIndicator(
+                      onRefresh: () async {
+                        await Future.wait([
+                          context.read<SubscriptionProvider>().fetchSubscriptions(force: true, silent: true),
+                          context.read<LookupProvider>().fetchInitialData(force: true),
+                        ]);
+                      },
+                      child: SingleChildScrollView(
+                        controller: _scrollController,
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            if (seg != segments.first) const SizedBox(height: 16),
-                            ...sectionPlans.map(
-                              (p) => Padding(
-                                padding: const EdgeInsets.only(bottom: 12),
-                                child: _PlanCatalogTile(plan: p, isDark: isDark),
-                              ),
-                            ),
-                          ],
+                          children: segments.isEmpty
+                              ? plans.map((p) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 12),
+                                  child: _PlanCatalogTile(plan: p, isDark: isDark),
+                                )).toList()
+                              : segments.expand((seg) {
+                                  final sectionPlans = plans
+                                      .where((p) => p.mealSizeId == seg.id)
+                                      .toList()
+                                    ..sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
+                                  if (sectionPlans.isEmpty) return <Widget>[];
+                                  return [
+                                    KeyedSubtree(
+                                      key: _keyForSection(seg.id),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                                        children: [
+                                          if (seg != segments.first) const SizedBox(height: 16),
+                                          ...sectionPlans.map(
+                                            (p) => Padding(
+                                              padding: const EdgeInsets.only(bottom: 12),
+                                              child: _PlanCatalogTile(plan: p, isDark: isDark),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ];
+                                }).toList(),
                         ),
                       ),
-                    ];
-                  }).toList(),
-                ),
-              ),
+                    ),
             ),
-        ],
+          ],
+        ),
       ),
     );
   }
-}
-
-class _SegmentHeaderDelegate extends SliverPersistentHeaderDelegate {
-  _SegmentHeaderDelegate({required this.child, required this.backgroundColor});
-
-  final Widget child;
-  final Color backgroundColor;
-
-  @override
-  double get minExtent => 72;
-
-  @override
-  double get maxExtent => 72;
-
-  @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    return ColoredBox(color: backgroundColor, child: child);
-  }
-
-  @override
-  bool shouldRebuild(covariant _SegmentHeaderDelegate oldDelegate) =>
-      oldDelegate.child != child || oldDelegate.backgroundColor != backgroundColor;
 }
 
 class _MealSizeSegment {

@@ -10,7 +10,14 @@ import 'package:meal_app/features/bulk_order/providers/bulk_order_provider.dart'
 
 /// Delivery address for bulk orders (state/city from master data + street address).
 class BulkOrderAddressSection extends StatefulWidget {
-  const BulkOrderAddressSection({super.key});
+  const BulkOrderAddressSection({
+    super.key,
+    this.showDeliveryTime = false,
+    this.deliveryTimeController,
+  });
+
+  final bool showDeliveryTime;
+  final TextEditingController? deliveryTimeController;
 
   @override
   State<BulkOrderAddressSection> createState() => _BulkOrderAddressSectionState();
@@ -21,12 +28,14 @@ class _BulkOrderAddressSectionState extends State<BulkOrderAddressSection> {
   CityModel? _selectedCity;
   final _addressController = TextEditingController();
   final _pincodeController = TextEditingController();
+  late final TextEditingController _deliveryTimeController;
   bool _hydrated = false;
   String? _formError;
 
   @override
   void initState() {
     super.initState();
+    _deliveryTimeController = widget.deliveryTimeController ?? TextEditingController();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<LookupProvider>().fetchInitialData();
       _hydrateFromProvider();
@@ -38,6 +47,7 @@ class _BulkOrderAddressSectionState extends State<BulkOrderAddressSection> {
     if (saved == null || _hydrated) return;
     _addressController.text = saved.addressLine;
     _pincodeController.text = saved.pincode ?? '';
+    _deliveryTimeController.text = saved.deliveryTime ?? _deliveryTimeController.text;
     final lookup = context.read<LookupProvider>();
     _selectedState = lookup.states.where((s) => s.id == saved.stateId).firstOrNull;
     if (_selectedState != null) {
@@ -58,6 +68,9 @@ class _BulkOrderAddressSectionState extends State<BulkOrderAddressSection> {
   void dispose() {
     _addressController.dispose();
     _pincodeController.dispose();
+    if (widget.deliveryTimeController == null) {
+      _deliveryTimeController.dispose();
+    }
     super.dispose();
   }
 
@@ -81,8 +94,21 @@ class _BulkOrderAddressSectionState extends State<BulkOrderAddressSection> {
         pincode: pin,
         stateName: state.name,
         cityName: city.name,
+        deliveryTime: _deliveryTimeController.text.trim(),
       ),
     );
+  }
+
+  Future<void> _pickDeliveryTime() async {
+    final initial = TimeOfDay.now();
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: initial,
+    );
+    if (picked == null || !mounted) return;
+    _deliveryTimeController.text = picked.format(context);
+    _syncToProvider();
+    setState(() {});
   }
 
   @override
@@ -202,6 +228,19 @@ class _BulkOrderAddressSectionState extends State<BulkOrderAddressSection> {
               _syncToProvider();
             },
           ),
+          if (widget.showDeliveryTime) ...[
+            const SizedBox(height: 12),
+            TextField(
+              controller: _deliveryTimeController,
+              readOnly: true,
+              decoration: const InputDecoration(
+                labelText: 'Delivery time *',
+                hintText: 'Select preferred lunch time',
+                prefixIcon: Icon(Icons.access_time),
+              ),
+              onTap: _pickDeliveryTime,
+            ),
+          ],
         ],
       ),
     );

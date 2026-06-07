@@ -40,6 +40,28 @@ class QuickServiceProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  Future<BulkDeliveryAddress?> loadSavedDeliveryAddress() async {
+    try {
+      final data = await _repository.getSavedDeliveryAddress();
+      if (data == null) return null;
+      final address = BulkDeliveryAddress(
+        stateId: int.tryParse('${data['state_id'] ?? data['stateId']}') ?? 0,
+        cityId: int.tryParse('${data['city_id'] ?? data['cityId']}') ?? 0,
+        addressLine: data['address_line']?.toString() ?? data['addressLine']?.toString() ?? '',
+        pincode: data['pincode']?.toString(),
+        stateName: data['state_name']?.toString() ?? data['stateName']?.toString(),
+        cityName: data['city_name']?.toString() ?? data['cityName']?.toString(),
+        deliveryTime: data['delivery_time']?.toString() ?? data['deliveryTime']?.toString(),
+      );
+      if (address.isComplete) {
+        _address = address;
+        notifyListeners();
+        return address;
+      }
+    } catch (_) {}
+    return null;
+  }
+
   Future<void> loadOneDayConfig() async {
     _loading = true;
     _error = null;
@@ -130,12 +152,15 @@ class QuickServiceProvider with ChangeNotifier {
       'city_id': a.cityId,
       'address_line': a.addressLine,
       if (a.pincode != null) 'pincode': a.pincode,
+      if (a.deliveryTime != null && a.deliveryTime!.trim().isNotEmpty) 'delivery_time': a.deliveryTime!.trim(),
     };
   }
 
   Future<Map<String, dynamic>?> payOneDayLunch({
     required String deliveryType,
     required int quantity,
+    required int mealSizeId,
+    required String deliveryTime,
   }) async {
     if (_address == null || !_address!.isComplete) {
       _error = 'Please complete delivery address';
@@ -149,6 +174,8 @@ class QuickServiceProvider with ChangeNotifier {
       final paymentData = await _repository.initiateOneDayLunchPayment({
         'delivery_type': deliveryType,
         'quantity': quantity,
+        'meal_size_id': mealSizeId,
+        'delivery_time': deliveryTime,
         'delivery_address': _addressPayload(),
         'redirectUrl': ApiEndpoints.paymentStatusPage,
       });

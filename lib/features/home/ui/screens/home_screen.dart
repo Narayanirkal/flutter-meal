@@ -207,50 +207,61 @@ class _HomeScreenState extends State<HomeScreen> {
           Navigator.of(context).pushNamed(AppRoutes.settings);
         },
       ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          if (!mounted) return;
-          await Future.wait([
-            context.read<HomepageProvider>().fetchHomepageEntries(force: true, silent: true),
-            context.read<MenuProvider>().fetchTodayMenu(silent: true),
-            context.read<CartProvider>().fetchCart(force: true, silent: true),
-            context.read<AuthProvider>().refreshMeProfile(
-              silent: true,
-              forceNetwork: NetworkStatusService.instance.isOnline,
+      body: Stack(
+        children: [
+          RefreshIndicator(
+            onRefresh: () async {
+              if (!mounted) return;
+              await Future.wait([
+                context.read<HomepageProvider>().fetchHomepageEntries(force: true, silent: true),
+                context.read<MenuProvider>().fetchTodayMenu(silent: true),
+                context.read<CartProvider>().fetchCart(force: true, silent: true),
+                context.read<AuthProvider>().refreshMeProfile(
+                  silent: true,
+                  forceNetwork: NetworkStatusService.instance.isOnline,
+                ),
+              ]);
+              if (!mounted) return;
+              await _refreshMealDataBundle();
+              if (!mounted) return;
+              await _maybePromptFourMealsLeftDialog();
+            },
+            child: CustomScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: [
+                SliverPadding(
+                  padding: EdgeInsets.fromLTRB(
+                    20,
+                    MediaQuery.paddingOf(context).top,
+                    20,
+                    10,
+                  ),
+                  sliver: SliverList(
+                    delegate: SliverChildListDelegate([
+                      _buildWelcomeHeader(context, isDark),
+                      const SizedBox(height: 12),
+                      _buildUpcomingPlanCard(context, isDark),
+                      _buildTodayMealCard(context, isDark),
+                      const QuickOrderSection(),
+                      _buildAlertsBanner(context, isDark),
+                      _buildFeatureQuickLinks(context, isDark),
+                      const SizedBox(height: 18),
+                      _buildAboutBuuttiiCard(context, isDark),
+                      const SizedBox(height: 30),
+                    ]),
+                  ),
+                ),
+              ],
             ),
-          ]);
-          if (!mounted) return;
-          await _refreshMealDataBundle();
-          if (!mounted) return;
-          await _maybePromptFourMealsLeftDialog();
-        },
-        child: CustomScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          slivers: [
-            SliverPadding(
-              padding: EdgeInsets.fromLTRB(
-                20,
-                MediaQuery.paddingOf(context).top,
-                20,
-                10,
-              ),
-              sliver: SliverList(
-                delegate: SliverChildListDelegate([
-                  _buildWelcomeHeader(context, isDark),
-                  const SizedBox(height: 12),
-                  _buildUpcomingPlanCard(context, isDark),
-                  _buildTodayMealCard(context, isDark),
-                  const QuickOrderSection(),
-                  _buildAlertsBanner(context, isDark),
-                  _buildFeatureQuickLinks(context, isDark),
-                  const SizedBox(height: 18),
-                  _buildAboutBuuttiiCard(context, isDark),
-                  const SizedBox(height: 30),
-                ]),
-              ),
-            ),
-          ],
-        ),
+          ),
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: MediaQuery.paddingOf(context).top,
+            child: ColoredBox(color: pageBg),
+          ),
+        ],
       ),
       ),
     );
@@ -484,17 +495,12 @@ class _HomeScreenState extends State<HomeScreen> {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 10),
       child: GestureDetector(
-        onTap: () async {
-          try {
-            await context.read<SubscriptionProvider>().fetchSubscriptions(silent: true);
-            if (!mounted) return;
-            Navigator.push(
-              context,
-              CupertinoPageRoute(builder: (_) => const ViewAllPlansScreen()),
-            );
-          } catch (e) {
-            // Silently handle navigation errors
-          }
+        onTap: () {
+          Navigator.push(
+            context,
+            CupertinoPageRoute(builder: (_) => const ViewAllPlansScreen()),
+          );
+          context.read<SubscriptionProvider>().fetchSubscriptions(silent: true).catchError((_) {});
         },
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),

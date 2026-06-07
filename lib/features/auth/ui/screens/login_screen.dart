@@ -7,7 +7,6 @@ import 'package:provider/provider.dart';
 
 import 'package:meal_app/core/theme/app_theme.dart';
 import 'package:meal_app/core/widgets/app_logo.dart';
-import 'package:meal_app/core/widgets/indian_flag_icon.dart';
 import 'package:meal_app/core/utils/error_handler.dart';
 import 'package:meal_app/features/auth/providers/auth_provider.dart';
 import 'package:meal_app/features/auth/ui/screens/otp_screen.dart';
@@ -150,14 +149,6 @@ class _LoginScreenState extends State<LoginScreen> {
     _formKey.currentState?.reset();
   }
 
-  Widget _buildFoodOutline(IconData icon) {
-    return Icon(
-      icon,
-      size: 54,
-      color: Colors.white.withValues(alpha: 0.18),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
@@ -197,16 +188,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             clipper: _HeroClipper(),
                             child: const ColoredBox(color: Color(0xFFFF7A00)),
                           ),
-                        ),
-                        Positioned(
-                          top: 24,
-                          right: 16,
-                          child: _buildFoodOutline(Icons.ramen_dining),
-                        ),
-                        Positioned(
-                          top: 48,
-                          left: 20,
-                          child: _buildFoodOutline(Icons.lunch_dining),
                         ),
                         Positioned(
                           top: MediaQuery.paddingOf(context).top + 28,
@@ -505,8 +486,6 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             child: Row(
               children: [
-                const IndianFlagIcon(size: 18),
-                const SizedBox(width: 8),
                 const Text(
                   '+91',
                   style: TextStyle(
