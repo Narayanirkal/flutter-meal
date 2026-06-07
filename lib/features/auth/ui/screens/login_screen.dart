@@ -6,6 +6,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:provider/provider.dart';
 
 import 'package:meal_app/core/theme/app_theme.dart';
+import 'package:meal_app/core/widgets/app_logo.dart';
 import 'package:meal_app/core/utils/error_handler.dart';
 import 'package:meal_app/features/auth/providers/auth_provider.dart';
 import 'package:meal_app/features/auth/ui/screens/otp_screen.dart';
@@ -36,6 +37,21 @@ class _LoginScreenState extends State<LoginScreen> {
     });
     _phoneFocusNode.addListener(() => _scrollToFocused(_phoneFocusNode));
     _usernameFocusNode.addListener(() => _scrollToFocused(_usernameFocusNode));
+    _phoneController.addListener(() {
+      if (mounted) setState(() {});
+    });
+  }
+
+  bool get _isPhoneComplete => _phoneController.text.trim().length == 10;
+
+  bool get _canSubmit {
+    final authProvider = context.read<AuthProvider>();
+    if (authProvider.state == AuthState.loading) return false;
+    if (!_isPhoneComplete) return false;
+    if (authProvider.authMode == AuthMode.register) {
+      return _usernameController.text.trim().isNotEmpty && _consentAccepted;
+    }
+    return true;
   }
 
   void _scrollToFocused(FocusNode node) {
@@ -133,14 +149,6 @@ class _LoginScreenState extends State<LoginScreen> {
     _formKey.currentState?.reset();
   }
 
-  Widget _buildFoodOutline(IconData icon) {
-    return Icon(
-      icon,
-      size: 54,
-      color: Colors.white.withValues(alpha: 0.18),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
@@ -148,21 +156,14 @@ class _LoginScreenState extends State<LoginScreen> {
     final isRegisterMode = authProvider.authMode == AuthMode.register;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    final pageBg = isDark ? AppTheme.backgroundDark : Colors.white;
+    final statusBarBg = isDark ? pageBg : const Color(0xFFFF7A00);
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
-        statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
-        systemNavigationBarColor: AppTheme.backgroundDark,
-        systemNavigationBarIconBrightness: Brightness.light,
-        systemNavigationBarDividerColor: Colors.transparent,
-      ),
+      value: AppTheme.overlayFor(background: statusBarBg, isDark: isDark),
       child: Scaffold(
         resizeToAvoidBottomInset: true,
-        backgroundColor: const Color(0xFFFBF9F8),
-        body: SafeArea(
-          bottom: false,
-          child: SingleChildScrollView(
+        backgroundColor: pageBg,
+        body: SingleChildScrollView(
             controller: _scrollController,
             keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
             padding: EdgeInsets.only(
@@ -176,54 +177,47 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 child: Column(
                 children: [
-                  // Hero Section
-                  ClipPath(
-                    clipper: _HeroClipper(),
-                    child: Container(
-                      height: 190,
-                      width: double.infinity,
-                      color: const Color(0xFFFF7A00),
-                    ),
-                  ),
-                  // Branding Header
-                  Transform.translate(
-                    offset: const Offset(0, -28),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                          border: Border.all(
-                            color: const Color(0xFFE0C0AF).withOpacity(0.2),
+                  SizedBox(
+                    height: 210 + MediaQuery.paddingOf(context).top,
+                    width: double.infinity,
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Positioned.fill(
+                          child: ClipPath(
+                            clipper: _HeroClipper(),
+                            child: const ColoredBox(color: Color(0xFFFF7A00)),
                           ),
                         ),
-                        child: const Text(
-                          'Buuttii',
-                          style: TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF994700),
+                        Positioned(
+                          top: MediaQuery.paddingOf(context).top + 28,
+                          left: 0,
+                          right: 0,
+                          child: Column(
+                            children: [
+                              const AppLogo(height: 68),
+                              const SizedBox(height: 8),
+                              const Text(
+                                'Buuttii',
+                                style: TextStyle(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                  letterSpacing: 0.2,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ),
+                      ],
                     ),
                   ),
-                  // Login Form
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 4),
                         // Heading
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -347,9 +341,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         SizedBox(
                           height: 52,
                           child: ElevatedButton(
-                            onPressed: isLoading
-                                ? null
-                                : (isRegisterMode ? _submitRegister : _submitLogin),
+                            onPressed: _canSubmit
+                                ? (isRegisterMode ? _submitRegister : _submitLogin)
+                                : null,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFFFF7A00),
                               foregroundColor: Colors.white,
@@ -412,58 +406,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ],
                               ),
                             ),
-                            const SizedBox(height: 32),
-                            // Trust Section
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Container(
-                                  height: 1,
-                                  width: 48,
-                                  color: const Color(0xFF8C7263).withOpacity(0.4),
-                                ),
-                                const SizedBox(width: 16),
-                                const Text(
-                                  'TRUSTED BY PROFESSIONALS',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
-                                    letterSpacing: 2,
-                                    color: Color(0xFF584235),
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Container(
-                                  height: 1,
-                                  width: 48,
-                                  color: const Color(0xFF8C7263).withOpacity(0.4),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 24),
-                            // Trust Badges
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.verified_user,
-                                  size: 32,
-                                  color: const Color(0xFF584235).withOpacity(0.6),
-                                ),
-                                const SizedBox(width: 32),
-                                Icon(
-                                  Icons.eco,
-                                  size: 32,
-                                  color: const Color(0xFF584235).withOpacity(0.6),
-                                ),
-                                const SizedBox(width: 32),
-                                Icon(
-                                  Icons.health_and_safety,
-                                  size: 32,
-                                  color: const Color(0xFF584235).withOpacity(0.6),
-                                ),
-                              ],
-                            ),
                           ],
                         ),
                         const SizedBox(height: 32),
@@ -475,7 +417,6 @@ class _LoginScreenState extends State<LoginScreen> {
             ), // ConstrainedBox
             ),
           ),
-        ),
       ),
     );
   }
@@ -545,12 +486,6 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             child: Row(
               children: [
-                const Icon(
-                  Icons.call,
-                  color: Color(0xFF584235),
-                  size: 20,
-                ),
-                const SizedBox(width: 8),
                 const Text(
                   '+91',
                   style: TextStyle(
@@ -582,8 +517,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 return null;
               },
               style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w400,
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.5,
               ),
               decoration: const InputDecoration(
                 hintText: 'Phone Number',

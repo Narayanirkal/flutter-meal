@@ -518,8 +518,8 @@ class _MealSkipScreenState extends State<MealSkipScreen> {
     String? selectedEntity;
     DateTimeRange? selectedRange;
     String? sheetError;
-    final minSkipDays = (mealProvider.skipPolicy['min_skip_days'] as num?)?.toInt() ?? 3;
-    final minNoticeDays = (mealProvider.skipPolicy['min_notice_days'] as num?)?.toInt() ?? 1;
+    final minSkipDays = int.tryParse(mealProvider.skipPolicy['min_skip_days']?.toString() ?? '') ?? 3;
+    final minNoticeDays = int.tryParse(mealProvider.skipPolicy['min_notice_days']?.toString() ?? '') ?? 1;
 
     // Helper: get subscription end_date for the selected entity from mealStatus
     DateTime? resolveEntityExpiry(String entityKey) {

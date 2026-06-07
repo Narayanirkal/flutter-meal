@@ -45,10 +45,15 @@ import 'package:meal_app/core/utils/no_transition_route.dart';
 import 'package:meal_app/core/network/announcement_repository.dart';
 import 'package:meal_app/core/providers/announcement_provider.dart';
 import 'package:meal_app/features/announcements/ui/screens/announcements_screen.dart';
+import 'package:meal_app/features/quick_service/data/repositories/quick_service_repository.dart';
+import 'package:meal_app/features/quick_service/providers/quick_service_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
+  SystemChrome.setSystemUIOverlayStyle(
+    AppTheme.overlayFor(background: AppTheme.pageBackgroundLight, isDark: false),
+  );
   runApp(const MyApp());
 }
 
@@ -75,6 +80,7 @@ class MyApp extends StatelessWidget {
     final mealRepository = MealRepository(dioClient);
     final bulkOrderRepository = BulkOrderRepository(dioClient);
     final announcementRepository = AnnouncementRepository(dioClient);
+    final quickServiceRepository = QuickServiceRepository(dioClient);
 
     // Start global online/offline monitor + attach Dio for queue replay.
     NetworkStatusService.instance.attachDioClient(dioClient);
@@ -97,6 +103,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => MealProvider(mealRepository, cache)),
         ChangeNotifierProvider(create: (_) => BulkOrderProvider(bulkOrderRepository)),
         ChangeNotifierProvider(create: (_) => AnnouncementProvider(announcementRepository)),
+        ChangeNotifierProvider(create: (_) => QuickServiceProvider(quickServiceRepository)),
       ],
       child: const MainApp(),
     );
@@ -109,15 +116,9 @@ class MainApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = context.watch<ThemeProvider>().isDarkMode;
+    final scaffoldBg = isDark ? AppTheme.backgroundDark : AppTheme.pageBackgroundLight;
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
-        statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
-        systemNavigationBarColor: AppTheme.backgroundDark,
-        systemNavigationBarIconBrightness: Brightness.light,
-        systemNavigationBarDividerColor: Colors.transparent,
-      ),
+      value: AppTheme.overlayFor(background: scaffoldBg, isDark: isDark),
       child: MaterialApp(
         title: 'Buuttii',
         debugShowCheckedModeBanner: false,
@@ -141,17 +142,9 @@ class MainApp extends StatelessWidget {
           }
         },
         builder: (context, child) {
-          final theme = Theme.of(context);
           return ReconnectRefreshCoordinator(
             child: OfflineBanner(
-              child: ColoredBox(
-                color: theme.scaffoldBackgroundColor,
-                child: SafeArea(
-                  top: true,
-                  bottom: true,
-                  child: child ?? const SizedBox.shrink(),
-                ),
-              ),
+              child: child ?? const SizedBox.shrink(),
             ),
           );
         },

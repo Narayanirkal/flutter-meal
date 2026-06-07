@@ -36,7 +36,7 @@ import 'package:meal_app/core/services/offline_cache_bootstrap.dart';
 import 'package:meal_app/core/widgets/app_skeleton.dart';
 import 'package:meal_app/core/providers/announcement_provider.dart';
 import 'package:meal_app/features/announcements/ui/screens/announcements_screen.dart';
-import 'package:meal_app/core/navigation/app_routes.dart';
+import 'package:meal_app/features/quick_service/ui/widgets/quick_order_section.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -46,8 +46,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  String _displayName = '';
-
   @override
   void initState() {
     super.initState();
@@ -84,7 +82,6 @@ class _HomeScreenState extends State<HomeScreen> {
       await _loadAllData();
     }
     if (!mounted) return;
-    _syncDisplayNameFromAuth();
     await _refreshMealDataBundle();
     if (!mounted) return;
     await _maybePromptFourMealsLeftDialog();
@@ -95,7 +92,6 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    if (mounted) _syncDisplayNameFromAuth();
   }
 
   Future<void> _loadAllData() async {
@@ -189,29 +185,15 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _syncDisplayNameFromAuth() {
-    if (!mounted) return;
-    final name = context.read<AuthProvider>().username.trim();
-    setState(() {
-      _displayName = name.isNotEmpty ? name : 'User';
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
+    final pageBg = isDark ? AppTheme.backgroundDark : Colors.white;
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent,
-        statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
-        statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
-        systemNavigationBarColor: AppTheme.backgroundDark,
-        systemNavigationBarIconBrightness: Brightness.light,
-        systemNavigationBarDividerColor: Colors.transparent,
-      ),
+      value: AppTheme.overlayFor(background: pageBg, isDark: isDark),
       child: Scaffold(
-      backgroundColor: isDark ? AppTheme.surfaceDark : const Color(0xFFFAF8F5),
+      backgroundColor: pageBg,
       bottomNavigationBar: BuuttiiFooterNav(
         currentIndex: 0,
         onHomeTap: () {},
@@ -225,44 +207,44 @@ class _HomeScreenState extends State<HomeScreen> {
           Navigator.of(context).pushNamed(AppRoutes.settings);
         },
       ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          if (!mounted) return;
-          await Future.wait([
-            context.read<HomepageProvider>().fetchHomepageEntries(force: true, silent: true),
-            context.read<MenuProvider>().fetchTodayMenu(silent: true),
-            context.read<CartProvider>().fetchCart(force: true, silent: true),
-            context.read<AuthProvider>().refreshMeProfile(
-              silent: true,
-              forceNetwork: NetworkStatusService.instance.isOnline,
-            ),
-          ]);
-          if (!mounted) return;
-          await _refreshMealDataBundle();
-          if (!mounted) return;
-          await _maybePromptFourMealsLeftDialog();
-          if (mounted) _syncDisplayNameFromAuth();
-        },
-        child: Container(
-          decoration: BoxDecoration(
-            color: isDark ? AppTheme.backgroundDark : const Color(0xFFFAF8F5),
-          ),
-          child: SafeArea(
+      body: Stack(
+        children: [
+          RefreshIndicator(
+            onRefresh: () async {
+              if (!mounted) return;
+              await Future.wait([
+                context.read<HomepageProvider>().fetchHomepageEntries(force: true, silent: true),
+                context.read<MenuProvider>().fetchTodayMenu(silent: true),
+                context.read<CartProvider>().fetchCart(force: true, silent: true),
+                context.read<AuthProvider>().refreshMeProfile(
+                  silent: true,
+                  forceNetwork: NetworkStatusService.instance.isOnline,
+                ),
+              ]);
+              if (!mounted) return;
+              await _refreshMealDataBundle();
+              if (!mounted) return;
+              await _maybePromptFourMealsLeftDialog();
+            },
             child: CustomScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
                 SliverPadding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  padding: EdgeInsets.fromLTRB(
+                    20,
+                    MediaQuery.paddingOf(context).top,
+                    20,
+                    10,
+                  ),
                   sliver: SliverList(
                     delegate: SliverChildListDelegate([
                       _buildWelcomeHeader(context, isDark),
                       const SizedBox(height: 12),
                       _buildUpcomingPlanCard(context, isDark),
                       _buildTodayMealCard(context, isDark),
+                      const QuickOrderSection(),
                       _buildAlertsBanner(context, isDark),
                       _buildFeatureQuickLinks(context, isDark),
-                      const SizedBox(height: 10),
-                      _buildQuickStatus(context),
                       const SizedBox(height: 18),
                       _buildAboutBuuttiiCard(context, isDark),
                       const SizedBox(height: 30),
@@ -272,32 +254,34 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
           ),
-        ),
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: MediaQuery.paddingOf(context).top,
+            child: ColoredBox(color: pageBg),
+          ),
+        ],
       ),
       ),
     );
   }
 
   Widget _buildWelcomeHeader(BuildContext context, bool isDark) {
-    final name = _displayName.isNotEmpty ? _displayName.trim() : 'User';
     return Padding(
-      padding: const EdgeInsets.only(top: 8, bottom: 12),
+      padding: const EdgeInsets.only(bottom: 8),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Hi, $name!',
-                  style: TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.w900,
-                    color: isDark ? Colors.white : const Color(0xFF5A4D42),
-                  ),
-                ),
-              ],
+            child: Text(
+              'Buuttii',
+              style: TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0.2,
+                color: isDark ? Colors.white : AppTheme.textPrimaryLight,
+              ),
             ),
           ),
           Row(
@@ -332,7 +316,7 @@ class _HomeScreenState extends State<HomeScreen> {
           },
           icon: Icon(
             CupertinoIcons.bell,
-            color: isDark ? Colors.white : const Color(0xFF5A4D42),
+            color: isDark ? Colors.white : AppTheme.textPrimaryLight,
             size: 24,
           ),
         ),
@@ -511,17 +495,12 @@ class _HomeScreenState extends State<HomeScreen> {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 10),
       child: GestureDetector(
-        onTap: () async {
-          try {
-            await context.read<SubscriptionProvider>().fetchSubscriptions(silent: true);
-            if (!mounted) return;
-            Navigator.push(
-              context,
-              CupertinoPageRoute(builder: (_) => const ViewAllPlansScreen()),
-            );
-          } catch (e) {
-            // Silently handle navigation errors
-          }
+        onTap: () {
+          Navigator.push(
+            context,
+            CupertinoPageRoute(builder: (_) => const ViewAllPlansScreen()),
+          );
+          context.read<SubscriptionProvider>().fetchSubscriptions(silent: true).catchError((_) {});
         },
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
@@ -637,7 +616,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   width: 42,
                   height: 42,
                   decoration: BoxDecoration(
-                    color: isDark ? Colors.white.withValues(alpha: 0.1) : const Color(0xFFFFF4EC),
+                    color: isDark ? Colors.white.withValues(alpha: 0.1) : const Color(0xFFEFF6FF),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(CupertinoIcons.calendar_today, color: AppTheme.primaryColor, size: 20),
@@ -649,7 +628,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w800,
-                      color: isDark ? Colors.white : const Color(0xFF5A4D42),
+                      color: isDark ? Colors.white : AppTheme.textPrimaryLight,
                     ),
                   ),
                 ),
@@ -720,95 +699,163 @@ class _HomeScreenState extends State<HomeScreen> {
             .toList() ??
         [];
 
+    final planBadge = _buildPlanStatusBadge(context, isDark);
+
     return Padding(
-      padding: const EdgeInsets.only(bottom: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            "Today's Meal",
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w900,
-              color: isDark ? Colors.white : const Color(0xFF5A4D42),
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          color: isDark ? AppTheme.surfaceDark : Colors.white,
+          border: Border.all(color: isDark ? AppTheme.borderDark : AppTheme.borderLight, width: 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
             ),
-          ),
-          const SizedBox(height: 12),
-          Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
-              color: isDark ? AppTheme.surfaceDark : Colors.white,
-              border: Border.all(color: isDark ? AppTheme.borderDark : AppTheme.borderLight, width: 1.5),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Stack(
               children: [
-                Stack(
-                  children: [
-                    GestureDetector(
-                      onTap: () {
-                        if (imageUrl != null && imageUrl.isNotEmpty) {
-                          ImagePreviewDialog.show(context, imageUrl, title: items);
-                        }
-                      },
-                      child: _buildMealImage(imageUrl, 180),
-                    ),
-                    if (nutritionPoints.isNotEmpty)
-                      Positioned(
-                        bottom: 12,
-                        left: 12,
-                        child: Wrap(
-                          spacing: 6,
-                          children: nutritionPoints.take(3).map((point) {
-                            return Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                GestureDetector(
+                  onTap: () {
+                    if (imageUrl != null && imageUrl.isNotEmpty) {
+                      ImagePreviewDialog.show(context, imageUrl, title: items);
+                    }
+                  },
+                  child: _buildMealImage(imageUrl, 180),
+                ),
+                if (planBadge != null)
+                  Positioned(
+                    top: 12,
+                    right: 12,
+                    child: planBadge,
+                  ),
+                if (nutritionPoints.isNotEmpty)
+                  Positioned(
+                    bottom: 8,
+                    left: 0,
+                    right: 0,
+                    child: SizedBox(
+                      height: 36,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        itemCount: nutritionPoints.length,
+                        separatorBuilder: (_, __) => const SizedBox(width: 6),
+                        itemBuilder: (_, i) {
+                          return Center(
+                            child: Container(
+                              height: 30,
+                              padding: const EdgeInsets.symmetric(horizontal: 10),
+                              alignment: Alignment.center,
                               decoration: BoxDecoration(
-                                color: Colors.teal.withValues(alpha: 0.85),
-                                borderRadius: BorderRadius.circular(12),
+                                color: const Color(0xFF0F172A).withValues(alpha: 0.82),
+                                borderRadius: BorderRadius.circular(14),
                               ),
                               child: Text(
-                                point,
+                                nutritionPoints[i],
                                 style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  height: 1,
                                   color: Colors.white,
                                 ),
                               ),
-                            );
-                          }).toList(),
-                        ),
+                            ),
+                          );
+                        },
                       ),
-                  ],
-                ),
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        items,
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w900,
-                          color: isDark ? Colors.white : AppTheme.textPrimaryLight,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                    ],
+                    ),
                   ),
-                ),
               ],
             ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Text(
+                      items,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                        color: isDark ? Colors.white : AppTheme.textPrimaryLight,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryColor.withValues(alpha: isDark ? 0.22 : 0.12),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.35)),
+                    ),
+                    child: const Text(
+                      "Today's Meal",
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.primaryColor,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget? _buildPlanStatusBadge(BuildContext context, bool isDark) {
+    final statusData = context.watch<MealProvider>().subscriptionStatusData;
+    if (statusData == null) return null;
+
+    final hasActive = statusData['has_active_subscription'] == true;
+    final hasUpcoming = statusData['has_upcoming_subscription'] == true;
+
+    final Color bg;
+    final String label;
+    if (hasActive) {
+      bg = const Color(0xFF059669);
+      label = 'Your plan includes this meal';
+    } else if (hasUpcoming) {
+      bg = const Color(0xFFD97706);
+      label = 'Upcoming plan';
+    } else {
+      bg = const Color(0xFF64748B);
+      label = 'Not subscribed';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.15),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
           ),
         ],
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
+        ),
       ),
     );
   }
@@ -943,7 +990,7 @@ class _HomeScreenState extends State<HomeScreen> {
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w900,
-              color: isDark ? Colors.white : const Color(0xFF5A4D42),
+              color: isDark ? Colors.white : AppTheme.textPrimaryLight,
             ),
           ),
           const SizedBox(height: 12),
@@ -1074,37 +1121,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildQuickStatus(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final mealProvider = context.watch<MealProvider>();
-    final isActive = mealProvider.subscriptionStatusData?['has_active_subscription'] == true;
-    final childrenCount = context.watch<ChildrenProvider>().children.length;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Your Activity',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w900,
-            color: isDark ? Colors.white : AppTheme.textPrimaryLight,
-          ),
-        ),
-        const SizedBox(height: 12),
-        _buildActivitySummary(
-          context,
-          isDark,
-          childrenCount: childrenCount,
-          childrenCountLoading: context.watch<ChildrenProvider>().isLoading,
-          hasActive: isActive,
-          hasUpcoming: mealProvider.subscriptionStatusData?['has_upcoming_subscription'] == true,
-          statusData: mealProvider.subscriptionStatusData,
-        ),
-      ],
-    ).animate().fadeIn(delay: 400.ms);
-  }
-
   Widget _buildAboutBuuttiiCard(BuildContext context, bool isDark) {
     final provider = context.watch<LookupProvider>();
     final contactInfo = provider.contactUsInfo;
@@ -1150,7 +1166,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w900,
-                    color: isDark ? Colors.white : const Color(0xFF5A4D42),
+                    color: isDark ? Colors.white : AppTheme.textPrimaryLight,
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -1170,181 +1186,4 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildActivitySummary(
-    BuildContext context,
-    bool isDark, {
-    required int childrenCount,
-    required bool childrenCountLoading,
-    required bool hasActive,
-    required bool hasUpcoming,
-    Map<String, dynamic>? statusData,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? AppTheme.surfaceDark : Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: isDark ? Colors.white10 : Colors.grey.withValues(alpha: 0.1)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.02),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: InkWell(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    CupertinoPageRoute(builder: (_) => const ChildrenManagementScreen()),
-                  );
-                  context.read<ChildrenProvider>().fetchChildren(silent: true);
-                },
-                borderRadius: const BorderRadius.horizontal(left: Radius.circular(18)),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.blue.withValues(alpha: 0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(CupertinoIcons.person_3_fill, color: Colors.blue, size: 18),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              '$childrenCount',
-                              style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w900,
-                                  color: isDark ? Colors.white : AppTheme.textPrimaryLight),
-                            ),
-                            Text(
-                              'Children',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondaryLight,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            Container(width: 1, color: isDark ? Colors.white10 : Colors.grey.withValues(alpha: 0.12)),
-            Expanded(
-              child: _buildPlanStatusPill(
-                context,
-                isDark,
-                hasActive: hasActive,
-                hasUpcoming: hasUpcoming,
-                statusData: statusData,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPlanStatusPill(
-    BuildContext context,
-    bool isDark, {
-    required bool hasActive,
-    required bool hasUpcoming,
-    Map<String, dynamic>? statusData,
-  }) {
-    final Color color;
-    final IconData icon;
-    final String subtitle;
-    final upcomingStart = SubscriptionStatusNormalizer.earliestUpcomingStartYmd(statusData);
-    final upcomingLabel = upcomingStart != null ? MealDate.formatDisplay(upcomingStart) : null;
-    
-    if (hasActive) {
-      color = Colors.green;
-      icon = CupertinoIcons.checkmark_seal_fill;
-      subtitle = 'Active plan';
-    } else if (hasUpcoming) {
-      color = const Color(0xFFEAB308);
-      icon = CupertinoIcons.clock_fill;
-      subtitle = upcomingLabel != null ? 'Starts $upcomingLabel' : 'Upcoming plan';
-    } else {
-      color = Colors.red;
-      icon = CupertinoIcons.exclamationmark_circle_fill;
-      subtitle = 'No active plan';
-    }
-
-    final title = 'My Subscription';
-
-    return InkWell(
-      onTap: () {
-        Navigator.push(
-          context,
-          CupertinoPageRoute(builder: (_) => const SubscriptionManagementScreen()),
-        );
-      },
-      borderRadius: const BorderRadius.horizontal(right: Radius.circular(18)),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(12, 12, 14, 12),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.12),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: color, size: 18),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800,
-                      color: isDark ? Colors.white : AppTheme.textPrimaryLight,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: isDark ? AppTheme.textSecondaryDark : AppTheme.textSecondaryLight,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-            Icon(CupertinoIcons.chevron_right, size: 14, color: isDark ? Colors.white38 : Colors.grey),
-          ],
-        ),
-      ),
-    );
-  }
 }
