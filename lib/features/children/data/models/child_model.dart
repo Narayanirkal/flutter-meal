@@ -46,15 +46,24 @@ class ChildModel {
 
   Map<String, dynamic> toJson() {
     return {
+      'id': id,
       'name': name,
       'rollNumber': rollNumber,
+      'roll_number': rollNumber,
       'schoolId': schoolId,
+      'school_id': schoolId,
       'standardId': standardId,
+      'standard_id': standardId,
       'mealSizeId': mealSizeId,
+      'meal_size_id': mealSizeId,
       'mealTime': mealTime,
       'meal_time': mealTime,
+      'school_name': schoolName,
+      'standard_name': standardName,
+      'meal_size_name': mealSizeName,
       'divisionId': divisionId,
       'division_id': divisionId,
+      'division_name': divisionName,
     };
   }
 }

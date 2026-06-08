@@ -409,21 +409,6 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                     const SizedBox(height: 20),
 
                     // 2. School/College — ALL active schools from GET /api/client/schools
-                    ElevatedButton.icon(
-                      onPressed: () => _openSupportWhatsApp(context),
-                      icon: const Icon(CupertinoIcons.phone_fill, color: Colors.white, size: 16),
-                      label: const Text("Can't find school/college? Chat on WhatsApp"),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF25D366),
-                        foregroundColor: Colors.white,
-                        minimumSize: const Size(double.infinity, 48),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
                     SearchableDropdown<SchoolModel>(
                       label: 'School/College Name',
                       items: lookupProvider.schools,
@@ -461,6 +446,31 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                           }
                         });
                       },
+                    ),
+                    const SizedBox(height: 8),
+                    ElevatedButton.icon(
+                      onPressed: () => _openSupportWhatsApp(context),
+                      icon: const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Icon(Icons.chat_bubble, color: Colors.white, size: 20),
+                            Icon(Icons.phone, color: Color(0xFF25D366), size: 12),
+                          ],
+                        ),
+                      ),
+                      label: const Text("Can't find school/college? Chat on WhatsApp"),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF25D366),
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size(double.infinity, 48),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                      ),
                     ),
                     const SizedBox(height: 20),
 

@@ -242,8 +242,6 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
               // Meta details — compact column of label/value pairs
               if (startDate != null)
                 _buildMetaRow('Start Date', DateFormat('dd MMM yyyy').format(startDate), isDark),
-              if (expiry != null)
-                _buildMetaRow('Expires On', DateFormat('dd MMM yyyy').format(expiry), isDark),
               if (amountPaid.isNotEmpty)
                 _buildMetaRow('Amount Paid', '₹$amountPaid', isDark),
               _buildMetaRow('Variant', includeSaturday ? 'With Saturday' : 'Without Saturday', isDark),
@@ -350,10 +348,28 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
         final orderType = (payment['order_type'] ?? payment['orderType'] ?? '')
             .toString()
             .toLowerCase();
-        final isResize = orderType == 'meal_size_upgrade' || orderType == 'meal_size_downgrade';
-        final planName = isResize
-            ? (orderType == 'meal_size_downgrade' ? 'Meal pack downsize (wallet)' : 'Meal pack resize')
-            : _safeString(payment['plan_name'] ?? payment['entity_name'], 'Subscription');
+        
+        String planName = '';
+        if (orderType == 'one_day_lunch') {
+          planName = 'One Day Lunch';
+        } else if (orderType == 'special_dish') {
+          planName = _safeString(payment['plan_name'] ?? payment['entity_name'], 'Buuttii Specials');
+          if (planName.isEmpty || planName == 'Subscription' || planName == 'null') {
+            planName = 'Buuttii Specials';
+          }
+        } else if (orderType == 'bulk') {
+          planName = 'Bulk Order';
+        } else if (orderType == 'meal_size_upgrade') {
+          planName = 'Meal pack resize';
+        } else if (orderType == 'meal_size_downgrade') {
+          planName = 'Meal pack downsize (wallet)';
+        } else if (orderType == 'referral_reward') {
+          planName = _safeString(payment['plan_name'], 'Referral Reward');
+        } else if (orderType == 'referral_applied') {
+          planName = _safeString(payment['plan_name'], 'Referral Applied');
+        } else {
+          planName = _safeString(payment['plan_name'] ?? payment['entity_name'], 'Subscription');
+        }
         final entityName = _safeString(payment['entity_name'], '');
         final amount = _safeNumString(payment['amount']);
         final walletApplied = _parseMoney(payment['wallet_amount_applied']);

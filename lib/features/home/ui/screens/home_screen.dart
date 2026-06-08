@@ -996,71 +996,77 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 12),
           Column(
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildQuickLinkCard(
-                      context: context,
-                      title: 'Manage Child',
-                      icon: CupertinoIcons.person_3_fill,
-                      bgColor: isDark ? const Color(0xFF1E3A8A) : const Color(0xFFDBEAFE),
-                      iconColor: const Color(0xFF3B82F6),
-                      isDark: isDark,
-                      onTap: () {
-                        Navigator.push(context, CupertinoPageRoute(builder: (_) => const ChildrenManagementScreen()));
-                        if (NetworkStatusService.instance.isOnline) context.read<ChildrenProvider>().fetchChildren(silent: true);
-                      },
+              IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(
+                      child: _buildQuickLinkCard(
+                        context: context,
+                        title: 'Manage Child',
+                        icon: CupertinoIcons.person_3_fill,
+                        bgColor: isDark ? const Color(0xFF1E3A8A) : const Color(0xFFDBEAFE),
+                        iconColor: const Color(0xFF3B82F6),
+                        isDark: isDark,
+                        onTap: () {
+                          Navigator.push(context, CupertinoPageRoute(builder: (_) => const ChildrenManagementScreen()));
+                          if (NetworkStatusService.instance.isOnline) context.read<ChildrenProvider>().fetchChildren(silent: true);
+                        },
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildQuickLinkCard(
-                      context: context,
-                      title: 'Teacher Plan',
-                      icon: CupertinoIcons.book_fill,
-                      bgColor: isDark ? const Color(0xFF78350F) : const Color(0xFFFDE68A),
-                      iconColor: const Color(0xFFD97706),
-                      isDark: isDark,
-                      onTap: () {
-                        Navigator.push(context, CupertinoPageRoute(builder: (_) => const TeacherProfileScreen()));
-                        if (NetworkStatusService.instance.isOnline) context.read<ProfileProvider>().fetchProfiles(silent: true);
-                      },
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildQuickLinkCard(
+                        context: context,
+                        title: 'Teacher Plan',
+                        icon: CupertinoIcons.book_fill,
+                        bgColor: isDark ? const Color(0xFF78350F) : const Color(0xFFFDE68A),
+                        iconColor: const Color(0xFFD97706),
+                        isDark: isDark,
+                        onTap: () {
+                          Navigator.push(context, CupertinoPageRoute(builder: (_) => const TeacherProfileScreen()));
+                          if (NetworkStatusService.instance.isOnline) context.read<ProfileProvider>().fetchProfiles(silent: true);
+                        },
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
               const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildQuickLinkCard(
-                      context: context,
-                      title: 'Professional Plan',
-                      icon: CupertinoIcons.briefcase_fill,
-                      bgColor: isDark ? const Color(0xFF4C1D95) : const Color(0xFFE9D5FF),
-                      iconColor: const Color(0xFF8B5CF6),
-                      isDark: isDark,
-                      onTap: () {
-                        Navigator.push(context, CupertinoPageRoute(builder: (_) => const ProfessionalProfileScreen()));
-                        if (NetworkStatusService.instance.isOnline) context.read<ProfileProvider>().fetchProfiles(silent: true);
-                      },
+              IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(
+                      child: _buildQuickLinkCard(
+                        context: context,
+                        title: 'Professional Plan',
+                        icon: CupertinoIcons.briefcase_fill,
+                        bgColor: isDark ? const Color(0xFF4C1D95) : const Color(0xFFE9D5FF),
+                        iconColor: const Color(0xFF8B5CF6),
+                        isDark: isDark,
+                        onTap: () {
+                          Navigator.push(context, CupertinoPageRoute(builder: (_) => const ProfessionalProfileScreen()));
+                          if (NetworkStatusService.instance.isOnline) context.read<ProfileProvider>().fetchProfiles(silent: true);
+                        },
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildQuickLinkCard(
-                      context: context,
-                      title: 'Bulk Order',
-                      icon: CupertinoIcons.square_stack_3d_up_fill,
-                      bgColor: isDark ? const Color(0xFF064E3B) : const Color(0xFFD1FAE5),
-                      iconColor: const Color(0xFF10B981),
-                      isDark: isDark,
-                      onTap: () {
-                        Navigator.push(context, CupertinoPageRoute(builder: (_) => const BulkOrderHubScreen()));
-                      },
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildQuickLinkCard(
+                        context: context,
+                        title: 'Bulk Order',
+                        icon: CupertinoIcons.square_stack_3d_up_fill,
+                        bgColor: isDark ? const Color(0xFF064E3B) : const Color(0xFFD1FAE5),
+                        iconColor: const Color(0xFF10B981),
+                        isDark: isDark,
+                        onTap: () {
+                          Navigator.push(context, CupertinoPageRoute(builder: (_) => const BulkOrderHubScreen()));
+                        },
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),
@@ -1079,6 +1085,7 @@ class _HomeScreenState extends State<HomeScreen> {
     required VoidCallback onTap,
   }) {
     return Container(
+      constraints: const BoxConstraints(minHeight: 130),
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(20),
@@ -1091,7 +1098,7 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
             child: Column(
-              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
                   width: 44,

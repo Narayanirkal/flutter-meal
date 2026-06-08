@@ -7,6 +7,7 @@ import 'package:meal_app/features/auth/data/models/auth_api_exception.dart';
 import 'package:meal_app/features/auth/data/models/otp_send_result.dart';
 import 'package:meal_app/features/auth/data/repositories/auth_repository.dart';
 import 'package:meal_app/core/services/offline_cache_bootstrap.dart';
+import 'package:meal_app/core/storage/cache_store.dart';
 
 enum AuthState { initial, loading, authenticated, unauthenticated, error }
 enum AuthMode { login, register }
@@ -325,6 +326,7 @@ class AuthProvider with ChangeNotifier {
     }
     
     OfflineCacheBootstrap.resetSession();
+    await CacheStore.clearAll();
     _state = AuthState.unauthenticated;
     _phoneNumber = '';
     _username = '';

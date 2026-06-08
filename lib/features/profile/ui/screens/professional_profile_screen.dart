@@ -395,21 +395,6 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
                     ),
                     const SizedBox(height: 20),
                     // 2. Company Name (from Corporate Locations API)
-                    ElevatedButton.icon(
-                      onPressed: () => _openSupportWhatsApp(context),
-                      icon: const Icon(CupertinoIcons.phone_fill, color: Colors.white, size: 16),
-                      label: const Text("Can't find company? Chat on WhatsApp"),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF25D366),
-                        foregroundColor: Colors.white,
-                        minimumSize: const Size(double.infinity, 48),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
                     SearchableDropdown<CorporateLocationModel>(
                       label: 'Company Name',
                       items: lookup.corporateLocations,
@@ -444,6 +429,31 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
                           }
                         });
                       },
+                    ),
+                    const SizedBox(height: 8),
+                    ElevatedButton.icon(
+                      onPressed: () => _openSupportWhatsApp(context),
+                      icon: const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Icon(Icons.chat_bubble, color: Colors.white, size: 20),
+                            Icon(Icons.phone, color: Color(0xFF25D366), size: 12),
+                          ],
+                        ),
+                      ),
+                      label: const Text("Can't find company? Chat on WhatsApp"),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF25D366),
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size(double.infinity, 48),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                      ),
                     ),
                     const SizedBox(height: 20),
                     // 3. State

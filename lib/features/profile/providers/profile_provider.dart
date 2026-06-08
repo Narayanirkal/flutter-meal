@@ -143,8 +143,17 @@ class ProfileProvider with ChangeNotifier {
         status: profile.status,
         mealSizeId: profile.mealSizeId,
         mealTime: profile.mealTime,
+        standardId: profile.standardId,
+        standardName: profile.standardName,
+        divisionId: profile.divisionId,
+        divisionName: profile.divisionName,
       );
       notifyListeners();
+      await CacheStore.setJson(
+        'teacher_profile',
+        _teacherProfile!.toJson(),
+        ttl: const Duration(hours: 12),
+      );
       return true;
     }
 
@@ -179,6 +188,7 @@ class ProfileProvider with ChangeNotifier {
       await OfflineQueue.enqueue(method: 'DELETE', path: ApiEndpoints.teacherProfile);
       _teacherProfile = null;
       notifyListeners();
+      await CacheStore.remove('teacher_profile');
       return true;
     }
 
@@ -224,6 +234,11 @@ class ProfileProvider with ChangeNotifier {
         mealSizeId: profile.mealSizeId,
       );
       notifyListeners();
+      await CacheStore.setJson(
+        'professional_profile',
+        _professionalProfile!.toJson(),
+        ttl: const Duration(hours: 12),
+      );
       return true;
     }
 
@@ -258,6 +273,7 @@ class ProfileProvider with ChangeNotifier {
       await OfflineQueue.enqueue(method: 'DELETE', path: ApiEndpoints.professionalProfile);
       _professionalProfile = null;
       notifyListeners();
+      await CacheStore.remove('professional_profile');
       return true;
     }
 
