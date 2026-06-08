@@ -181,7 +181,7 @@ class AuthProvider with ChangeNotifier {
       final OtpSendResult result;
       if (_authMode == AuthMode.register) {
         result = await _withAuthTimeout(
-          _authRepository.registerSendOtp(_phoneNumber, _username, _consentAccepted),
+          _authRepository.registerSendOtp(_phoneNumber, _username, _consentAccepted, referralCode: _signupReferralCode),
         );
       } else {
         result = await _withAuthTimeout(_authRepository.loginSendOtp(_phoneNumber));
@@ -258,7 +258,7 @@ class AuthProvider with ChangeNotifier {
 
     try {
       final result = await _withAuthTimeout(
-        _authRepository.registerSendOtp(phone, username, consentAccepted),
+        _authRepository.registerSendOtp(phone, username, consentAccepted, referralCode: referralCode),
       );
       _applyOtpSendMeta(
         maxVerifyAttempts: result.maxVerifyAttempts,
