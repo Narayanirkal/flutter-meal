@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:meal_app/core/providers/cart_provider.dart';
@@ -51,6 +53,18 @@ class _ReconnectRefreshCoordinatorState extends State<ReconnectRefreshCoordinato
       if (!NetworkStatusService.instance.isBackendReachable) return;
 
       await context.read<CartProvider>().syncOfflineItemsIfAny();
+
+      // Trigger global background sync for mutated user data.
+      final profileProvider = context.read<ProfileProvider>();
+      final childrenProvider = context.read<ChildrenProvider>();
+      final cartProvider = context.read<CartProvider>();
+      final mealProvider = context.read<MealProvider>();
+
+      unawaited(profileProvider.fetchProfiles(force: true, silent: true));
+      unawaited(childrenProvider.fetchChildren(force: true, silent: true));
+      unawaited(cartProvider.fetchCart(force: true, silent: true));
+      unawaited(mealProvider.fetchSubscriptionStatus(silent: true));
+      unawaited(mealProvider.fetchMealStatus(silent: true));
 
       final screen = AppRouteTracker.instance.current;
       final meal = context.read<MealProvider>();

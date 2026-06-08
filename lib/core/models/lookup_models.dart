@@ -94,6 +94,15 @@ class MealSizeModel {
     );
   }
 
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'name': name,
+      'display_name': displayName,
+      'sort_order': sortOrder,
+    };
+  }
+
   /// Highest tier in the catalog (e.g. Large / Extra Large).
   static int? largestTierId(List<MealSizeModel> sizes) {
     if (sizes.isEmpty) return null;

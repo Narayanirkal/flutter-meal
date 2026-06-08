@@ -71,6 +71,27 @@ class BulkOrderConfig {
           : [],
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'min_quantity': minQuantity,
+        'min_lead_days': minLeadDays,
+        'tier_threshold': tierThreshold,
+        'price_per_meal_under_threshold': pricePerMealUnderThreshold,
+        'variety_menu_lookahead_days': varietyMenuLookaheadDays,
+        'max_variety_types': maxVarietyTypes,
+        'allow_multiple_variety_meals': allowMultipleVarietyMeals,
+        'min_quantity_per_variety_meal': minQuantityPerVarietyMeal,
+        'is_active': isActive,
+        'earliest_delivery_date': earliestDeliveryDate,
+        'hub_intro_text': hubIntroText,
+        'standard_tier_title': standardTierTitle,
+        'standard_tier_subtitle': standardTierSubtitle,
+        'standard_tier_description': standardTierDescription,
+        'variety_tier_title': varietyTierTitle,
+        'variety_tier_subtitle': varietyTierSubtitle,
+        'variety_tier_description': varietyTierDescription,
+        'variety_prices': varietyPrices.map((e) => e.toJson()).toList(),
+      };
 }
 
 class BulkVarietyPrice {
@@ -85,6 +106,11 @@ class BulkVarietyPrice {
       pricePerMeal: double.tryParse('${json['price_per_meal'] ?? 0}') ?? 0,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'slot_number': slotNumber,
+        'price_per_meal': pricePerMeal,
+      };
 }
 
 class BulkMenuOption {
@@ -116,4 +142,13 @@ class BulkMenuOption {
           int.tryParse('${json['min_order_quantity'] ?? 1}') ?? 1,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'menu_date': menuDate,
+        'name': items,
+        'image_url': imageUrl,
+        'price_per_meal': pricePerMeal,
+        'min_order_quantity': minOrderQuantity,
+      };
 }

@@ -283,6 +283,7 @@ class MenuProvider with ChangeNotifier {
       if (e.toString().contains('403')) {
         _isSubscribed = false;
         _weeklyMenu = [];
+        await _cache.remove(_weeklyCacheKey);
       } else {
         // Keep showing cached weekly menu when offline / flaky network.
         _error = _weeklyMenu.isEmpty ? ErrorHandler.getErrorMessage(e) : null;

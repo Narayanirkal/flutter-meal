@@ -253,19 +253,44 @@ class _BulkOrderPaymentSheetState extends State<BulkOrderPaymentSheet> {
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            ListTile(
-                              contentPadding: EdgeInsets.zero,
-                              title: const Text('Delivery time'),
-                              subtitle: Text(
-                                _deliveryTime == null
-                                    ? 'Tap to choose'
-                                    : TimeUtils.formatToDisplay(TimeUtils.toBackendFormat(_deliveryTime!)),
-                              ),
-                              trailing: const Icon(CupertinoIcons.clock),
-                              onTap: _pickTime,
-                              shape: RoundedRectangleBorder(
+                            Container(
+                              decoration: BoxDecoration(
+                                color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade50,
                                 borderRadius: BorderRadius.circular(12),
-                                side: BorderSide(color: Colors.grey.withValues(alpha: 0.25)),
+                                border: Border.all(
+                                  color: isDark ? Colors.white.withValues(alpha: 0.15) : Colors.grey.shade300,
+                                ),
+                              ),
+                              child: ListTile(
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                                title: Text(
+                                  'Delivery time',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: isDark ? Colors.white70 : AppTheme.textSecondaryLight,
+                                  ),
+                                ),
+                                subtitle: Padding(
+                                  padding: const EdgeInsets.only(top: 4.0),
+                                  child: Text(
+                                    _deliveryTime == null
+                                        ? 'Tap to choose'
+                                        : TimeUtils.formatToDisplay(TimeUtils.toBackendFormat(_deliveryTime!)),
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                      color: _deliveryTime != null
+                                          ? (isDark ? Colors.white : AppTheme.textPrimaryLight)
+                                          : (isDark ? Colors.white38 : Colors.grey.shade400),
+                                    ),
+                                  ),
+                                ),
+                                trailing: Icon(
+                                  CupertinoIcons.clock,
+                                  color: isDark ? Colors.white70 : AppTheme.textPrimaryLight,
+                                ),
+                                onTap: _pickTime,
                               ),
                             ),
                             if (hint != null)
@@ -324,7 +349,7 @@ class _BulkOrderPaymentSheetState extends State<BulkOrderPaymentSheet> {
                           onPressed: _paying ? null : _pay,
                           style: FilledButton.styleFrom(
                             minimumSize: const Size(double.infinity, 56),
-                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                           ),
                           child: _paying

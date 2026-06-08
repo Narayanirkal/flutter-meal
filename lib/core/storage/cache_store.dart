@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:meal_app/core/services/network_status_service.dart';
 
 /// SharedPreferences-backed cache for non-sensitive app data (lists, cart snapshot).
 /// Do not store tokens, OTPs, or payment payloads here — use secure storage instead.
@@ -65,6 +66,9 @@ class CacheStore {
       final decoded = jsonDecode(raw) as Map<String, dynamic>;
       final entry = _CacheEntry.fromJson(decoded);
       if (entry.isExpired) {
+        if (!NetworkStatusService.instance.isOnline) {
+          return entry.data;
+        }
         await prefs.remove(_k(key));
         return null;
       }
@@ -89,7 +93,11 @@ class CacheStore {
 
   static Future<void> clearAll() async {
     final prefs = await SharedPreferences.getInstance();
-    final keys = prefs.getKeys().where((k) => k.startsWith(_prefix)).toList();
+    final keys = prefs.getKeys().where((k) {
+      return k.startsWith(_prefix) ||
+          k.startsWith('cache_') ||
+          k == 'bulk_delivery_address_v1';
+    }).toList();
     for (final key in keys) {
       await prefs.remove(key);
     }

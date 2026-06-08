@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+import 'package:intl/intl.dart';
 
 import 'package:flutter/material.dart';
 
@@ -486,31 +487,17 @@ class _MealSizeUpgradeScreenState extends State<MealSizeUpgradeScreen> {
     }
   }
 
-
-
   @override
-
   Widget build(BuildContext context) {
-
     final pay = context.watch<PaymentProvider>();
-
     final subs = pay.activeSubscriptions;
-
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
     final history = _upgradeHistory(pay);
 
-
-
     Map<String, dynamic>? selectedMap;
-
     if (subs.isNotEmpty && subs[_selectedSubIndex.clamp(0, subs.length - 1)] is Map) {
-
       selectedMap = Map<String, dynamic>.from(subs[_selectedSubIndex.clamp(0, subs.length - 1)] as Map);
-
     }
-
-
 
     final upgrades = _optionsForDirection('upgrade');
     final downgrades = _optionsForDirection('downgrade');
@@ -521,8 +508,6 @@ class _MealSizeUpgradeScreenState extends State<MealSizeUpgradeScreen> {
         (_currentSizeName != null && _currentSizeName!.isNotEmpty)
             ? _currentSizeName!
             : _trim(selectedMap?['meal_size_name']);
-
-
 
     return Scaffold(
       backgroundColor: isDark ? AppTheme.surfaceDark : const Color(0xFFFAF8F5),
@@ -535,8 +520,21 @@ class _MealSizeUpgradeScreenState extends State<MealSizeUpgradeScreen> {
                   Container(
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
                     decoration: BoxDecoration(
-                      color: isDark ? Colors.black26 : const Color(0xFFF3EBE0),
-                      borderRadius: const BorderRadius.vertical(bottom: Radius.circular(32)),
+                      gradient: LinearGradient(
+                        colors: isDark 
+                            ? [const Color(0xFF2C2520), const Color(0xFF1E1A17)]
+                            : [const Color(0xFFF5EBE0), const Color(0xFFE3D5CA)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: const BorderRadius.vertical(bottom: Radius.circular(36)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.06),
+                          blurRadius: 16,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
                     child: Column(
                       children: [
@@ -547,24 +545,26 @@ class _MealSizeUpgradeScreenState extends State<MealSizeUpgradeScreen> {
                               icon: const Icon(CupertinoIcons.back, color: Color(0xFF8B7A66)),
                               onPressed: () => Navigator.pop(context),
                             ),
-                            Text(
+                            const Text(
                               'Buuttii',
                               style: TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.w900,
                                 color: AppTheme.primaryColor,
+                                letterSpacing: 0.5,
                               ),
                             ),
                             const SizedBox(width: 48),
                           ],
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 8),
                         Text(
                           'Resize meal pack',
                           style: TextStyle(
-                            fontSize: 28,
-                            fontWeight: FontWeight.w800,
-                            color: isDark ? Colors.white : const Color(0xFF5A4D42),
+                            fontSize: 26,
+                            fontWeight: FontWeight.w900,
+                            color: isDark ? Colors.white : const Color(0xFF4A3E3D),
+                            letterSpacing: -0.5,
                           ),
                         ),
                       ],
@@ -577,463 +577,534 @@ class _MealSizeUpgradeScreenState extends State<MealSizeUpgradeScreen> {
                         physics: const AlwaysScrollableScrollPhysics(),
                         padding: const EdgeInsets.all(20),
                         children: [
-
-                  if (_error != null)
-
-                    Container(
-
-                      margin: const EdgeInsets.only(bottom: 16),
-
-                      padding: const EdgeInsets.all(14),
-
-                      decoration: BoxDecoration(
-
-                        color: isDark ? Colors.orange.withValues(alpha: 0.15) : Colors.orange.shade50,
-
-                        borderRadius: BorderRadius.circular(14),
-
-                      ),
-
-                      child: Text(
-
-                        _error!,
-
-                        style: TextStyle(
-
-                          fontWeight: FontWeight.w700,
-
-                          color: isDark ? Colors.orange.shade200 : Colors.orange.shade900,
-
-                        ),
-
-                      ),
-
-                    ),
-
-                  Text(
-
-                    'Move to a larger pack and pay a one-time fee, or downsize and receive the amount in your wallet.',
-
-                    style: TextStyle(
-
-                      height: 1.4,
-
-                      fontWeight: FontWeight.w600,
-
-                      color: isDark ? Colors.white70 : AppTheme.textSecondaryLight,
-
-                    ),
-
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  if (_walletBalance != null && _walletBalance!.isNotEmpty)
-                    Material(
-                      color: isDark ? AppTheme.surfaceDark : Colors.white,
-                      borderRadius: BorderRadius.circular(14),
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(14),
-                        onTap: () => Navigator.push(
-                          context,
-                          CupertinoPageRoute(builder: (_) => const WalletScreen()),
-                        ),
-                        child: Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(24),
-                            border: Border.all(
-                              color: isDark ? AppTheme.borderDark : AppTheme.borderLight,
-                              width: 1.5,
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(CupertinoIcons.money_dollar_circle_fill, color: AppTheme.primaryColor, size: 28),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Wallet balance',
-                                      style: TextStyle(fontSize: 12, color: isDark ? Colors.white54 : AppTheme.textSecondaryLight),
-                                    ),
-                                    Text(
-                                      '₹${MoneyFormat.display(_walletBalance)}',
-                                      style: TextStyle(
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.w900,
-                                        color: isDark ? Colors.white : AppTheme.textPrimaryLight,
-                                      ),
-                                    ),
-                                  ],
+                          if (_error != null)
+                            Container(
+                              margin: const EdgeInsets.only(bottom: 16),
+                              padding: const EdgeInsets.all(14),
+                              decoration: BoxDecoration(
+                                color: isDark ? Colors.orange.withValues(alpha: 0.15) : Colors.orange.shade50,
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              child: Text(
+                                _error!,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  color: isDark ? Colors.orange.shade200 : Colors.orange.shade900,
                                 ),
                               ),
-                              Icon(CupertinoIcons.chevron_right, color: isDark ? Colors.white54 : Colors.grey),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
+                            ),
 
-                  if (_walletBalance != null && _walletBalance!.isNotEmpty)
-                    const SizedBox(height: 20),
-
-                  if (subs.isEmpty)
-
-                    Text(
-
-                      'No active or upcoming paid subscriptions found. Complete a subscription payment first, then you can resize the meal pack.',
-
-                      style: TextStyle(
-
-                        fontWeight: FontWeight.w700,
-
-                        color: isDark ? Colors.white54 : Colors.grey.shade700,
-
-                      ),
-
-                    )
-
-                  else ...[
-
-                    _sectionTitle(context, 'Who is resizing?'),
-
-                    const SizedBox(height: 8),
-
-                    Material(
-                      color: isDark ? AppTheme.surfaceDark : Colors.white,
-                      borderRadius: BorderRadius.circular(14),
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(14),
-                        onTap: () => _pickSubscriber(subs, isDark),
-                        child: Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(24),
-                            border: Border.all(
-                              color: isDark ? AppTheme.borderDark : AppTheme.borderLight,
-                              width: 1.5,
+                          Text(
+                            'Move to a larger pack and pay a one-time fee, or downsize and receive the amount in your wallet.',
+                            style: TextStyle(
+                              height: 1.4,
+                              fontWeight: FontWeight.w600,
+                              color: isDark ? Colors.white70 : AppTheme.textSecondaryLight,
                             ),
                           ),
-                          child: Row(
-                            children: [
-                              CircleAvatar(
-                                radius: 20,
-                                backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.12),
-                                child: const Icon(CupertinoIcons.person_fill, color: AppTheme.primaryColor, size: 22),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      _trim((subs[_selectedSubIndex.clamp(0, subs.length - 1)] as Map)['entity_name'])
-                                              .isNotEmpty
-                                          ? _trim((subs[_selectedSubIndex.clamp(0, subs.length - 1)] as Map)['entity_name'])
-                                          : widget.initialEntityName ?? 'Subscriber',
-                                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
-                                    ),
-                                    if (_trim((subs[_selectedSubIndex.clamp(0, subs.length - 1)] as Map)['plan_name']).isNotEmpty)
-                                      Text(
-                                        _trim((subs[_selectedSubIndex.clamp(0, subs.length - 1)] as Map)['plan_name']),
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          color: isDark ? Colors.white54 : AppTheme.textSecondaryLight,
-                                        ),
-                                      ),
-                                    if (currentSize.isNotEmpty)
-                                      Text(
-                                        'Meal size: $currentSize',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w700,
-                                          color: isDark ? Colors.white60 : AppTheme.textSecondaryLight,
-                                        ),
-                                      ),
-                                  ],
+                          const SizedBox(height: 20),
+
+                          if (_walletBalance != null && _walletBalance!.isNotEmpty)
+                            Container(
+                              margin: const EdgeInsets.only(bottom: 16),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: isDark 
+                                      ? [const Color(0xFF332D29), const Color(0xFF26211E)]
+                                      : [const Color(0xFFFFF7ED), const Color(0xFFFFEDD5)],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
                                 ),
-                              ),
-                              Icon(CupertinoIcons.chevron_down, color: isDark ? Colors.white54 : AppTheme.textSecondaryLight),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-
-                    if (currentSize.isNotEmpty) ...[
-
-                      const SizedBox(height: 12),
-
-                      Container(
-
-                        width: double.infinity,
-
-                        padding: const EdgeInsets.all(14),
-
-                        decoration: BoxDecoration(
-                          color: isDark ? AppTheme.surfaceDark : Colors.white,
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(
-                            color: isDark ? AppTheme.borderDark : AppTheme.borderLight,
-                            width: 1.5,
-                          ),
-                        ),
-
-                        child: Row(
-
-                          children: [
-
-                            Icon(CupertinoIcons.square_grid_2x2, color: AppTheme.primaryColor, size: 22),
-
-                            const SizedBox(width: 12),
-
-                            Expanded(
-
-                              child: Column(
-
-                                crossAxisAlignment: CrossAxisAlignment.start,
-
-                                children: [
-
-                                  Text(
-
-                                    'Current meal size',
-
-                                    style: TextStyle(fontSize: 12, color: isDark ? Colors.white54 : AppTheme.textSecondaryLight),
-
+                                borderRadius: BorderRadius.circular(24),
+                                border: Border.all(
+                                  color: isDark ? const Color(0xFF453D37) : const Color(0xFFFFD8A8),
+                                  width: 1.5,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.orange.withValues(alpha: isDark ? 0.05 : 0.03),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 4),
                                   ),
-
-                                  Text(
-
-                                    currentSize,
-
-                                    style: TextStyle(
-
-                                      fontSize: 17,
-
-                                      fontWeight: FontWeight.w800,
-
-                                      color: isDark ? Colors.white : AppTheme.textPrimaryLight,
-
-                                    ),
-
-                                  ),
-
                                 ],
-
                               ),
-
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(24),
+                                onTap: () => Navigator.push(
+                                  context,
+                                  CupertinoPageRoute(builder: (_) => const WalletScreen()),
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(18),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(10),
+                                        decoration: BoxDecoration(
+                                          color: AppTheme.primaryColor.withValues(alpha: 0.15),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: const Icon(CupertinoIcons.creditcard_fill, color: AppTheme.primaryColor, size: 24),
+                                      ),
+                                      const SizedBox(width: 14),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'Wallet Balance',
+                                              style: TextStyle(
+                                                fontSize: 11, 
+                                                fontWeight: FontWeight.w800, 
+                                                color: isDark ? Colors.white60 : const Color(0xFFC2410C),
+                                                letterSpacing: 0.5,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              '₹${MoneyFormat.display(_walletBalance)}',
+                                              style: TextStyle(
+                                                fontSize: 22,
+                                                fontWeight: FontWeight.w900,
+                                                color: isDark ? Colors.white : const Color(0xFF7C2D12),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const Icon(CupertinoIcons.chevron_right, color: AppTheme.primaryColor, size: 20),
+                                    ],
+                                  ),
+                                ),
+                              ),
                             ),
 
+                          if (subs.isEmpty)
+                            Text(
+                              'No active or upcoming paid subscriptions found. Complete a subscription payment first, then you can resize the meal pack.',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w700,
+                                color: isDark ? Colors.white54 : Colors.grey.shade700,
+                              ),
+                            )
+                          else ...[
+                            _sectionTitle(context, 'Recipient profile'),
+                            const SizedBox(height: 8),
+
+                            Container(
+                              width: double.infinity,
+                              decoration: BoxDecoration(
+                                color: isDark ? const Color(0xFF2B2521) : Colors.white,
+                                borderRadius: BorderRadius.circular(28),
+                                border: Border.all(
+                                  color: isDark ? const Color(0xFF3B332D) : const Color(0xFFEEDFD2),
+                                  width: 1.5,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+                                    blurRadius: 14,
+                                    offset: const Offset(0, 6),
+                                  ),
+                                ],
+                              ),
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(28),
+                                onTap: () => _pickSubscriber(subs, isDark),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(20),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          CircleAvatar(
+                                            radius: 22,
+                                            backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.12),
+                                            child: const Icon(CupertinoIcons.person_crop_circle_fill, color: AppTheme.primaryColor, size: 24),
+                                          ),
+                                          const SizedBox(width: 14),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  'Subscriber Profile',
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w800,
+                                                    color: isDark ? Colors.white54 : AppTheme.textSecondaryLight,
+                                                  ),
+                                                ),
+                                                Text(
+                                                  _trim((subs[_selectedSubIndex.clamp(0, subs.length - 1)] as Map)['entity_name'])
+                                                          .isNotEmpty
+                                                      ? _trim((subs[_selectedSubIndex.clamp(0, subs.length - 1)] as Map)['entity_name'])
+                                                      : widget.initialEntityName ?? 'Subscriber',
+                                                  style: TextStyle(
+                                                    fontWeight: FontWeight.w900, 
+                                                    fontSize: 18,
+                                                    color: isDark ? Colors.white : AppTheme.textPrimaryLight,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                            decoration: BoxDecoration(
+                                              color: isDark ? const Color(0xFF3D342C) : const Color(0xFFFAF2EB),
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Text(
+                                                  'Change',
+                                                  style: TextStyle(
+                                                    fontSize: 12, 
+                                                    fontWeight: FontWeight.w800, 
+                                                    color: AppTheme.primaryColor
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 4),
+                                                Icon(CupertinoIcons.chevron_down, color: AppTheme.primaryColor, size: 14),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 16),
+                                      const Divider(height: 1, thickness: 1.2),
+                                      const SizedBox(height: 16),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  'Current Plan',
+                                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: isDark ? Colors.white54 : AppTheme.textSecondaryLight),
+                                                ),
+                                                const SizedBox(height: 2),
+                                                Text(
+                                                  _trim((subs[_selectedSubIndex.clamp(0, subs.length - 1)] as Map)['plan_name']).isNotEmpty
+                                                      ? _trim((subs[_selectedSubIndex.clamp(0, subs.length - 1)] as Map)['plan_name'])
+                                                      : 'Active Subscription',
+                                                  style: TextStyle(
+                                                    fontSize: 14, 
+                                                    fontWeight: FontWeight.w700,
+                                                    color: isDark ? Colors.white : AppTheme.textPrimaryLight,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          if (currentSize.isNotEmpty)
+                                            Column(
+                                              crossAxisAlignment: CrossAxisAlignment.end,
+                                              children: [
+                                                Text(
+                                                  'Meal Size',
+                                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: isDark ? Colors.white54 : AppTheme.textSecondaryLight),
+                                                ),
+                                                const SizedBox(height: 2),
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                                  decoration: BoxDecoration(
+                                                    color: AppTheme.primaryColor,
+                                                    borderRadius: BorderRadius.circular(10),
+                                                  ),
+                                                  child: Text(
+                                                    currentSize.toUpperCase(),
+                                                    style: const TextStyle(
+                                                      fontSize: 12,
+                                                      fontWeight: FontWeight.w900,
+                                                      color: Colors.white,
+                                                      letterSpacing: 0.5,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                            if (_toMealSizeId != null) ...[
+                              const SizedBox(height: 16),
+                              Builder(
+                                builder: (context) {
+                                  final isDowngrade = selectedDirection == 'downgrade';
+                                  final selectedOption = _upgradeOptions.firstWhere(
+                                    (o) => _int(o['to_meal_size_id']) == _toMealSizeId,
+                                    orElse: () => <String, dynamic>{},
+                                  );
+                                  final toName = _trim(selectedOption['to_display_name'] ?? selectedOption['label']);
+                                  final price = _trim(selectedOption['price']);
+                                  return Container(
+                                    padding: const EdgeInsets.all(18),
+                                    decoration: BoxDecoration(
+                                      color: isDowngrade 
+                                          ? (isDark ? const Color(0xFF1B2F22) : const Color(0xFFF0FDF4))
+                                          : (isDark ? const Color(0xFF382315) : const Color(0xFFFFF7ED)),
+                                      borderRadius: BorderRadius.circular(24),
+                                      border: Border.all(
+                                        color: isDowngrade 
+                                            ? (isDark ? const Color(0xFF2E5A39) : const Color(0xFFBBF7D0))
+                                            : (isDark ? const Color(0xFF6E4327) : const Color(0xFFFFEDD5)),
+                                        width: 1.5,
+                                      ),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Expanded(
+                                          child: Row(
+                                            children: [
+                                              Text(
+                                                currentSize,
+                                                style: TextStyle(
+                                                  fontSize: 15,
+                                                  fontWeight: FontWeight.w900,
+                                                  color: isDark ? Colors.white : AppTheme.textPrimaryLight,
+                                                ),
+                                              ),
+                                              const SizedBox(width: 10),
+                                              Icon(
+                                                CupertinoIcons.right_chevron,
+                                                color: isDowngrade ? const Color(0xFF22C55E) : AppTheme.primaryColor,
+                                                size: 16,
+                                              ),
+                                              const SizedBox(width: 10),
+                                              Text(
+                                                toName,
+                                                style: TextStyle(
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.w900,
+                                                  color: isDowngrade ? const Color(0xFF22C55E) : AppTheme.primaryColor,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        Column(
+                                          crossAxisAlignment: CrossAxisAlignment.end,
+                                          children: [
+                                            Text(
+                                              isDowngrade ? 'Refund Credit' : 'Payment Due',
+                                              style: TextStyle(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w800,
+                                                color: isDowngrade ? const Color(0xFF16A34A) : AppTheme.primaryColor,
+                                              ),
+                                            ),
+                                            Text(
+                                              isDowngrade ? '+₹$price' : '₹$price',
+                                              style: TextStyle(
+                                                fontSize: 18,
+                                                fontWeight: FontWeight.w900,
+                                                color: isDowngrade ? const Color(0xFF22C55E) : AppTheme.primaryColor,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }
+                              ),
+                            ],
+
+                            const SizedBox(height: 24),
+                            _sectionTitle(context, 'Choose new size'),
+                            const SizedBox(height: 8),
+
+                            if (_loadingOptions)
+                              const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 24),
+                                child: Center(child: CupertinoActivityIndicator()),
+                              )
+                            else if (!hasAnyOptions)
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(14),
+                                decoration: BoxDecoration(
+                                  color: isDark ? AppTheme.surfaceDark : Colors.orange.shade50,
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                child: Text(
+                                  !_eligible
+                                      ? 'This profile does not have a completed subscription payment yet. Pay for a plan first, then resize options will appear here.'
+                                      : 'No resizing path is published from your current size yet. Contact support if you need to change your pack.',
+                                  style: TextStyle(fontWeight: FontWeight.w700, color: isDark ? Colors.white70 : AppTheme.textPrimaryLight),
+                                ),
+                              )
+                            else ...[
+                              if (upgrades.isNotEmpty) ...[
+                                const SizedBox(height: 8),
+                                ..._buildOptionTiles(upgrades, isDark),
+                                const SizedBox(height: 16),
+                              ],
+                              if (downgrades.isNotEmpty) ...[
+                                _sectionTitle(context, 'Smaller packs (wallet credit)'),
+                                const SizedBox(height: 8),
+                                ..._buildOptionTiles(downgrades, isDark),
+                              ],
+                            ],
+
+                            const SizedBox(height: 8),
+
+                            if (selectedDirection == 'upgrade' && _selectedUpgradePrice() != null)
+                              WalletCheckoutSection(
+                                useWallet: _useWallet,
+                                onUseWalletChanged: _onUseWalletChanged,
+                                walletBalance: _walletBalance ?? pay.walletBalance,
+                                walletApplied: _walletApplied,
+                                gatewayAmount: _gatewayAmount,
+                                totalAmount: _selectedUpgradePrice(),
+                                loadingPreview: _loadingWalletPreview,
+                              ),
+
+                            if (selectedDirection == 'upgrade' && _selectedUpgradePrice() != null)
+                              const SizedBox(height: 16),
+
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                onPressed: pay.isLoading || _toMealSizeId == null || !hasAnyOptions || !_eligible ? null : _confirmAction,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: selectedDirection == 'downgrade' ? const Color(0xFF22C55E) : AppTheme.primaryColor,
+                                  foregroundColor: Colors.white,
+                                  disabledBackgroundColor: isDark ? const Color(0xFF332A24) : Colors.grey.shade300,
+                                  disabledForegroundColor: Colors.grey.shade500,
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                  elevation: 3,
+                                  shadowColor: (selectedDirection == 'downgrade' ? const Color(0xFF22C55E) : AppTheme.primaryColor).withValues(alpha: 0.4),
+                                ),
+                                child: Text(
+                                  pay.isLoading
+                                      ? 'Please wait…'
+                                      : selectedDirection == 'downgrade'
+                                          ? 'Confirm & credit wallet'
+                                          : 'Pay',
+                                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w900),
+                                ),
+                              ),
+                            ),
                           ],
 
-                        ),
+                          if (history.isNotEmpty) ...[
+                            const SizedBox(height: 32),
+                            _sectionTitle(context, 'Resize history'),
+                            const SizedBox(height: 12),
+                            ...history.take(20).map((h) {
+                              final amount = MoneyFormat.display(h['amount'] ?? h['order_amount'] ?? h['amount_paid']);
+                              final status = _trim(h['order_status'] ?? h['status'] ?? h['payment_status']).toUpperCase();
+                              final when = _trim(h['created_at'] ?? h['createdAt']);
+                              final who = _trim(h['entity_name'] ?? h['entityName']);
+                              final plan = _trim(h['plan_name'] ?? h['planName']);
+                              final isSuccess = status == 'COMPLETED' || status == 'SUCCESS';
 
+                              DateTime date = DateTime.now();
+                              if (when.isNotEmpty) {
+                                date = DateTime.tryParse(when) ?? DateTime.now();
+                              }
+
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 12),
+                                decoration: BoxDecoration(
+                                  color: isDark ? const Color(0xFF2B2521) : Colors.white,
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: isDark ? const Color(0xFF3D342C) : const Color(0xFFEEDFD2),
+                                    width: 1.2,
+                                  ),
+                                ),
+                                child: ListTile(
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 6),
+                                  leading: CircleAvatar(
+                                    backgroundColor: (isSuccess ? Colors.green : Colors.orange).withValues(alpha: 0.12),
+                                    child: Icon(
+                                      isSuccess ? CupertinoIcons.checkmark_alt : CupertinoIcons.clock,
+                                      color: isSuccess ? Colors.green : Colors.orange,
+                                      size: 20,
+                                    ),
+                                  ),
+                                  title: Text(
+                                    who.isNotEmpty ? who : plan, 
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                      color: isDark ? Colors.white : AppTheme.textPrimaryLight,
+                                    ),
+                                  ),
+                                  subtitle: Text(
+                                    DateFormat('dd MMM yyyy, hh:mm a').format(date),
+                                    style: TextStyle(
+                                      fontSize: 12, 
+                                      color: isDark ? Colors.white54 : AppTheme.textSecondaryLight
+                                    ),
+                                  ),
+                                  trailing: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      Text(
+                                        '₹$amount', 
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w900,
+                                          fontSize: 16,
+                                          color: isDark ? Colors.white : AppTheme.textPrimaryLight,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: (isSuccess ? Colors.green : Colors.orange).withValues(alpha: 0.1),
+                                          borderRadius: BorderRadius.circular(6),
+                                        ),
+                                        child: Text(
+                                          status,
+                                          style: TextStyle(
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.w900,
+                                            color: isSuccess ? Colors.green : Colors.orange,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }),
+                          ],
+                          const SizedBox(height: 24),
+                        ],
                       ),
-
-                    ],
-
-                    const SizedBox(height: 24),
-
-                    _sectionTitle(context, 'Choose new size'),
-
-                    const SizedBox(height: 8),
-
-                          if (_loadingOptions)
-                            const Padding(
-                              padding: EdgeInsets.symmetric(vertical: 24),
-                              child: Center(child: CupertinoActivityIndicator()),
-                            )
-                          else if (!hasAnyOptions)
-
-                      Container(
-
-                        width: double.infinity,
-
-                        padding: const EdgeInsets.all(14),
-
-                        decoration: BoxDecoration(
-
-                          color: isDark ? AppTheme.surfaceDark : Colors.orange.shade50,
-
-                          borderRadius: BorderRadius.circular(14),
-
-                        ),
-
-                        child: Text(
-
-                          !_eligible
-                              ? 'This profile does not have a completed subscription payment yet. Pay for a plan first, then resize options will appear here.'
-                              : 'No resizing path is published from your current size yet. Contact support if you need to change your pack.',
-
-                          style: TextStyle(fontWeight: FontWeight.w700, color: isDark ? Colors.white70 : AppTheme.textPrimaryLight),
-
-                        ),
-
-                      )
-
-                    else ...[
-                      if (upgrades.isNotEmpty) ...[
-                        _sectionTitle(context, 'Larger packs (pay)'),
-                        const SizedBox(height: 8),
-                        ..._buildOptionTiles(upgrades, isDark),
-                        const SizedBox(height: 16),
-                      ],
-                      if (downgrades.isNotEmpty) ...[
-                        _sectionTitle(context, 'Smaller packs (wallet credit)'),
-                        const SizedBox(height: 8),
-                        ..._buildOptionTiles(downgrades, isDark),
-                      ],
-                    ],
-
-                    const SizedBox(height: 8),
-
-                    if (selectedDirection == 'upgrade' && _selectedUpgradePrice() != null)
-                      WalletCheckoutSection(
-                        useWallet: _useWallet,
-                        onUseWalletChanged: _onUseWalletChanged,
-                        walletBalance: _walletBalance ?? pay.walletBalance,
-                        walletApplied: _walletApplied,
-                        gatewayAmount: _gatewayAmount,
-                        totalAmount: _selectedUpgradePrice(),
-                        loadingPreview: _loadingWalletPreview,
-                      ),
-
-                    if (selectedDirection == 'upgrade' && _selectedUpgradePrice() != null)
-                      const SizedBox(height: 8),
-
-                    SizedBox(
-
-                      width: double.infinity,
-
-                      child: ElevatedButton(
-
-                        onPressed: pay.isLoading || _toMealSizeId == null || !hasAnyOptions || !_eligible ? null : _confirmAction,
-
-                        style: ElevatedButton.styleFrom(
-
-                          backgroundColor: AppTheme.primaryColor,
-
-                          foregroundColor: Colors.white,
-
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-
-                        ),
-
-                        child: Text(
-                          pay.isLoading
-                              ? 'Please wait…'
-                              : selectedDirection == 'downgrade'
-                                  ? 'Confirm & credit wallet'
-                                  : 'Pay',
-                        ),
-
-                      ),
-
                     ),
-
-                  ],
-
-                  if (history.isNotEmpty) ...[
-
-                    const SizedBox(height: 32),
-
-                    _sectionTitle(context, 'Resize history'),
-
-                    const SizedBox(height: 8),
-
-                    ...history.take(20).map((h) {
-
-                      final amount = MoneyFormat.display(h['amount'] ?? h['order_amount'] ?? h['amount_paid']);
-
-                      final status = _trim(h['order_status'] ?? h['status'] ?? h['payment_status']).toUpperCase();
-
-                      final when = _trim(h['created_at'] ?? h['createdAt']);
-
-                      final who = _trim(h['entity_name'] ?? h['entityName']);
-
-                      final plan = _trim(h['plan_name'] ?? h['planName']);
-
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        decoration: BoxDecoration(
-                          color: isDark ? AppTheme.surfaceDark : Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: isDark ? AppTheme.borderDark.withValues(alpha: 0.5) : AppTheme.borderLight,
-                            width: 1.5,
-                          ),
-                        ),
-                        child: ListTile(
-
-                          title: Text(who.isNotEmpty ? who : plan, style: const TextStyle(fontWeight: FontWeight.w700)),
-
-                          subtitle: Text(when.isNotEmpty ? when : 'Meal size resize'),
-
-                          trailing: Column(
-
-                            mainAxisAlignment: MainAxisAlignment.center,
-
-                            crossAxisAlignment: CrossAxisAlignment.end,
-
-                            children: [
-
-                              Text('₹$amount', style: const TextStyle(fontWeight: FontWeight.w800)),
-
-                              Text(status, style: TextStyle(fontSize: 11, color: isDark ? Colors.white54 : Colors.grey)),
-
-                            ],
-
-                          ),
-
-                        ),
-
-                      );
-
-                    }),
-
-                  ],
-
-                  const SizedBox(height: 24),
+                  ),
                 ],
               ),
-            ),
-          ),
-        ],
       ),
-    ),
-  );
+    );
   }
 
-
-
   Widget _sectionTitle(BuildContext context, String text) {
-
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Text(
-
       text,
-
       style: TextStyle(
-
         fontSize: 15,
-
         fontWeight: FontWeight.w900,
-
         color: isDark ? Colors.white : AppTheme.textPrimaryLight,
-
       ),
-
     );
-
   }
 
   List<Widget> _buildOptionTiles(List<Map<String, dynamic>> options, bool isDark) {
@@ -1043,12 +1114,17 @@ class _MealSizeUpgradeScreenState extends State<MealSizeUpgradeScreen> {
       final selected = _toMealSizeId == id;
       final isDowngrade = _trim(t['direction']) == 'downgrade';
 
+      Color activeColor = isDowngrade ? const Color(0xFF22C55E) : AppTheme.primaryColor;
+      Color activeBg = isDowngrade 
+          ? (isDark ? const Color(0xFF1B2F22) : const Color(0xFFF0FDF4))
+          : (isDark ? const Color(0xFF382315) : const Color(0xFFFFF7ED));
+
       return Padding(
-        padding: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.only(bottom: 12),
         child: Material(
           color: selected
-              ? AppTheme.primaryColor.withValues(alpha: isDark ? 0.2 : 0.1)
-              : (isDark ? AppTheme.surfaceDark : Colors.white),
+              ? activeBg
+              : (isDark ? const Color(0xFF25201C) : Colors.white),
           borderRadius: BorderRadius.circular(24),
           child: InkWell(
             onTap: () {
@@ -1057,42 +1133,77 @@ class _MealSizeUpgradeScreenState extends State<MealSizeUpgradeScreen> {
             },
             borderRadius: BorderRadius.circular(24),
             child: Container(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(24),
                 border: Border.all(
-                  color: selected ? AppTheme.primaryColor : (isDark ? AppTheme.borderDark.withValues(alpha: 0.5) : AppTheme.borderLight),
+                  color: selected ? activeColor : (isDark ? const Color(0xFF352D28) : const Color(0xFFEEDFD2)),
                   width: selected ? 2.5 : 1.5,
                 ),
+                boxShadow: selected ? [
+                  BoxShadow(
+                    color: activeColor.withValues(alpha: isDark ? 0.2 : 0.06),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ] : null,
               ),
               child: Row(
                 children: [
-                  Icon(
-                    selected ? CupertinoIcons.checkmark_circle_fill : CupertinoIcons.circle,
-                    color: selected ? AppTheme.primaryColor : Colors.grey,
+                  Container(
+                    padding: const EdgeInsets.all(2),
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: selected ? activeColor : Colors.grey.shade400,
+                        width: 2,
+                      ),
+                    ),
+                    child: CircleAvatar(
+                      radius: 6,
+                      backgroundColor: selected ? activeColor : Colors.transparent,
+                    ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
                           _trim(t['label']),
-                          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+                          style: TextStyle(
+                            fontWeight: FontWeight.w900, 
+                            fontSize: 16,
+                            color: isDark ? Colors.white : AppTheme.textPrimaryLight,
+                          ),
                         ),
+                        const SizedBox(height: 2),
                         Text(
                           _trim(t['subtitle']),
-                          style: TextStyle(fontSize: 12, color: isDark ? Colors.white54 : AppTheme.textSecondaryLight),
+                          style: TextStyle(
+                            fontSize: 12, 
+                            fontWeight: FontWeight.w700,
+                            color: isDark ? Colors.white54 : AppTheme.textSecondaryLight
+                          ),
                         ),
                       ],
                     ),
                   ),
-                  Text(
-                    isDowngrade ? '+₹${_trim(t['price'])}' : '₹${_trim(t['price'])}',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w900,
-                      fontSize: 16,
-                      color: isDowngrade ? Colors.green : AppTheme.primaryColor,
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: selected
+                          ? activeColor.withValues(alpha: 0.15)
+                          : (isDark ? const Color(0xFF2D2521) : const Color(0xFFFAF2EB)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      isDowngrade ? '+₹${_trim(t['price'])}' : '₹${_trim(t['price'])}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
+                        color: isDowngrade ? const Color(0xFF22C55E) : AppTheme.primaryColor,
+                      ),
                     ),
                   ),
                 ],

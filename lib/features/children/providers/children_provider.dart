@@ -104,9 +104,20 @@ class ChildrenProvider with ChangeNotifier {
         standardId: child.standardId,
         mealSizeId: child.mealSizeId,
         mealTime: child.mealTime,
+        schoolName: child.schoolName,
+        standardName: child.standardName,
+        mealSizeName: child.mealSizeName,
+        divisionId: child.divisionId,
+        divisionName: child.divisionName,
       );
       _children = [..._children, optimistic];
       notifyListeners();
+      
+      await CacheStore.setJson(
+        'children_list',
+        _children.map((c) => c.toJson()).toList(),
+        ttl: const Duration(hours: 12),
+      );
       return true;
     }
 
@@ -148,13 +159,21 @@ class ChildrenProvider with ChangeNotifier {
                   standardId: child.standardId,
                   mealSizeId: child.mealSizeId,
                   mealTime: child.mealTime,
-                  schoolName: c.schoolName,
-                  standardName: c.standardName,
-                  mealSizeName: c.mealSizeName,
+                  schoolName: child.schoolName ?? c.schoolName,
+                  standardName: child.standardName ?? c.standardName,
+                  mealSizeName: child.mealSizeName ?? c.mealSizeName,
+                  divisionId: child.divisionId ?? c.divisionId,
+                  divisionName: child.divisionName ?? c.divisionName,
                 )
               : c)
           .toList();
       notifyListeners();
+      
+      await CacheStore.setJson(
+        'children_list',
+        _children.map((c) => c.toJson()).toList(),
+        ttl: const Duration(hours: 12),
+      );
       return true;
     }
 
@@ -186,6 +205,12 @@ class ChildrenProvider with ChangeNotifier {
       );
       _children = _children.where((c) => c.id != id).toList();
       notifyListeners();
+      
+      await CacheStore.setJson(
+        'children_list',
+        _children.map((c) => c.toJson()).toList(),
+        ttl: const Duration(hours: 12),
+      );
       return true;
     }
 

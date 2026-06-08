@@ -5,6 +5,7 @@ import 'package:meal_app/core/network/api_endpoints.dart';
 import 'package:meal_app/core/services/network_status_service.dart';
 import 'package:meal_app/core/services/phonepe_service.dart';
 import 'package:meal_app/core/utils/error_handler.dart';
+import 'package:meal_app/core/storage/cache_store.dart';
 import 'package:meal_app/features/bulk_order/core/bulk_address_storage.dart';
 import 'package:meal_app/features/bulk_order/data/models/bulk_delivery_address.dart';
 import 'package:meal_app/features/bulk_order/data/models/bulk_order_config.dart';
@@ -14,7 +15,33 @@ import 'package:meal_app/features/bulk_order/data/repositories/bulk_order_reposi
 class BulkOrderProvider with ChangeNotifier {
   final BulkOrderRepository _repository;
 
-  BulkOrderProvider(this._repository);
+  BulkOrderProvider(this._repository) {
+    _loadFromCache();
+  }
+
+  Future<void> _loadFromCache() async {
+    try {
+      final configJson = await CacheStore.getJson('bulk_config');
+      if (configJson is Map<String, dynamic>) {
+        _config = BulkOrderConfig.fromJson(configJson);
+      }
+      final categoriesList = await CacheStore.getJsonList('bulk_variety_categories');
+      if (categoriesList.isNotEmpty) {
+        _varietyCategories = categoriesList.map(BulkVarietyCategory.fromJson).toList();
+      }
+      final addressesList = await CacheStore.getJsonList('bulk_saved_addresses');
+      if (addressesList.isNotEmpty) {
+        _savedAddresses = addressesList.map(BulkDeliveryAddress.fromJson).toList();
+        if (_deliveryAddress == null && _savedAddresses.isNotEmpty) {
+          _deliveryAddress = _savedAddresses.firstWhere(
+            (a) => a.isDefault,
+            orElse: () => _savedAddresses.first,
+          );
+        }
+      }
+      notifyListeners();
+    } catch (_) {}
+  }
 
   bool _loading = false;
   bool get isLoading => _loading;
@@ -108,12 +135,24 @@ class BulkOrderProvider with ChangeNotifier {
     if (!force && _config != null && _canReuseCache(_lastConfigFetchTime)) {
       return;
     }
+    if (!NetworkStatusService.instance.isOnline) {
+      if (_config != null) return;
+      final configJson = await CacheStore.getJson('bulk_config');
+      if (configJson is Map<String, dynamic>) {
+        _config = BulkOrderConfig.fromJson(configJson);
+        notifyListeners();
+      }
+      return;
+    }
     _loading = true;
     _error = null;
     notifyListeners();
     try {
       _config = await _repository.fetchConfig();
       _lastConfigFetchTime = DateTime.now();
+      if (_config != null) {
+        await CacheStore.setJson('bulk_config', _config!.toJson(), ttl: const Duration(days: 1));
+      }
     } catch (e) {
       _error = ErrorHandler.getErrorMessage(e);
     } finally {
@@ -180,12 +219,32 @@ class BulkOrderProvider with ChangeNotifier {
 
   Future<void> loadSavedDeliveryAddresses({bool force = false}) async {
     if (_savedAddresses.isNotEmpty && !force) return;
+    if (!NetworkStatusService.instance.isOnline) {
+      if (_savedAddresses.isNotEmpty) return;
+      final cachedList = await CacheStore.getJsonList('bulk_saved_addresses');
+      if (cachedList.isNotEmpty) {
+        _savedAddresses = cachedList.map(BulkDeliveryAddress.fromJson).toList();
+        if (_deliveryAddress == null && _savedAddresses.isNotEmpty) {
+          _deliveryAddress = _savedAddresses.firstWhere(
+            (a) => a.isDefault,
+            orElse: () => _savedAddresses.first,
+          );
+        }
+        notifyListeners();
+      }
+      return;
+    }
     try {
       final rows = await _repository.getSavedDeliveryAddresses();
       _savedAddresses = rows
           .whereType<Map>()
           .map((row) => BulkDeliveryAddress.fromJson(Map<String, dynamic>.from(row)))
           .toList();
+      await CacheStore.setJson(
+        'bulk_saved_addresses',
+        _savedAddresses.map((e) => e.toJson()).toList(),
+        ttl: const Duration(days: 7),
+      );
       if (_deliveryAddress == null && _savedAddresses.isNotEmpty) {
         _deliveryAddress = _savedAddresses.firstWhere(
           (a) => a.isDefault,
@@ -490,12 +549,26 @@ class BulkOrderProvider with ChangeNotifier {
     if (!force && _varietyCategories.isNotEmpty && _canReuseCache(_lastCategoriesFetchTime)) {
       return;
     }
+    if (!NetworkStatusService.instance.isOnline) {
+      if (_varietyCategories.isNotEmpty) return;
+      final cachedList = await CacheStore.getJsonList('bulk_variety_categories');
+      if (cachedList.isNotEmpty) {
+        _varietyCategories = cachedList.map(BulkVarietyCategory.fromJson).toList();
+        notifyListeners();
+      }
+      return;
+    }
     _loading = true;
     _error = null;
     notifyListeners();
     try {
       _varietyCategories = await _repository.fetchVarietyCategories();
       _lastCategoriesFetchTime = DateTime.now();
+      await CacheStore.setJson(
+        'bulk_variety_categories',
+        _varietyCategories.map((e) => e.toJson()).toList(),
+        ttl: const Duration(days: 1),
+      );
     } catch (e) {
       _error = ErrorHandler.getErrorMessage(e);
     } finally {
@@ -508,12 +581,31 @@ class BulkOrderProvider with ChangeNotifier {
     if (!force && _categoryMeals.isNotEmpty && _canReuseCache(_lastMealsFetchTime[categoryId])) {
       return;
     }
+    if (!NetworkStatusService.instance.isOnline) {
+      final cachedList = await CacheStore.getJsonList('bulk_meals_category_$categoryId');
+      if (cachedList.isNotEmpty) {
+        _categoryMeals = cachedList.map(BulkMenuOption.fromJson).toList();
+        for (final m in _categoryMeals) {
+          _varietyMealCatalog[m.id] = m;
+          if (categoryName != null && categoryName.isNotEmpty) {
+            _mealCategoryNames[m.id] = categoryName;
+          }
+        }
+        notifyListeners();
+      }
+      return;
+    }
     _loading = true;
     _error = null;
     notifyListeners();
     try {
       _categoryMeals = await _repository.fetchMealsByCategory(categoryId);
       _lastMealsFetchTime[categoryId] = DateTime.now();
+      await CacheStore.setJson(
+        'bulk_meals_category_$categoryId',
+        _categoryMeals.map((e) => e.toJson()).toList(),
+        ttl: const Duration(hours: 12),
+      );
       for (final m in _categoryMeals) {
         _varietyMealCatalog[m.id] = m;
         if (categoryName != null && categoryName.isNotEmpty) {
