@@ -320,43 +320,34 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
           children: [
             // Custom Header
             Container(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
               decoration: BoxDecoration(
                 color: isDark ? Colors.black26 : const Color(0xFFF3EBE0),
-                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(32)),
+                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
               ),
-              child: Column(
+              child: Row(
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      IconButton(
-                        icon: const Icon(CupertinoIcons.back, color: Color(0xFF8B7A66)),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                      Text(
-                        'Buuttii',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w900,
-                          color: AppTheme.primaryColor,
-                        ),
-                      ),
-                      CircleAvatar(
-                        radius: 18,
-                        backgroundColor: isDark ? Colors.white12 : Colors.black12,
-                        child: const Icon(CupertinoIcons.person_fill, color: Colors.white, size: 20),
-                      ),
-                    ],
+                  IconButton(
+                    icon: const Icon(CupertinoIcons.back, color: Color(0xFF8B7A66)),
+                    onPressed: () => Navigator.pop(context),
                   ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Professional Profile',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w800,
-                      color: isDark ? Colors.white : const Color(0xFF5A4D42),
+                  Expanded(
+                    child: Text(
+                      'Professional Profile',
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                        color: isDark ? Colors.white : const Color(0xFF5A4D42),
+                      ),
                     ),
+                  ),
+                  CircleAvatar(
+                    radius: 18,
+                    backgroundColor: isDark ? Colors.white12 : Colors.black12,
+                    child: const Icon(CupertinoIcons.person_fill, color: Colors.white, size: 20),
                   ),
                 ],
               ),

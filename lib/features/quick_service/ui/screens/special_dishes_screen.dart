@@ -5,8 +5,8 @@ import 'package:provider/provider.dart';
 import 'package:meal_app/core/theme/app_theme.dart';
 import 'package:meal_app/features/quick_service/providers/quick_service_provider.dart';
 import 'package:meal_app/features/bulk_order/providers/bulk_order_provider.dart';
-import 'package:meal_app/features/bulk_order/ui/widgets/bulk_order_address_section.dart';
 import 'package:meal_app/features/quick_service/ui/widgets/quick_service_checkout.dart';
+import 'package:meal_app/features/quick_service/ui/screens/special_dishes_cart_screen.dart';
 
 class SpecialDishesScreen extends StatefulWidget {
   const SpecialDishesScreen({super.key});
@@ -22,29 +22,36 @@ class _SpecialDishesScreenState extends State<SpecialDishesScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
       final p = context.read<QuickServiceProvider>();
       await p.loadCategories();
+      if (!mounted) return;
       await p.loadCartFromServer();
-      await context.read<BulkOrderProvider>().loadSavedDeliveryAddress();
-      final backendAddr = await p.loadSavedDeliveryAddress();
+      if (!mounted) return;
       final bulk = context.read<BulkOrderProvider>();
+      await bulk.loadSavedDeliveryAddress();
+      if (!mounted) return;
+      final backendAddr = await p.loadSavedDeliveryAddress();
+      if (!mounted) return;
       final addr = backendAddr ?? bulk.deliveryAddress;
       if (addr != null) {
         bulk.setDeliveryAddress(addr);
         p.setAddress(addr);
       }
-      if (p.categories.isNotEmpty) {
-        final id = p.categories.first['id']?.toString();
-        if (id != null) {
-          setState(() => _selectedCategoryId = id);
-          await p.loadItems(id);
-        }
-      }
+      
+      // Load 'all' items by default
+      setState(() => _selectedCategoryId = 'all');
+      await p.loadItems('all');
     });
   }
 
-  Future<void> _checkout() async {
-    await QuickServiceCheckout.paySpecialDishes(context, skipAddressPrompt: true);
+  void _openCart() {
+    Navigator.push(
+      context,
+      CupertinoPageRoute(
+        builder: (_) => const SpecialDishesCartScreen(),
+      ),
+    );
   }
 
   @override
@@ -55,147 +62,348 @@ class _SpecialDishesScreenState extends State<SpecialDishesScreen> {
 
     return Scaffold(
       backgroundColor: pageBg,
-      resizeToAvoidBottomInset: false,
       appBar: AppBar(
-        title: const Text('Buuttii Specials'),
+        title: const Text(
+          'Buuttii Specials',
+          style: TextStyle(fontWeight: FontWeight.w900),
+        ),
         backgroundColor: pageBg,
         surfaceTintColor: Colors.transparent,
-        actions: [
-          if (p.cartItemCount > 0)
-            TextButton(
-              onPressed: p.isLoading ? null : _checkout,
-              child: Text('Pay (${p.cartItemCount})'),
-            ),
-        ],
       ),
+      floatingActionButton: p.cartItemCount > 0
+          ? FloatingActionButton.extended(
+              heroTag: 'special_dishes_cart_fab',
+              onPressed: _openCart,
+              backgroundColor: AppTheme.primaryColor,
+              foregroundColor: Colors.white,
+              icon: const Icon(CupertinoIcons.cart_fill),
+              label: Text(
+                'Cart (${p.cartItemCount})',
+                style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15),
+              ),
+            )
+          : null,
       body: SafeArea(
         top: false,
-        child: p.isLoading && p.categories.isEmpty
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                if (p.categories.isNotEmpty)
-                  SizedBox(
-                    height: 44,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                      itemCount: p.categories.length,
-                      separatorBuilder: (_, __) => const SizedBox(width: 8),
-                      itemBuilder: (_, i) {
-                        final cat = p.categories[i];
-                        final id = cat['id']?.toString() ?? '';
-                        final selected = id == _selectedCategoryId;
-                        return ChoiceChip(
-                          label: Text(cat['name']?.toString() ?? 'Category'),
-                          selected: selected,
-                          onSelected: (_) async {
-                            setState(() => _selectedCategoryId = id);
-                            await p.loadItems(id);
-                          },
-                        );
-                      },
-                    ),
-                  ),
-                Expanded(
-                  child: ListView.builder(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: p.items.length,
-                    itemBuilder: (_, i) {
-                      final item = p.items[i];
-                      final id = item['id']?.toString() ?? '';
-                      final qty = p.cartQty[id] ?? 0;
-                      final price = double.tryParse(item['price']?.toString() ?? '') ?? 0.0;
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        child: Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Row(
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(10),
-                                child: CachedNetworkImage(
-                                  imageUrl: item['image_url']?.toString() ?? '',
-                                  width: 72,
-                                  height: 72,
-                                  fit: BoxFit.cover,
-                                  errorWidget: (_, __, ___) => Container(
-                                    width: 72,
-                                    height: 72,
-                                    color: Colors.grey.shade200,
-                                    child: const Icon(CupertinoIcons.photo),
-                                  ),
-                                ),
+        child: p.isLoading && p.categories.isEmpty && p.items.isEmpty
+            ? const Center(child: CircularProgressIndicator())
+            : Column(
+                children: [
+                  // Categories scroll bar
+                  if (p.categories.isNotEmpty)
+                    Container(
+                      height: 48,
+                      margin: const EdgeInsets.symmetric(vertical: 8),
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        itemCount: p.categories.length + 1,
+                        separatorBuilder: (_, __) => const SizedBox(width: 8),
+                        itemBuilder: (_, i) {
+                          final bool selected;
+                          final String title;
+                          final VoidCallback onTap;
+
+                          if (i == 0) {
+                            selected = _selectedCategoryId == 'all';
+                            title = 'All';
+                            onTap = () async {
+                              setState(() => _selectedCategoryId = 'all');
+                              await p.loadItems('all');
+                            };
+                          } else {
+                            final cat = p.categories[i - 1];
+                            final id = cat['id']?.toString() ?? '';
+                            selected = id == _selectedCategoryId;
+                            title = cat['name']?.toString() ?? 'Category';
+                            onTap = () async {
+                              setState(() => _selectedCategoryId = id);
+                              await p.loadItems(id);
+                            };
+                          }
+
+                          return ChoiceChip(
+                            label: Text(
+                              title,
+                              style: TextStyle(
+                                color: selected
+                                    ? Colors.white
+                                    : (isDark ? Colors.white70 : Colors.black87),
+                                fontWeight: selected ? FontWeight.bold : FontWeight.w600,
                               ),
-                              const SizedBox(width: 12),
-                              Expanded(
+                            ),
+                            selected: selected,
+                            selectedColor: AppTheme.primaryColor,
+                            backgroundColor: isDark ? AppTheme.surfaceDark : const Color(0xFFF1EDE9),
+                            checkmarkColor: Colors.white,
+                            onSelected: (_) => onTap(),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                              side: BorderSide(
+                                color: selected ? AppTheme.primaryColor : Colors.transparent,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+
+                  // Menu list
+                  Expanded(
+                    child: p.isLoading && p.items.isEmpty
+                        ? const Center(child: CircularProgressIndicator())
+                        : p.items.isEmpty
+                            ? Center(
                                 child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
-                                    Text(
-                                      item['name']?.toString() ?? 'Item',
-                                      style: const TextStyle(fontWeight: FontWeight.w800),
+                                    Icon(
+                                      CupertinoIcons.square_list,
+                                      size: 64,
+                                      color: Colors.grey.withValues(alpha: 0.4),
                                     ),
-                                    Text('₹${price.toStringAsFixed(0)}'),
-                                    Row(
-                                      children: [
-                                        IconButton(
-                                          onPressed: qty > 0 ? () => p.setCartQty(id, qty - 1) : null,
-                                          icon: const Icon(CupertinoIcons.minus_circle),
-                                        ),
-                                        Text('$qty', style: const TextStyle(fontWeight: FontWeight.w800)),
-                                        IconButton(
-                                          onPressed: () => p.setCartQty(id, qty + 1),
-                                          icon: const Icon(CupertinoIcons.plus_circle),
-                                        ),
-                                      ],
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      'No special dishes found',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w700,
+                                        color: isDark ? Colors.white60 : Colors.grey.shade600,
+                                      ),
                                     ),
                                   ],
                                 ),
+                              )
+                            : Center(
+                                child: ConstrainedBox(
+                                  constraints: const BoxConstraints(maxWidth: 600),
+                                  child: ListView.separated(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                    itemCount: p.items.length,
+                                    separatorBuilder: (_, __) => const SizedBox(height: 16),
+                                    itemBuilder: (context, i) {
+                                      final item = p.items[i];
+                                      final id = item['id']?.toString() ?? '';
+                                      final qty = p.cartQty[id] ?? 0;
+                                      final price = double.tryParse(item['price']?.toString() ?? '') ?? 0.0;
+                                      final description = item['description']?.toString() ?? '';
+                                      final imageUrl = item['image_url']?.toString() ?? '';
+
+                                      return Container(
+                                        decoration: BoxDecoration(
+                                          color: isDark ? AppTheme.surfaceDark : Colors.white,
+                                          borderRadius: BorderRadius.circular(16),
+                                          border: Border.all(
+                                            color: isDark ? AppTheme.borderDark : const Color(0xFFEFECE9),
+                                            width: 1.5,
+                                          ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
+                                              blurRadius: 8,
+                                              offset: const Offset(0, 4),
+                                            ),
+                                          ],
+                                        ),
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            // Image on top of the card
+                                            ClipRRect(
+                                              borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+                                              child: CachedNetworkImage(
+                                                imageUrl: imageUrl,
+                                                height: 180,
+                                                width: double.infinity,
+                                                fit: BoxFit.cover,
+                                                placeholder: (_, __) => Container(
+                                                  height: 180,
+                                                  color: isDark ? Colors.white.withValues(alpha: 0.04) : Colors.grey.shade100,
+                                                  child: const Center(child: CupertinoActivityIndicator()),
+                                                ),
+                                                errorWidget: (_, __, ___) => Container(
+                                                  height: 180,
+                                                  color: isDark ? Colors.white.withValues(alpha: 0.04) : Colors.grey.shade100,
+                                                  child: const Icon(CupertinoIcons.photo, color: Colors.grey),
+                                                ),
+                                              ),
+                                            ),
+                                            // Details area below image
+                                            Padding(
+                                              padding: const EdgeInsets.all(16),
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  Row(
+                                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                    children: [
+                                                      Expanded(
+                                                        child: Column(
+                                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                                          children: [
+                                                            Text(
+                                                              item['name']?.toString() ?? 'Item',
+                                                              style: TextStyle(
+                                                                fontSize: 18,
+                                                                fontWeight: FontWeight.w800,
+                                                                color: isDark ? Colors.white : const Color(0xFF1B1C1C),
+                                                                letterSpacing: -0.2,
+                                                              ),
+                                                            ),
+                                                            const SizedBox(height: 4),
+                                                            Text(
+                                                              '₹${price.toStringAsFixed(0)}',
+                                                              style: const TextStyle(
+                                                                fontSize: 16,
+                                                                fontWeight: FontWeight.w800,
+                                                                color: AppTheme.primaryColor,
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                      const SizedBox(width: 16),
+                                                      _buildQtySelector(id, qty, p, isDark, context),
+                                                    ],
+                                                  ),
+                                                  if (description.isNotEmpty) ...[
+                                                    const SizedBox(height: 12),
+                                                    Text(
+                                                      description,
+                                                      style: TextStyle(
+                                                        fontSize: 13,
+                                                        color: isDark ? Colors.white60 : const Color(0xFF584235),
+                                                        height: 1.4,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ],
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
                               ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
                   ),
-                ),
-                if (p.cartItemCount > 0)
-                  Padding(
-                    padding: EdgeInsets.fromLTRB(
-                      16,
-                      16,
-                      16,
-                      16 + MediaQuery.viewInsetsOf(context).bottom,
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const BulkOrderAddressSection(),
-                        Builder(
-                          builder: (ctx) {
-                            final addr = ctx.watch<BulkOrderProvider>().deliveryAddress;
-                            WidgetsBinding.instance.addPostFrameCallback((_) {
-                              if (mounted) ctx.read<QuickServiceProvider>().setAddress(addr);
-                            });
-                            return const SizedBox.shrink();
-                          },
-                        ),
-                        const SizedBox(height: 8),
-                        SizedBox(
-                          width: double.infinity,
-                          height: 50,
-                          child: ElevatedButton(
-                            onPressed: p.isLoading ? null : _checkout,
-                            child: const Text('Checkout', style: TextStyle(fontWeight: FontWeight.w800)),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
+                ],
+              ),
+      ),
+    );
+  }
+
+  Widget _buildQtySelector(String id, int qty, QuickServiceProvider p, bool isDark, BuildContext context) {
+    if (qty == 0) {
+      return Container(
+        decoration: BoxDecoration(
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 6,
+              offset: const Offset(0, 3),
             ),
+          ],
         ),
+        child: ElevatedButton(
+          onPressed: () => p.setCartQty(id, 1),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: isDark ? AppTheme.surfaceDark : Colors.white,
+            foregroundColor: AppTheme.primaryColor,
+            elevation: 0,
+            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 8),
+            minimumSize: Size.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+              side: const BorderSide(color: AppTheme.primaryColor, width: 1.5),
+            ),
+          ),
+          child: const Text(
+            'ADD',
+            style: TextStyle(
+              fontWeight: FontWeight.w900,
+              fontSize: 13,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Container(
+      height: 36,
+      decoration: BoxDecoration(
+        color: AppTheme.primaryColor,
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primaryColor.withValues(alpha: 0.25),
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconButton(
+            onPressed: () => p.setCartQty(id, qty - 1),
+            icon: const Icon(CupertinoIcons.minus, size: 14, color: Colors.white),
+            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+            padding: EdgeInsets.zero,
+            splashRadius: 18,
+          ),
+          Theme(
+            data: Theme.of(context).copyWith(
+              textSelectionTheme: const TextSelectionThemeData(
+                cursorColor: Colors.white,
+                selectionColor: Colors.white24,
+                selectionHandleColor: Colors.white,
+              ),
+            ),
+            child: SizedBox(
+              width: 40,
+              child: TextFormField(
+                initialValue: '$qty',
+                key: ValueKey('qty_${id}_$qty'),
+                textAlign: TextAlign.center,
+                keyboardType: TextInputType.number,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w900,
+                  fontSize: 14,
+                  color: Colors.white,
+                ),
+                cursorColor: Colors.white,
+                decoration: const InputDecoration(
+                  isDense: true,
+                  contentPadding: EdgeInsets.symmetric(vertical: 8),
+                  border: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  errorBorder: InputBorder.none,
+                  disabledBorder: InputBorder.none,
+                  fillColor: Colors.transparent,
+                  filled: false,
+                ),
+                onFieldSubmitted: (val) {
+                  final newQty = int.tryParse(val) ?? qty;
+                  p.setCartQty(id, newQty);
+                },
+              ),
+            ),
+          ),
+          IconButton(
+            onPressed: () => p.setCartQty(id, qty + 1),
+            icon: const Icon(CupertinoIcons.plus, size: 14, color: Colors.white),
+            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+            padding: EdgeInsets.zero,
+            splashRadius: 18,
+          ),
+        ],
+      ),
     );
   }
 }

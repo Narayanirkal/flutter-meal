@@ -56,50 +56,41 @@ class _BulkOrderCartScreenState extends State<BulkOrderCartScreen> {
           children: [
             // Custom Header with rounded bottom corners
             Container(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
               decoration: BoxDecoration(
                 color: isDark ? Colors.black26 : const Color(0xFFF3EBE0),
-                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(32)),
+                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
               ),
-              child: Column(
+              child: Row(
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      IconButton(
-                        icon: const Icon(CupertinoIcons.back, color: Color(0xFF8B7A66)),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                      Text(
-                        'Buuttii',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w900,
-                          color: AppTheme.primaryColor,
-                        ),
-                      ),
-                      if (p.hasBulkCartItems)
-                        TextButton.icon(
-                          onPressed: () {
-                            p.clearBulkCart();
-                            Navigator.pop(context);
-                          },
-                          icon: const Icon(CupertinoIcons.trash, color: Color(0xFF8B7A66), size: 16),
-                          label: const Text('Clear', style: TextStyle(color: Color(0xFF8B7A66))),
-                        )
-                      else
-                        const SizedBox(width: 48),
-                    ],
+                  IconButton(
+                    icon: const Icon(CupertinoIcons.back, color: Color(0xFF8B7A66)),
+                    onPressed: () => Navigator.pop(context),
                   ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Bulk Cart',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w800,
-                      color: isDark ? Colors.white : const Color(0xFF5A4D42),
+                  Expanded(
+                    child: Text(
+                      'Bulk Cart',
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                        color: isDark ? Colors.white : const Color(0xFF5A4D42),
+                      ),
                     ),
                   ),
+                  if (p.hasBulkCartItems)
+                    TextButton.icon(
+                      onPressed: () {
+                        p.clearBulkCart();
+                        Navigator.pop(context);
+                      },
+                      icon: const Icon(CupertinoIcons.trash, color: Color(0xFF8B7A66), size: 16),
+                      label: const Text('Clear', style: TextStyle(color: Color(0xFF8B7A66))),
+                    )
+                  else
+                    const SizedBox(width: 48),
                 ],
               ),
             ),

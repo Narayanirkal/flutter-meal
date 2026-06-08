@@ -84,7 +84,7 @@ class AuthRepository {
     }
   }
 
-  Future<bool> registerVerifyOtp(String phoneNumber, String username, String code, bool consentAccepted) async {
+  Future<bool> registerVerifyOtp(String phoneNumber, String username, String code, bool consentAccepted, {String? referralCode}) async {
     try {
       final response = await _dioClient.dio.post(
         ApiEndpoints.registerVerifyOtp,
@@ -93,6 +93,8 @@ class AuthRepository {
           'username': username,
           'code': code,
           'consentAccepted': consentAccepted,
+          if (referralCode != null && referralCode.trim().isNotEmpty)
+            'referralCode': referralCode.trim(),
         },
       );
 
