@@ -430,21 +430,22 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                    Text(
-                      [
-                        includeSaturday ? 'With Saturday' : 'Without Saturday',
-                        if (mealSizeName.isNotEmpty) mealSizeName,
-                        if (mealTimingRaw.isNotEmpty) TimeUtils.formatToDisplay(mealTimingRaw),
-                      ].join(' • '),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      softWrap: true,
-                      style: TextStyle(
-                        color: isDark ? Colors.white38 : AppTheme.textSecondaryLight,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
+                    if (orderType != 'referral_reward' && orderType != 'referral_applied')
+                      Text(
+                        [
+                          includeSaturday ? 'With Saturday' : 'Without Saturday',
+                          if (mealSizeName.isNotEmpty) mealSizeName,
+                          if (mealTimingRaw.isNotEmpty) TimeUtils.formatToDisplay(mealTimingRaw),
+                        ].join(' • '),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        softWrap: true,
+                        style: TextStyle(
+                          color: isDark ? Colors.white38 : AppTheme.textSecondaryLight,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
                     Text(
                       DateFormat('dd MMM yyyy, hh:mm a').format(date),
                       style: TextStyle(
@@ -469,14 +470,15 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text(
-                    '₹$amount',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 15,
-                      color: isDark ? Colors.white : AppTheme.textPrimaryLight,
+                  if (orderType != 'referral_reward' && orderType != 'referral_applied')
+                    Text(
+                      '₹$amount',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 15,
+                        color: isDark ? Colors.white : AppTheme.textPrimaryLight,
+                      ),
                     ),
-                  ),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(

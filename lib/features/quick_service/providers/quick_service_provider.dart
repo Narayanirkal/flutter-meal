@@ -113,6 +113,7 @@ class QuickServiceProvider with ChangeNotifier {
   Future<void> loadItems(String categoryId) async {
     _loading = true;
     _error = null;
+    _items = [];
     notifyListeners();
     try {
       _items = await _repository.getSpecialItems(categoryId);

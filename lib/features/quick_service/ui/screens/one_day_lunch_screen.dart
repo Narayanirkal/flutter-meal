@@ -279,7 +279,7 @@ class _OneDayLunchBody extends StatelessWidget {
               // ── Pay button ────────────────────────────────────────────
               SizedBox(
                 width: double.infinity,
-                height: 52,
+                height: 56,
                 child: ElevatedButton(
                   onPressed: isLoading ? null : onPay,
                   child: isLoading

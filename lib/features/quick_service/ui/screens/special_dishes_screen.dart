@@ -5,7 +5,6 @@ import 'package:provider/provider.dart';
 import 'package:meal_app/core/theme/app_theme.dart';
 import 'package:meal_app/features/quick_service/providers/quick_service_provider.dart';
 import 'package:meal_app/features/bulk_order/providers/bulk_order_provider.dart';
-import 'package:meal_app/features/quick_service/ui/widgets/quick_service_checkout.dart';
 import 'package:meal_app/features/quick_service/ui/screens/special_dishes_cart_screen.dart';
 
 class SpecialDishesScreen extends StatefulWidget {
@@ -17,6 +16,7 @@ class SpecialDishesScreen extends StatefulWidget {
 
 class _SpecialDishesScreenState extends State<SpecialDishesScreen> {
   String? _selectedCategoryId;
+  bool _initialLoading = true;
 
   @override
   void initState() {
@@ -42,6 +42,9 @@ class _SpecialDishesScreenState extends State<SpecialDishesScreen> {
       // Load 'all' items by default
       setState(() => _selectedCategoryId = 'all');
       await p.loadItems('all');
+      if (mounted) {
+        setState(() => _initialLoading = false);
+      }
     });
   }
 
@@ -85,7 +88,7 @@ class _SpecialDishesScreenState extends State<SpecialDishesScreen> {
           : null,
       body: SafeArea(
         top: false,
-        child: p.isLoading && p.categories.isEmpty && p.items.isEmpty
+        child: _initialLoading
             ? const Center(child: CircularProgressIndicator())
             : Column(
                 children: [

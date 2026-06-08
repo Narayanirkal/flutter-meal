@@ -982,7 +982,7 @@ class _MealSizeUpgradeScreenState extends State<MealSizeUpgradeScreen> {
                                   foregroundColor: Colors.white,
                                   disabledBackgroundColor: isDark ? const Color(0xFF332A24) : Colors.grey.shade300,
                                   disabledForegroundColor: Colors.grey.shade500,
-                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                                   elevation: 3,
                                   shadowColor: (selectedDirection == 'downgrade' ? const Color(0xFF22C55E) : AppTheme.primaryColor).withValues(alpha: 0.4),

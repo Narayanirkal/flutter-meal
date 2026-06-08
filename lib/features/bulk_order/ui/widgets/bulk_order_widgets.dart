@@ -86,12 +86,46 @@ class BulkDeliveryDateTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      title: const Text('Delivery date'),
-      subtitle: Text(deliveryDate ?? 'Select date'),
-      trailing: enabled ? const Icon(CupertinoIcons.calendar) : null,
-      onTap: enabled ? onTap : null,
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDark ? Colors.white.withValues(alpha: 0.15) : Colors.grey.shade300,
+        ),
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+        title: Text(
+          'Delivery date',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: isDark ? Colors.white70 : AppTheme.textSecondaryLight,
+          ),
+        ),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 4.0),
+          child: Text(
+            deliveryDate ?? 'Select date',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: deliveryDate != null
+                  ? (isDark ? Colors.white : AppTheme.textPrimaryLight)
+                  : (isDark ? Colors.white38 : Colors.grey.shade400),
+            ),
+          ),
+        ),
+        trailing: enabled
+            ? Icon(
+                CupertinoIcons.calendar,
+                color: isDark ? Colors.white70 : AppTheme.textPrimaryLight,
+              )
+            : null,
+        onTap: enabled ? onTap : null,
+      ),
     );
   }
 }

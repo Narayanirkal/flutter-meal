@@ -812,12 +812,12 @@ class _BottomPayBar extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
           child: SizedBox(
             width: double.infinity,
-            height: 52,
+            height: 56,
             child: FilledButton(
               onPressed: isLoading ? null : onPay,
               style: FilledButton.styleFrom(
                 minimumSize: const Size(double.infinity, 56),
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
               ),
               child: isLoading
