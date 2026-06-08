@@ -72,8 +72,10 @@ class TeacherProfileModel {
       'meal_time': mealTime,
       'standard_id': standardId,
       'standardId': standardId,
+      'standard_name': standardName,
       'division_id': divisionId,
       'divisionId': divisionId,
+      'division_name': divisionName,
     };
   }
 }
@@ -125,6 +127,7 @@ class ProfessionalProfileModel {
       'name': name,
       'company_name': companyName,
       'corporate_location_id': corporateLocationId,
+      'corporate_location_name': corporateLocationName,
       'city': city,
       'state': state,
       'lunch_time': lunchTime,

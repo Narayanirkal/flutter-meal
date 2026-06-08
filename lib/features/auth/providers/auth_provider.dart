@@ -7,6 +7,7 @@ import 'package:meal_app/features/auth/data/models/auth_api_exception.dart';
 import 'package:meal_app/features/auth/data/models/otp_send_result.dart';
 import 'package:meal_app/features/auth/data/repositories/auth_repository.dart';
 import 'package:meal_app/core/services/offline_cache_bootstrap.dart';
+import 'package:meal_app/core/storage/cache_store.dart';
 
 enum AuthState { initial, loading, authenticated, unauthenticated, error }
 enum AuthMode { login, register }
@@ -36,6 +37,7 @@ class AuthProvider with ChangeNotifier {
   int _mealsReward = 2;
   int _pendingRewardsCount = 0;
   List<dynamic> _pendingRewardsList = [];
+  String _signupReferralCode = '';
 
   AuthProvider(this._authRepository) {
     _checkAuthStatus();
@@ -65,6 +67,7 @@ class AuthProvider with ChangeNotifier {
     if (_state != AuthState.authenticated) {
       _state = AuthState.unauthenticated;
     }
+    _signupReferralCode = '';
     notifyListeners();
   }
 
@@ -77,6 +80,7 @@ class AuthProvider with ChangeNotifier {
     _authMode = mode;
     _errorMessage = '';
     _consentAccepted = false;
+    _signupReferralCode = '';
     if (_state != AuthState.authenticated) {
       _state = AuthState.unauthenticated;
     }
@@ -177,7 +181,7 @@ class AuthProvider with ChangeNotifier {
       final OtpSendResult result;
       if (_authMode == AuthMode.register) {
         result = await _withAuthTimeout(
-          _authRepository.registerSendOtp(_phoneNumber, _username, _consentAccepted),
+          _authRepository.registerSendOtp(_phoneNumber, _username, _consentAccepted, referralCode: _signupReferralCode),
         );
       } else {
         result = await _withAuthTimeout(_authRepository.loginSendOtp(_phoneNumber));
@@ -243,17 +247,18 @@ class AuthProvider with ChangeNotifier {
 
   // ─── REGISTER FLOW ────────────────────────────────────────────────────────
 
-  Future<bool> registerSendOtp(String phone, String username, bool consentAccepted) async {
+  Future<bool> registerSendOtp(String phone, String username, bool consentAccepted, {String? referralCode}) async {
     _state = AuthState.loading;
     _errorMessage = '';
     _phoneNumber = phone;
     _username = username;
     _consentAccepted = consentAccepted;
+    _signupReferralCode = referralCode ?? '';
     notifyListeners();
 
     try {
       final result = await _withAuthTimeout(
-        _authRepository.registerSendOtp(phone, username, consentAccepted),
+        _authRepository.registerSendOtp(phone, username, consentAccepted, referralCode: referralCode),
       );
       _applyOtpSendMeta(
         maxVerifyAttempts: result.maxVerifyAttempts,
@@ -282,7 +287,7 @@ class AuthProvider with ChangeNotifier {
 
     try {
       final success =
-          await _withAuthTimeout(_authRepository.registerVerifyOtp(_phoneNumber, _username, code, _consentAccepted));
+          await _withAuthTimeout(_authRepository.registerVerifyOtp(_phoneNumber, _username, code, _consentAccepted, referralCode: _signupReferralCode));
       if (success) {
         _consentAccepted = false;
         markPendingDashboardRefresh();
@@ -321,6 +326,7 @@ class AuthProvider with ChangeNotifier {
     }
     
     OfflineCacheBootstrap.resetSession();
+    await CacheStore.clearAll();
     _state = AuthState.unauthenticated;
     _phoneNumber = '';
     _username = '';

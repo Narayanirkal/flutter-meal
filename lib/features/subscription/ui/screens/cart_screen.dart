@@ -459,7 +459,7 @@ class _CartScreenState extends State<CartScreen> {
             width: double.infinity,
             child: ElevatedButton(
               onPressed: cartProvider.isLoading ? null : () => _handleCheckout(context, cartProvider),
-              style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 18), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18))),
+              style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18))),
               child: Text(
                 _amountDueNow(cartProvider) <= 0.009 && _useWallet
                     ? 'Complete with wallet'

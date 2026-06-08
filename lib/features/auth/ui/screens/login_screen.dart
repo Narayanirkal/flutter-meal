@@ -22,11 +22,13 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _phoneController = TextEditingController();
   final _usernameController = TextEditingController();
+  final _referralController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   final _scrollController = ScrollController();
   final _phoneFocusNode = FocusNode();
   final _usernameFocusNode = FocusNode();
   bool _consentAccepted = false;
+  bool _showReferralField = false;
 
   @override
   void initState() {
@@ -76,6 +78,7 @@ class _LoginScreenState extends State<LoginScreen> {
   void dispose() {
     _phoneController.dispose();
     _usernameController.dispose();
+    _referralController.dispose();
     _scrollController.dispose();
     _phoneFocusNode.dispose();
     _usernameFocusNode.dispose();
@@ -129,10 +132,12 @@ class _LoginScreenState extends State<LoginScreen> {
       final provider = Provider.of<AuthProvider>(context, listen: false);
       final completePhoneNumber = '+91${_phoneController.text.trim()}';
       final username = _usernameController.text.trim();
+      final referralCode = _showReferralField ? _referralController.text.trim() : null;
       final success = await provider.registerSendOtp(
         completePhoneNumber,
         username,
         _consentAccepted,
+        referralCode: referralCode,
       );
 
       if (success && mounted) {
@@ -145,7 +150,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _setMode(AuthMode mode) {
     context.read<AuthProvider>().setAuthMode(mode);
-    setState(() => _consentAccepted = false);
+    setState(() {
+      _consentAccepted = false;
+      _showReferralField = false;
+    });
+    _referralController.clear();
     _formKey.currentState?.reset();
   }
 
@@ -224,10 +233,10 @@ class _LoginScreenState extends State<LoginScreen> {
                           children: [
                             Text(
                               isRegisterMode ? 'Create account' : 'Welcome back',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.w600,
-                                color: Color(0xFF1B1C1C),
+                                color: isDark ? AppTheme.textPrimaryDark : const Color(0xFF1B1C1C),
                               ),
                             ),
                             const SizedBox(height: 4),
@@ -235,9 +244,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               isRegisterMode
                                   ? 'Enter your WhatsApp number and username to continue with your healthy meal journey.'
                                   : 'Enter your WhatsApp number to continue with your healthy meal journey.',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 14,
-                                color: Color(0xFF584235),
+                                color: isDark ? AppTheme.textSecondaryDark : const Color(0xFF584235),
                               ),
                             ),
                           ],
@@ -264,6 +273,49 @@ class _LoginScreenState extends State<LoginScreen> {
                         // Phone Input
                         _buildPhoneInput(),
                         const SizedBox(height: 16),
+                        // Referral Code (Register Mode)
+                        if (isRegisterMode) ...[
+                          if (!_showReferralField)
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: TextButton.icon(
+                                onPressed: () {
+                                  setState(() {
+                                    _showReferralField = true;
+                                  });
+                                },
+                                style: TextButton.styleFrom(
+                                  padding: EdgeInsets.zero,
+                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                ),
+                                icon: Icon(Icons.redeem, size: 16, color: isDark ? AppTheme.primaryColor : const Color(0xFF994700)),
+                                label: Text(
+                                  'Have a referral code?',
+                                  style: TextStyle(
+                                    color: isDark ? AppTheme.primaryColor : const Color(0xFF994700),
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
+                            )
+                          else ...[
+                            _buildMaterialInput(
+                              controller: _referralController,
+                              label: 'Referral Code',
+                              icon: Icons.card_giftcard,
+                              textCapitalization: TextCapitalization.characters,
+                              inputFormatters: [
+                                LengthLimitingTextInputFormatter(15),
+                                FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9]')),
+                              ],
+                              validator: (value) {
+                                return null;
+                              },
+                            ),
+                          ],
+                          const SizedBox(height: 16),
+                        ],
                         // Terms Checkbox (Register Mode)
                         if (isRegisterMode) ...[
                           Row(
@@ -284,8 +336,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                   padding: const EdgeInsets.only(top: 8.0),
                                   child: RichText(
                                     text: TextSpan(
-                                      style: const TextStyle(
-                                        color: Color(0xFF584235),
+                                      style: TextStyle(
+                                        color: isDark ? AppTheme.textSecondaryDark : const Color(0xFF584235),
                                         fontSize: 12.5,
                                         height: 1.35,
                                       ),
@@ -293,8 +345,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                         const TextSpan(text: 'I agree to the '),
                                         TextSpan(
                                           text: 'Terms & Conditions',
-                                          style: const TextStyle(
-                                            color: Color(0xFF994700),
+                                          style: TextStyle(
+                                            color: isDark ? AppTheme.primaryColor : const Color(0xFF994700),
                                             fontWeight: FontWeight.bold,
                                             decoration: TextDecoration.underline,
                                           ),
@@ -312,8 +364,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                         const TextSpan(text: ' and '),
                                         TextSpan(
                                           text: 'Privacy Policy',
-                                          style: const TextStyle(
-                                            color: Color(0xFF994700),
+                                          style: TextStyle(
+                                            color: isDark ? AppTheme.primaryColor : const Color(0xFF994700),
                                             fontWeight: FontWeight.bold,
                                             decoration: TextDecoration.underline,
                                           ),
@@ -368,7 +420,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                       Text(
                                         isRegisterMode ? 'Create Account' : 'Get OTP',
                                         style: const TextStyle(
-                                          fontSize: 20,
+                                          fontSize: 18,
                                           fontWeight: FontWeight.w600,
                                         ),
                                       ),
@@ -387,15 +439,15 @@ class _LoginScreenState extends State<LoginScreen> {
                                 text: isRegisterMode
                                     ? 'Already have an account? '
                                     : 'New to Buuttii? ',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 14,
-                                  color: Color(0xFF584235),
+                                  color: isDark ? AppTheme.textSecondaryDark : const Color(0xFF584235),
                                 ),
                                 children: [
                                   TextSpan(
                                     text: isRegisterMode ? 'Login' : 'Register',
-                                    style: const TextStyle(
-                                      color: Color(0xFF994700),
+                                    style: TextStyle(
+                                      color: isDark ? AppTheme.primaryColor : const Color(0xFF994700),
                                       fontWeight: FontWeight.bold,
                                     ),
                                     recognizer: TapGestureRecognizer()
@@ -428,27 +480,33 @@ class _LoginScreenState extends State<LoginScreen> {
     FocusNode? focusNode,
     TextInputType? keyboardType,
     TextInputAction? textInputAction,
+    List<TextInputFormatter>? inputFormatters,
+    TextCapitalization textCapitalization = TextCapitalization.none,
     String? Function(String?)? validator,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFF6F3F2),
+        color: isDark ? AppTheme.surfaceDark : const Color(0xFFF6F3F2),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFF8C7263)),
+        border: Border.all(color: isDark ? AppTheme.borderDark : const Color(0xFF8C7263)),
       ),
       child: TextFormField(
         controller: controller,
         focusNode: focusNode,
         keyboardType: keyboardType,
         textInputAction: textInputAction,
+        inputFormatters: inputFormatters,
+        textCapitalization: textCapitalization,
         validator: validator,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w400,
+          color: isDark ? AppTheme.textPrimaryDark : const Color(0xFF1B1C1C),
         ),
         decoration: InputDecoration(
           hintText: label,
-          prefixIcon: Icon(icon, color: const Color(0xFF584235)),
+          prefixIcon: Icon(icon, color: isDark ? AppTheme.textSecondaryDark : const Color(0xFF584235)),
           border: InputBorder.none,
           enabledBorder: InputBorder.none,
           focusedBorder: InputBorder.none,
@@ -457,8 +515,8 @@ class _LoginScreenState extends State<LoginScreen> {
           filled: false,
           isCollapsed: true,
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          hintStyle: const TextStyle(
-            color: Color(0xFF584235),
+          hintStyle: TextStyle(
+            color: isDark ? AppTheme.textSecondaryDark.withOpacity(0.6) : const Color(0xFF584235),
             fontSize: 16,
             fontWeight: FontWeight.w400,
           ),
@@ -468,11 +526,12 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _buildPhoneInput() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFF6F3F2),
+        color: isDark ? AppTheme.surfaceDark : const Color(0xFFF6F3F2),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFF8C7263)),
+        border: Border.all(color: isDark ? AppTheme.borderDark : const Color(0xFF8C7263)),
       ),
       child: Row(
         children: [
@@ -481,17 +540,17 @@ class _LoginScreenState extends State<LoginScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             decoration: BoxDecoration(
               border: Border(
-                right: BorderSide(color: const Color(0xFFE0C0AF)),
+                right: BorderSide(color: isDark ? AppTheme.borderDark : const Color(0xFFE0C0AF)),
               ),
             ),
             child: Row(
               children: [
-                const Text(
+                Text(
                   '+91',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
-                    color: Color(0xFF1B1C1C),
+                    color: isDark ? AppTheme.textPrimaryDark : const Color(0xFF1B1C1C),
                   ),
                 ),
               ],
@@ -516,12 +575,13 @@ class _LoginScreenState extends State<LoginScreen> {
                 }
                 return null;
               },
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0.5,
+                color: isDark ? AppTheme.textPrimaryDark : const Color(0xFF1B1C1C),
               ),
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 hintText: 'Phone Number',
                 border: InputBorder.none,
                 enabledBorder: InputBorder.none,
@@ -530,10 +590,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 focusedErrorBorder: InputBorder.none,
                 filled: false,
                 isCollapsed: true,
-                contentPadding: EdgeInsets.symmetric(horizontal: 16),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16),
                 counterText: '',
                 hintStyle: TextStyle(
-                  color: Color(0xFF584235),
+                  color: isDark ? AppTheme.textSecondaryDark.withOpacity(0.6) : const Color(0xFF584235),
                   fontSize: 16,
                   fontWeight: FontWeight.w400,
                 ),

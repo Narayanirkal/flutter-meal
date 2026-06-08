@@ -91,40 +91,31 @@ class _MealSkipScreenState extends State<MealSkipScreen> {
           children: [
             // Custom Header with rounded bottom corners
             Container(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
               decoration: BoxDecoration(
                 color: isDark ? Colors.black26 : const Color(0xFFF3EBE0),
-                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(32)),
+                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
               ),
-              child: Column(
+              child: Row(
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      IconButton(
-                        icon: const Icon(CupertinoIcons.back, color: Color(0xFF8B7A66)),
-                        onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
-                      ),
-                      Text(
-                        'Buuttii',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w900,
-                          color: AppTheme.primaryColor,
-                        ),
-                      ),
-                      const SizedBox(width: 48),
-                    ],
+                  IconButton(
+                    icon: const Icon(CupertinoIcons.back, color: Color(0xFF8B7A66)),
+                    onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
                   ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Meal Skips',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w800,
-                      color: isDark ? Colors.white : const Color(0xFF5A4D42),
+                  Expanded(
+                    child: Text(
+                      'Meal Skips',
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                        color: isDark ? Colors.white : const Color(0xFF5A4D42),
+                      ),
                     ),
                   ),
+                  const SizedBox(width: 48),
                 ],
               ),
             ),
@@ -593,57 +584,75 @@ class _MealSkipScreenState extends State<MealSkipScreen> {
                 Text('Skip Dates', style: TextStyle(fontWeight: FontWeight.w700, color: isDark ? Colors.white : AppTheme.textPrimaryLight)),
                 const SizedBox(height: 8),
                 InkWell(
-                  onTap: () async {
-                    final tomorrow = DateTime.now().add(Duration(days: minNoticeDays));
-                    // Cap lastDate to subscription expiry for the selected entity
-                    final expiry = selectedEntity != null ? resolveEntityExpiry(selectedEntity!) : null;
-                    final lastDate = expiry != null
-                        ? (expiry.isBefore(tomorrow.add(const Duration(days: 90))) ? expiry : tomorrow.add(const Duration(days: 90)))
-                        : tomorrow.add(const Duration(days: 90));
+                  onTap: selectedEntity == null
+                      ? null
+                      : () async {
+                          final tomorrow = DateTime.now().add(Duration(days: minNoticeDays));
+                          // Cap lastDate to subscription expiry for the selected entity
+                          final expiry = resolveEntityExpiry(selectedEntity!);
+                          final lastDate = expiry != null
+                              ? (expiry.isBefore(tomorrow.add(const Duration(days: 90))) ? expiry : tomorrow.add(const Duration(days: 90)))
+                              : tomorrow.add(const Duration(days: 90));
 
-                    if (expiry != null && expiry.isBefore(tomorrow)) {
-                      setSheetState(() => sheetError = 'Your subscription for this profile has expired.');
-                      return;
-                    }
+                          if (expiry != null && expiry.isBefore(tomorrow)) {
+                            setSheetState(() => sheetError = 'Your subscription for this profile has expired.');
+                            return;
+                          }
 
-                    final range = await showDateRangePicker(
-                      context: sheetCtx,
-                      firstDate: tomorrow,
-                      lastDate: lastDate,
-                      helpText: expiry != null
-                          ? 'Select skip range (max: ${DateFormat('dd MMM yyyy').format(expiry)})'
-                          : 'Select skip range (min 3 days)',
-                    );
-                    if (range != null) {
-                      final days = range.end.difference(range.start).inDays + 1;
-                      if (days < minSkipDays) {
-                        setSheetState(() => sheetError = 'Minimum $minSkipDays consecutive days required');
-                        return;
-                      }
-                      setSheetState(() {
-                        selectedRange = range;
-                        sheetError = null;
-                      });
-                    }
-                  },
+                          final range = await showDateRangePicker(
+                            context: sheetCtx,
+                            firstDate: tomorrow,
+                            lastDate: lastDate,
+                            helpText: expiry != null
+                                ? 'Select skip range (max: ${DateFormat('dd MMM yyyy').format(expiry)})'
+                                : 'Select skip range (min 3 days)',
+                          );
+                          if (range != null) {
+                            final days = range.end.difference(range.start).inDays + 1;
+                            if (days < minSkipDays) {
+                              setSheetState(() => sheetError = 'Minimum $minSkipDays consecutive days required');
+                              return;
+                            }
+                            setSheetState(() {
+                              selectedRange = range;
+                              sheetError = null;
+                            });
+                          }
+                        },
                   child: Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: isDark ? AppTheme.surfaceDark : Colors.grey.withValues(alpha: 0.05),
+                      color: selectedEntity == null
+                          ? (isDark ? Colors.white.withValues(alpha: 0.02) : Colors.grey.shade100)
+                          : (isDark ? AppTheme.surfaceDark : const Color(0xFFFDEEE8)),
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: isDark ? Colors.white10 : Colors.grey.withValues(alpha: 0.2)),
+                      border: Border.all(
+                        color: selectedEntity == null
+                            ? (isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.shade300)
+                            : (isDark ? AppTheme.primaryColor.withValues(alpha: 0.4) : AppTheme.primaryColor.withValues(alpha: 0.3)),
+                        width: selectedEntity == null ? 1.0 : 1.5,
+                      ),
                     ),
                     child: Row(
                       children: [
-                        const Icon(CupertinoIcons.calendar, color: AppTheme.primaryColor),
+                        Icon(
+                          CupertinoIcons.calendar,
+                          color: selectedEntity == null
+                              ? (isDark ? Colors.white24 : Colors.grey.shade400)
+                              : AppTheme.primaryColor,
+                        ),
                         const SizedBox(width: 12),
                         Text(
                           selectedRange != null
                               ? '${DateFormat('dd MMM').format(selectedRange!.start)} - ${DateFormat('dd MMM yyyy').format(selectedRange!.end)}'
                               : (selectedEntity == null ? 'Select a profile first' : 'Tap to select date range'),
                           style: TextStyle(
-                            color: selectedRange != null ? (isDark ? Colors.white : AppTheme.textPrimaryLight) : Colors.grey,
-                            fontWeight: FontWeight.w600,
+                            color: selectedRange != null
+                                ? (isDark ? Colors.white : AppTheme.textPrimaryLight)
+                                : (selectedEntity == null
+                                    ? (isDark ? Colors.white24 : Colors.grey.shade400)
+                                    : AppTheme.primaryColor),
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ],

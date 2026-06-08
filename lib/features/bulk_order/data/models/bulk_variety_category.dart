@@ -25,4 +25,13 @@ class BulkVarietyCategory {
       mealCount: int.tryParse('${json['meal_count'] ?? 0}') ?? 0,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'description': description,
+        'image_url': imageUrl,
+        'sort_order': sortOrder,
+        'meal_count': mealCount,
+      };
 }

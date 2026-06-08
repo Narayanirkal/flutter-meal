@@ -90,7 +90,7 @@ class _QuickOrderSectionState extends State<QuickOrderSection> {
                   todayPrice: todayPrice,
                   nextDayPrice: nextDayPrice,
                   cutoff: cutoff,
-                  enabled: cfg != null && !provider.isLoading,
+                  enabled: true,
                   onOrder: () {
                     Navigator.push(
                       context,

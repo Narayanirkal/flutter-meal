@@ -61,29 +61,12 @@ class LookupProvider with ChangeNotifier {
   Future<void> _persistCache() async {
     await CacheStore.setJson(_cacheKey, {
       'schools': _schools.map((e) => e.toJson()).toList(),
-      'standards': _standards
-          .map((e) => {'id': e.id, 'name': e.name, 'display_name': e.displayName})
-          .toList(),
+      'standards': _standards.map((e) => e.toJson()).toList(),
       'divisions': _divisions.map((e) => e.toJson()).toList(),
-      'mealSizes': _mealSizes
-          .map((e) => {
-                'id': e.id,
-                'name': e.name,
-                'display_name': e.displayName,
-                'sort_order': e.sortOrder,
-              })
-          .toList(),
-      'corporateLocations': _corporateLocations
-          .map((e) => {
-                'id': e.id,
-                'name': e.name,
-                'address': e.address,
-                'city': e.city,
-                'state': e.state,
-              })
-          .toList(),
+      'mealSizes': _mealSizes.map((e) => e.toJson()).toList(),
+      'corporateLocations': _corporateLocations.map((e) => e.toJson()).toList(),
       'subscriptions': _subscriptions,
-      'states': _states.map((e) => {'id': e.id, 'name': e.name}).toList(),
+      'states': _states.map((e) => e.toJson()).toList(),
       'deliveryTimeSettings': _deliveryTimeSettings?.toJson(),
       'contactUsInfo': _contactUsInfo?.toJson(),
     }, ttl: const Duration(days: 7));
@@ -120,13 +103,17 @@ class LookupProvider with ChangeNotifier {
 
 
   Future<void> fetchInitialData({bool force = false}) async {
+    if (!NetworkStatusService.instance.isOnline) {
+      if (_schools.isNotEmpty) return;
+      await _loadFromCache();
+      return;
+    }
     final isFresh = _lastFetchedAt != null && DateTime.now().difference(_lastFetchedAt!).inMinutes < 60;
     final canUseFreshOnly =
         !force &&
         _schools.isNotEmpty &&
         _standards.isNotEmpty &&
-        isFresh &&
-        !NetworkStatusService.instance.isOnline;
+        isFresh;
     if (canUseFreshOnly) return;
     if (_inflightInitialRequest != null) return _inflightInitialRequest;
     if (_isLoading) return;

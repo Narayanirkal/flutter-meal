@@ -38,7 +38,6 @@ class ReferEarnScreen extends StatefulWidget {
 }
 
 class _ReferEarnScreenState extends State<ReferEarnScreen> {
-  final TextEditingController _codeController = TextEditingController();
   CandidateProfile? _selectedCandidate;
   bool _isActionLoading = false;
 
@@ -53,7 +52,6 @@ class _ReferEarnScreenState extends State<ReferEarnScreen> {
 
   @override
   void dispose() {
-    _codeController.dispose();
     super.dispose();
   }
 
@@ -95,60 +93,6 @@ class _ReferEarnScreenState extends State<ReferEarnScreen> {
     Share.share(text);
   }
 
-  Future<void> _applyCode() async {
-    final code = _codeController.text.trim();
-    if (code.isEmpty) {
-      ErrorHandler.showError(context, 'Please enter a referral code.');
-      return;
-    }
-
-    setState(() => _isActionLoading = true);
-
-    try {
-      final referralProvider = context.read<ReferralProvider>();
-      final success = await referralProvider.applyCode(code);
-      if (success) {
-        _codeController.clear();
-        if (mounted) {
-          showDialog(
-            context: context,
-            builder: (ctx) => AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              title: const Row(
-                children: [
-                  Icon(CupertinoIcons.checkmark_seal_fill, color: AppTheme.primaryColor, size: 28),
-                  SizedBox(width: 10),
-                  Text('Code Applied!'),
-                ],
-              ),
-              content: const Text(
-                'Referral code has been successfully applied! Once you purchase your first subscription, your referrer will get their extra meals.',
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(ctx);
-                    _refreshAllData(silent: true);
-                  },
-                  child: const Text('OK', style: TextStyle(color: AppTheme.primaryColor, fontWeight: FontWeight.bold)),
-                ),
-              ],
-            ),
-          );
-        }
-      } else {
-        if (mounted) {
-          ErrorHandler.showError(context, referralProvider.errorMessage ?? 'Failed to apply referral code.');
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ErrorHandler.showError(context, e.toString());
-      }
-    } finally {
-      if (mounted) setState(() => _isActionLoading = false);
-    }
-  }
 
   Future<void> _claimReward(int rewardId) async {
     if (_selectedCandidate == null) {
@@ -217,7 +161,6 @@ class _ReferEarnScreenState extends State<ReferEarnScreen> {
     final referralProvider = context.watch<ReferralProvider>();
 
     final referralCode = authProvider.referralCode;
-    final referredById = authProvider.referredById;
     final mealsReward = authProvider.mealsReward;
     
     // Build candidate profiles
@@ -307,11 +250,6 @@ class _ReferEarnScreenState extends State<ReferEarnScreen> {
                   const SizedBox(height: 24),
                 ],
 
-                // 4. Enter Code Section (Only for new users with no referrer)
-                if (referredById == null || referredById.isEmpty) ...[
-                  _buildApplyCodeCard(isDark),
-                  const SizedBox(height: 24),
-                ],
 
                 // 5. How it works guide
                 _buildHowItWorks(mealsReward, isDark),
@@ -659,77 +597,6 @@ class _ReferEarnScreenState extends State<ReferEarnScreen> {
     ).animate().fadeIn(delay: 200.ms, duration: 400.ms);
   }
 
-  Widget _buildApplyCodeCard(bool isDark) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: isDark ? AppTheme.surfaceDark : Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: isDark ? Colors.white10 : Colors.grey.withValues(alpha: 0.1),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'HAVE A REFERRAL CODE?',
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 1.2,
-              color: isDark ? Colors.grey : AppTheme.textSecondaryLight,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'Enter referral code below to link your account before subscribing.',
-            style: TextStyle(
-              fontSize: 13,
-              color: isDark ? Colors.white60 : AppTheme.textSecondaryLight,
-            ),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _codeController,
-            textCapitalization: TextCapitalization.characters,
-            inputFormatters: [
-              LengthLimitingTextInputFormatter(15),
-              FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9]')),
-            ],
-            decoration: InputDecoration(
-              hintText: 'ENTER CODE (e.g. ABC123XY)',
-              prefixIcon: const Icon(CupertinoIcons.ticket_fill, size: 20),
-              contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: _applyCode,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryColor,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              ),
-              child: const Text('Apply Code'),
-            ),
-          ),
-        ],
-      ),
-    ).animate().fadeIn(delay: 250.ms, duration: 400.ms);
-  }
 
   Widget _buildHowItWorks(int mealsReward, bool isDark) {
     return Container(
@@ -762,7 +629,7 @@ class _ReferEarnScreenState extends State<ReferEarnScreen> {
           _buildStepRow(
             '2',
             'Friend Subscribes',
-            'Your friend applies the code and purchases a regular plan subscription.',
+            'Your friend enters your code during registration and purchases a regular plan subscription.',
             isDark,
           ),
           const SizedBox(height: 16),

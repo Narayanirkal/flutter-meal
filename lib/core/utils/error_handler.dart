@@ -1,4 +1,4 @@
-import 'dart:async' show TimeoutException;
+import 'dart:async' show TimeoutException, Timer;
 import 'dart:io' show SocketException;
 
 import 'package:dio/dio.dart';
@@ -127,6 +127,9 @@ class ErrorHandler {
     if (code == 404) {
       return 'We could not find what you asked for. Please try again.';
     }
+    if (code == 429) {
+      return 'Too many requests. Please try again later.';
+    }
     if (code == 422) {
       return 'Some information could not be accepted. Please check and try again.';
     }
@@ -179,80 +182,98 @@ class ErrorHandler {
         raw.contains('connection closed before full header was received');
   }
 
+  static OverlayEntry? _activeEntry;
+
   /// Use when storing a string error on a provider (e.g. cart) for UI display.
   static String userFacing(Object? error) => getErrorMessage(error);
 
-  /// Red snackbar for validation / blocked actions (meal size, etc.).
+  /// Red snackbar/toast for validation / blocked actions (meal size, etc.).
   static void showValidationError(BuildContext context, String message) {
-    final messenger = _rootMessenger(context);
-    messenger.clearSnackBars();
-    messenger.showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.error_outline, color: Colors.white),
-            const SizedBox(width: 12),
-            Expanded(child: Text(message)),
-          ],
-        ),
-        backgroundColor: Colors.red.shade700,
-        behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.all(16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        duration: const Duration(seconds: 4),
-      ),
+    _showOverlayToast(
+      context,
+      message,
+      backgroundColor: Colors.red.shade700,
+      icon: Icons.error_outline,
     );
   }
 
-  /// Shows an error snackbar.
-  /// Always clears previous snackbars first to prevent stacking.
-  /// Uses the root navigator's ScaffoldMessenger so the snackbar is visible
-  /// even when called from inside a modal bottom sheet.
+  /// Shows an error toast.
   static void showError(BuildContext context, dynamic error) {
     final message = getErrorMessage(error);
-    final messenger = _rootMessenger(context);
-    messenger.clearSnackBars();
-    messenger.showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.error_outline, color: Colors.white),
-            const SizedBox(width: 12),
-            Expanded(child: Text(message)),
-          ],
-        ),
-        backgroundColor: AppTheme.accentColor,
-        behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.all(16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        duration: const Duration(seconds: 3),
-      ),
+    _showOverlayToast(
+      context,
+      message,
+      backgroundColor: AppTheme.accentColor,
+      icon: Icons.error_outline,
     );
   }
 
-  /// Shows a success snackbar.
-  /// Always clears previous snackbars first to prevent stacking.
-  /// Uses the root navigator's ScaffoldMessenger so the snackbar is visible
-  /// even when called from inside a modal bottom sheet.
+  /// Shows a success toast.
   static void showSuccess(BuildContext context, String message) {
-    final messenger = _rootMessenger(context);
-    messenger.clearSnackBars();
-    messenger.showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            const Icon(Icons.check_circle_outline, color: Colors.white),
-            const SizedBox(width: 12),
-            Expanded(child: Text(message)),
-          ],
-        ),
-        backgroundColor: Colors.green,
-        behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.all(16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        duration: const Duration(seconds: 3),
-      ),
+    _showOverlayToast(
+      context,
+      message,
+      backgroundColor: Colors.green.shade700,
+      icon: Icons.check_circle_outline,
     );
+  }
+
+  static void _showOverlayToast(
+    BuildContext context,
+    String message, {
+    required Color backgroundColor,
+    required IconData icon,
+  }) {
+    if (!context.mounted) return;
+    try {
+      final overlay = Overlay.of(context, rootOverlay: true);
+      
+      if (_activeEntry != null) {
+        try {
+          _activeEntry!.remove();
+        } catch (_) {}
+        _activeEntry = null;
+      }
+
+      late OverlayEntry entry;
+      entry = OverlayEntry(
+        builder: (context) => _OverlayToast(
+          message: message,
+          backgroundColor: backgroundColor,
+          icon: icon,
+          onDismiss: () {
+            try {
+              if (_activeEntry == entry) {
+                entry.remove();
+                _activeEntry = null;
+              }
+            } catch (_) {}
+          },
+        ),
+      );
+
+      _activeEntry = entry;
+      overlay.insert(entry);
+    } catch (_) {
+      // Fallback to standard ScaffoldMessenger if Overlay lookup fails
+      final messenger = ScaffoldMessenger.maybeOf(context);
+      if (messenger != null) {
+        messenger.clearSnackBars();
+        messenger.showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(icon, color: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(child: Text(message)),
+              ],
+            ),
+            backgroundColor: backgroundColor,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
   }
 
   /// Resolves the topmost [ScaffoldMessengerState] by walking up via the root
@@ -270,3 +291,130 @@ class ErrorHandler {
     return ScaffoldMessenger.of(context);
   }
 }
+
+class _OverlayToast extends StatefulWidget {
+  final String message;
+  final Color backgroundColor;
+  final IconData icon;
+  final VoidCallback onDismiss;
+
+  const _OverlayToast({
+    required this.message,
+    required this.backgroundColor,
+    required this.icon,
+    required this.onDismiss,
+  });
+
+  @override
+  State<_OverlayToast> createState() => _OverlayToastState();
+}
+
+class _OverlayToastState extends State<_OverlayToast> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _yAnimation;
+  late Animation<double> _opacityAnimation;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+
+    _yAnimation = Tween<double>(begin: -80, end: 0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic),
+    );
+
+    _opacityAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeIn),
+    );
+
+    _controller.forward();
+
+    _timer = Timer(const Duration(seconds: 4), () {
+      _dismiss();
+    });
+  }
+
+  void _dismiss() {
+    if (mounted) {
+      _controller.reverse().then((_) {
+        widget.onDismiss();
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final mediaQuery = MediaQuery.of(context);
+    final bottomPadding = mediaQuery.padding.bottom + 16;
+
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Positioned(
+          bottom: bottomPadding + _yAnimation.value,
+          left: 16,
+          right: 16,
+          child: Opacity(
+            opacity: _opacityAnimation.value,
+            child: child,
+          ),
+        );
+      },
+      child: GestureDetector(
+        onTap: _dismiss,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 550),
+            child: Material(
+              color: Colors.transparent,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: widget.backgroundColor,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.16),
+                      blurRadius: 12,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                child: Row(
+                  children: [
+                    Icon(widget.icon, color: Colors.white, size: 22),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        widget.message,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Icon(Icons.close, color: Colors.white70, size: 16),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+///

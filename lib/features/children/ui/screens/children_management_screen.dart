@@ -86,43 +86,34 @@ class _ChildrenManagementScreenState extends State<ChildrenManagementScreen> {
           children: [
             // Custom Header with rounded bottom corners
             Container(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
               decoration: BoxDecoration(
                 color: isDark ? Colors.black26 : const Color(0xFFF3EBE0),
-                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(32)),
+                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
               ),
-              child: Column(
+              child: Row(
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      IconButton(
-                        icon: const Icon(CupertinoIcons.back, color: Color(0xFF8B7A66)),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                      Text(
-                        'Buuttii',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w900,
-                          color: AppTheme.primaryColor,
-                        ),
-                      ),
-                      CircleAvatar(
-                        radius: 18,
-                        backgroundColor: isDark ? Colors.white12 : Colors.black12,
-                        child: const Icon(CupertinoIcons.person_fill, color: Colors.white, size: 20),
-                      ),
-                    ],
+                  IconButton(
+                    icon: const Icon(CupertinoIcons.back, color: Color(0xFF8B7A66)),
+                    onPressed: () => Navigator.pop(context),
                   ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Manage Children',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w800,
-                      color: isDark ? Colors.white : const Color(0xFF5A4D42),
+                  Expanded(
+                    child: Text(
+                      'Manage Children',
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                        color: isDark ? Colors.white : const Color(0xFF5A4D42),
+                      ),
                     ),
+                  ),
+                  CircleAvatar(
+                    radius: 18,
+                    backgroundColor: isDark ? Colors.white12 : Colors.black12,
+                    child: const Icon(CupertinoIcons.person_fill, color: Colors.white, size: 20),
                   ),
                 ],
               ),
@@ -840,21 +831,6 @@ class _ChildFormState extends State<_ChildForm> {
               ),
               const SizedBox(height: 16),
               // 3. School — shows ALL active schools from GET /api/client/schools
-              ElevatedButton.icon(
-                onPressed: () => _openSupportWhatsApp(context),
-                icon: const Icon(CupertinoIcons.phone_fill, color: Colors.white, size: 16),
-                label: const Text("Can't find school? Chat on WhatsApp"),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF25D366),
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size(double.infinity, 48),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-                ),
-              ),
-              const SizedBox(height: 10),
               SearchableDropdown<SchoolModel>(
                 label: 'School/College',
                 items: lookup.schools,
@@ -891,6 +867,31 @@ class _ChildFormState extends State<_ChildForm> {
                     }
                   });
                 },
+              ),
+              const SizedBox(height: 8),
+              ElevatedButton.icon(
+                onPressed: () => _openSupportWhatsApp(context),
+                icon: const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Icon(Icons.chat_bubble, color: Colors.white, size: 20),
+                      Icon(Icons.phone, color: Color(0xFF25D366), size: 12),
+                    ],
+                  ),
+                ),
+                label: const Text("Can't find school? Chat on WhatsApp"),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF25D366),
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size(double.infinity, 48),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  textStyle: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                ),
               ),
               // Show school pickup timing info after school is selected
               if (_selectedSchool != null && _selectedSchool!.hasLunchBoxPickup) ...[

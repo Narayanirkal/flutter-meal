@@ -276,6 +276,8 @@ class _HomeScreenState extends State<HomeScreen> {
           Expanded(
             child: Text(
               'Buuttii',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 fontSize: 26,
                 fontWeight: FontWeight.w900,
@@ -308,150 +310,159 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildAnnouncementsButton(BuildContext context, bool isDark) {
     final unreadCount = context.watch<AnnouncementProvider>().getUnreadCountForLocation('home');
     
-    return Stack(
-      children: [
-        IconButton(
-          onPressed: () async {
-            // Force-refresh before navigating so the user sees the latest list
-            await context.read<AnnouncementProvider>()
-                .fetchAnnouncements(location: 'home', force: true);
-            if (!mounted) return;
-            Navigator.pushNamed(context, AppRoutes.announcements);
-          },
-          icon: Icon(
-            CupertinoIcons.bell,
-            color: isDark ? Colors.white : AppTheme.textPrimaryLight,
-            size: 24,
-          ),
-        ),
-        if (unreadCount > 0)
-          Positioned(
-            right: 0,
-            top: 0,
-            child: Container(
-              padding: const EdgeInsets.all(4),
-              decoration: BoxDecoration(
-                color: Colors.red,
-                shape: BoxShape.circle,
-              ),
-              constraints: const BoxConstraints(
-                minWidth: 18,
-                minHeight: 18,
-              ),
-              child: Text(
-                unreadCount > 9 ? '9+' : unreadCount.toString(),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-              ),
+    return GestureDetector(
+      onTap: () {
+        Navigator.pushNamed(context, AppRoutes.announcements);
+      },
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Icon(
+              CupertinoIcons.bell,
+              color: isDark ? Colors.white : AppTheme.textPrimaryLight,
+              size: 24,
             ),
-          ),
-      ],
+            if (unreadCount > 0)
+              Positioned(
+                right: -4,
+                top: -4,
+                child: Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryColor,
+                    shape: BoxShape.circle,
+                  ),
+                  constraints: const BoxConstraints(
+                    minWidth: 16,
+                    minHeight: 16,
+                  ),
+                  child: Text(
+                    unreadCount > 9 ? '9+' : unreadCount.toString(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 8,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 
   Widget _buildCartActionButton(BuildContext context) {
     final itemCount = context.watch<CartProvider>().itemCount;
     final badgeColor = Theme.of(context).colorScheme.error;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return IconButton(
-      onPressed: () {
+    return GestureDetector(
+      onTap: () {
         Navigator.push(
           context,
           CupertinoPageRoute(builder: (_) => const CartScreen()),
         );
       },
-      icon: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Icon(
-            CupertinoIcons.cart_fill,
-            size: 24,
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
-          if (itemCount > 0)
-            Positioned(
-              right: -8,
-              top: -6,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                constraints: const BoxConstraints(minWidth: 16),
-                decoration: BoxDecoration(
-                  color: badgeColor,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: Theme.of(context).scaffoldBackgroundColor,
-                    width: 1.5,
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Icon(
+              CupertinoIcons.cart_fill,
+              size: 24,
+              color: isDark ? Colors.white : AppTheme.textPrimaryLight,
+            ),
+            if (itemCount > 0)
+              Positioned(
+                right: -6,
+                top: -4,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                  constraints: const BoxConstraints(minWidth: 14, minHeight: 14),
+                  decoration: BoxDecoration(
+                    color: badgeColor,
+                    borderRadius: BorderRadius.circular(7),
+                    border: Border.all(
+                      color: Theme.of(context).scaffoldBackgroundColor,
+                      width: 1.2,
+                    ),
                   ),
-                ),
-                child: Text(
-                  itemCount > 99 ? '99+' : '$itemCount',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 9,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white,
+                  child: Text(
+                    itemCount > 99 ? '99+' : '$itemCount',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 8,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
-      tooltip: itemCount > 0 ? 'Cart ($itemCount)' : 'Cart',
     );
   }
 
   Widget _buildBulkCartActionButton(BuildContext context) {
     final count = context.watch<BulkOrderProvider>().bulkCartTotalMeals;
     final badgeColor = Theme.of(context).colorScheme.secondary;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return IconButton(
-      onPressed: () {
+    return GestureDetector(
+      onTap: () {
         Navigator.push(
           context,
           CupertinoPageRoute(builder: (_) => const BulkOrderCartScreen()),
         );
       },
-      icon: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          Icon(
-            CupertinoIcons.bag_fill,
-            size: 24,
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
-          if (count > 0)
-            Positioned(
-              right: -8,
-              top: -6,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
-                constraints: const BoxConstraints(minWidth: 16),
-                decoration: BoxDecoration(
-                  color: badgeColor,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: Theme.of(context).scaffoldBackgroundColor,
-                    width: 1.5,
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Icon(
+              CupertinoIcons.bag_fill,
+              size: 24,
+              color: isDark ? Colors.white : AppTheme.textPrimaryLight,
+            ),
+            if (count > 0)
+              Positioned(
+                right: -6,
+                top: -4,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                  constraints: const BoxConstraints(minWidth: 14, minHeight: 14),
+                  decoration: BoxDecoration(
+                    color: badgeColor,
+                    borderRadius: BorderRadius.circular(7),
+                    border: Border.all(
+                      color: Theme.of(context).scaffoldBackgroundColor,
+                      width: 1.2,
+                    ),
                   ),
-                ),
-                child: Text(
-                  count > 99 ? '99+' : '$count',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 9,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white,
+                  child: Text(
+                    count > 99 ? '99+' : '$count',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 8,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
-      tooltip: 'Bulk cart ($count)',
     );
   }
 
@@ -544,6 +555,162 @@ class _HomeScreenState extends State<HomeScreen> {
     .scale(duration: 2000.ms, begin: const Offset(1, 1), end: const Offset(1.02, 1.02), curve: Curves.easeInOut);
   }
 
+  String _formatUpcomingMessage(Map<String, dynamic> row) {
+    final startYmd = row['start_date']?.toString();
+    if (startYmd == null) return '';
+    final formattedDate = MealDate.formatDisplay(startYmd);
+
+    // Determine name
+    String name = '';
+    final rawName = row['entity_name'] ?? row['name'] ?? row['child_name'];
+    if (rawName != null && rawName.toString().trim().isNotEmpty) {
+      name = rawName.toString().trim();
+    } else {
+      final entityType = row['entity_type']?.toString();
+      final entityId = row['entity_id']?.toString();
+      if (entityType == 'child' && entityId != null) {
+        final child = context.read<ChildrenProvider>().children.where((c) => c.id?.toString() == entityId).firstOrNull;
+        if (child != null) name = child.name;
+      } else if (entityType == 'teacher') {
+        final tp = context.read<ProfileProvider>().teacherProfile;
+        if (tp != null) name = tp.name;
+      } else if (entityType == 'professional') {
+        final pp = context.read<ProfileProvider>().professionalProfile;
+        if (pp != null) name = pp.name;
+      }
+    }
+
+    if (name.isEmpty) {
+      name = 'Profile';
+    }
+
+    return "$name will start receiving meals from $formattedDate";
+  }
+
+  void _showAllUpcomingPlansSheet(BuildContext context, List<Map<String, dynamic>> upcomingRows, bool isDark) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: isDark ? AppTheme.backgroundDark : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.5,
+          minChildSize: 0.3,
+          maxChildSize: 0.9,
+          expand: false,
+          builder: (context, scrollController) {
+            return SafeArea(
+              child: Column(
+                children: [
+                  const SizedBox(height: 10),
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.withValues(alpha: 0.35),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Upcoming Plans',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w800,
+                            color: isDark ? Colors.white : AppTheme.textPrimaryLight,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(CupertinoIcons.xmark_circle_fill),
+                          onPressed: () => Navigator.pop(ctx),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(height: 1),
+                  Expanded(
+                    child: ListView.builder(
+                      controller: scrollController,
+                      padding: const EdgeInsets.all(20),
+                      itemCount: upcomingRows.length,
+                      itemBuilder: (context, index) {
+                        final row = upcomingRows[index];
+                        final message = _formatUpcomingMessage(row);
+                        final planName = row['plan_name']?.toString() ?? 'Subscription Plan';
+                        
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: isDark ? AppTheme.surfaceDark : Colors.grey.shade50,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
+                              color: isDark ? AppTheme.borderDark : Colors.grey.shade200,
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primaryColor.withValues(alpha: 0.1),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  CupertinoIcons.calendar_today,
+                                  color: AppTheme.primaryColor,
+                                  size: 18,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (planName.isNotEmpty)
+                                      Text(
+                                        planName,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 14,
+                                          color: isDark ? Colors.white : AppTheme.textPrimaryLight,
+                                        ),
+                                      ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      message,
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: isDark ? Colors.white70 : AppTheme.textSecondaryLight,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   Widget _buildUpcomingPlanCard(BuildContext context, bool isDark) {
     final statusData = context.watch<MealProvider>().subscriptionStatusData;
     if (statusData == null) return const SizedBox.shrink();
@@ -568,88 +735,71 @@ class _HomeScreenState extends State<HomeScreen> {
       return aStart.compareTo(bStart);
     });
 
-    final widgets = <Widget>[];
-    for (final row in upcomingRows) {
-      final startYmd = row['start_date']?.toString();
-      if (startYmd == null) continue;
+    final firstRow = upcomingRows.first;
+    final message = _formatUpcomingMessage(firstRow);
+    if (message.isEmpty) return const SizedBox.shrink();
 
-      final formattedDate = MealDate.formatDisplay(startYmd);
-
-      // Determine name
-      String name = '';
-      final rawName = row['entity_name'] ?? row['name'] ?? row['child_name'];
-      if (rawName != null && rawName.toString().trim().isNotEmpty) {
-        name = rawName.toString().trim();
-      } else {
-        final entityType = row['entity_type']?.toString();
-        final entityId = row['entity_id']?.toString();
-        if (entityType == 'child' && entityId != null) {
-          final child = context.read<ChildrenProvider>().children.where((c) => c.id?.toString() == entityId).firstOrNull;
-          if (child != null) name = child.name;
-        } else if (entityType == 'teacher') {
-          final tp = context.read<ProfileProvider>().teacherProfile;
-          if (tp != null) name = tp.name;
-        } else if (entityType == 'professional') {
-          final pp = context.read<ProfileProvider>().professionalProfile;
-          if (pp != null) name = pp.name;
-        }
-      }
-
-      if (name.isEmpty) {
-        name = 'Profile';
-      }
-
-      final message = "$name will start receiving meals from $formattedDate";
-
-      widgets.add(
-        Padding(
-          padding: const EdgeInsets.only(bottom: 16),
-          child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: isDark ? AppTheme.surfaceDark : Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: isDark ? AppTheme.borderDark : AppTheme.borderLight,
-                width: 1.5,
-              ),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    color: isDark ? Colors.white.withValues(alpha: 0.1) : const Color(0xFFEFF6FF),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(CupertinoIcons.calendar_today, color: AppTheme.primaryColor, size: 20),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    message,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                      color: isDark ? Colors.white : AppTheme.textPrimaryLight,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isDark ? AppTheme.surfaceDark : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isDark ? AppTheme.borderDark : AppTheme.borderLight,
+            width: 1.5,
           ),
         ),
-      );
-    }
-
-    if (widgets.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: widgets,
+        child: Row(
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: isDark ? Colors.white.withValues(alpha: 0.1) : const Color(0xFFEFF6FF),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(CupertinoIcons.calendar_today, color: AppTheme.primaryColor, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text.rich(
+                TextSpan(
+                  children: [
+                    TextSpan(
+                      text: message,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        color: isDark ? Colors.white : AppTheme.textPrimaryLight,
+                      ),
+                    ),
+                    if (upcomingRows.length > 1)
+                      WidgetSpan(
+                        alignment: PlaceholderAlignment.middle,
+                        child: GestureDetector(
+                          onTap: () => _showAllUpcomingPlansSheet(context, upcomingRows, isDark),
+                          child: Padding(
+                            padding: const EdgeInsets.only(left: 6.0),
+                            child: Text(
+                              '•  View all (${upcomingRows.length})',
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w900,
+                                color: AppTheme.primaryColor,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -999,71 +1149,77 @@ class _HomeScreenState extends State<HomeScreen> {
           const SizedBox(height: 12),
           Column(
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildQuickLinkCard(
-                      context: context,
-                      title: 'Manage Child',
-                      icon: CupertinoIcons.person_3_fill,
-                      bgColor: isDark ? const Color(0xFF1E3A8A) : const Color(0xFFDBEAFE),
-                      iconColor: const Color(0xFF3B82F6),
-                      isDark: isDark,
-                      onTap: () {
-                        Navigator.push(context, CupertinoPageRoute(builder: (_) => const ChildrenManagementScreen()));
-                        if (NetworkStatusService.instance.isOnline) context.read<ChildrenProvider>().fetchChildren(silent: true);
-                      },
+              IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(
+                      child: _buildQuickLinkCard(
+                        context: context,
+                        title: 'Manage Child',
+                        icon: CupertinoIcons.person_3_fill,
+                        bgColor: isDark ? const Color(0xFF1E3A8A) : const Color(0xFFDBEAFE),
+                        iconColor: const Color(0xFF3B82F6),
+                        isDark: isDark,
+                        onTap: () {
+                          Navigator.push(context, CupertinoPageRoute(builder: (_) => const ChildrenManagementScreen()));
+                          if (NetworkStatusService.instance.isOnline) context.read<ChildrenProvider>().fetchChildren(silent: true);
+                        },
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildQuickLinkCard(
-                      context: context,
-                      title: 'Teacher Plan',
-                      icon: CupertinoIcons.book_fill,
-                      bgColor: isDark ? const Color(0xFF78350F) : const Color(0xFFFDE68A),
-                      iconColor: const Color(0xFFD97706),
-                      isDark: isDark,
-                      onTap: () {
-                        Navigator.push(context, CupertinoPageRoute(builder: (_) => const TeacherProfileScreen()));
-                        if (NetworkStatusService.instance.isOnline) context.read<ProfileProvider>().fetchProfiles(silent: true);
-                      },
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildQuickLinkCard(
+                        context: context,
+                        title: 'Teacher Plan',
+                        icon: CupertinoIcons.book_fill,
+                        bgColor: isDark ? const Color(0xFF78350F) : const Color(0xFFFDE68A),
+                        iconColor: const Color(0xFFD97706),
+                        isDark: isDark,
+                        onTap: () {
+                          Navigator.push(context, CupertinoPageRoute(builder: (_) => const TeacherProfileScreen()));
+                          if (NetworkStatusService.instance.isOnline) context.read<ProfileProvider>().fetchProfiles(silent: true);
+                        },
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
               const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildQuickLinkCard(
-                      context: context,
-                      title: 'Professional Plan',
-                      icon: CupertinoIcons.briefcase_fill,
-                      bgColor: isDark ? const Color(0xFF4C1D95) : const Color(0xFFE9D5FF),
-                      iconColor: const Color(0xFF8B5CF6),
-                      isDark: isDark,
-                      onTap: () {
-                        Navigator.push(context, CupertinoPageRoute(builder: (_) => const ProfessionalProfileScreen()));
-                        if (NetworkStatusService.instance.isOnline) context.read<ProfileProvider>().fetchProfiles(silent: true);
-                      },
+              IntrinsicHeight(
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(
+                      child: _buildQuickLinkCard(
+                        context: context,
+                        title: 'Professional Plan',
+                        icon: CupertinoIcons.briefcase_fill,
+                        bgColor: isDark ? const Color(0xFF4C1D95) : const Color(0xFFE9D5FF),
+                        iconColor: const Color(0xFF8B5CF6),
+                        isDark: isDark,
+                        onTap: () {
+                          Navigator.push(context, CupertinoPageRoute(builder: (_) => const ProfessionalProfileScreen()));
+                          if (NetworkStatusService.instance.isOnline) context.read<ProfileProvider>().fetchProfiles(silent: true);
+                        },
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildQuickLinkCard(
-                      context: context,
-                      title: 'Bulk Order',
-                      icon: CupertinoIcons.square_stack_3d_up_fill,
-                      bgColor: isDark ? const Color(0xFF064E3B) : const Color(0xFFD1FAE5),
-                      iconColor: const Color(0xFF10B981),
-                      isDark: isDark,
-                      onTap: () {
-                        Navigator.push(context, CupertinoPageRoute(builder: (_) => const BulkOrderHubScreen()));
-                      },
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildQuickLinkCard(
+                        context: context,
+                        title: 'Bulk Order',
+                        icon: CupertinoIcons.square_stack_3d_up_fill,
+                        bgColor: isDark ? const Color(0xFF064E3B) : const Color(0xFFD1FAE5),
+                        iconColor: const Color(0xFF10B981),
+                        isDark: isDark,
+                        onTap: () {
+                          Navigator.push(context, CupertinoPageRoute(builder: (_) => const BulkOrderHubScreen()));
+                        },
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),
@@ -1082,6 +1238,7 @@ class _HomeScreenState extends State<HomeScreen> {
     required VoidCallback onTap,
   }) {
     return Container(
+      constraints: const BoxConstraints(minHeight: 130),
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(20),
@@ -1094,7 +1251,7 @@ class _HomeScreenState extends State<HomeScreen> {
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
             child: Column(
-              mainAxisSize: MainAxisSize.min,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
                   width: 44,

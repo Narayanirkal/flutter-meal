@@ -64,7 +64,7 @@ class AuthRepository {
 
   // ─── REGISTER FLOW (new user) ──────────────────────────────────────────────
 
-  Future<OtpSendResult> registerSendOtp(String phoneNumber, String username, bool consentAccepted) async {
+  Future<OtpSendResult> registerSendOtp(String phoneNumber, String username, bool consentAccepted, {String? referralCode}) async {
     try {
       final response = await _dioClient.dio.post(
         ApiEndpoints.registerSendOtp,
@@ -72,6 +72,8 @@ class AuthRepository {
           'phoneNumber': phoneNumber,
           'username': username,
           'consentAccepted': consentAccepted,
+          if (referralCode != null && referralCode.trim().isNotEmpty)
+            'referralCode': referralCode.trim(),
         },
       );
       if (response.statusCode == 200 && response.data['success'] == true) {
@@ -84,7 +86,7 @@ class AuthRepository {
     }
   }
 
-  Future<bool> registerVerifyOtp(String phoneNumber, String username, String code, bool consentAccepted) async {
+  Future<bool> registerVerifyOtp(String phoneNumber, String username, String code, bool consentAccepted, {String? referralCode}) async {
     try {
       final response = await _dioClient.dio.post(
         ApiEndpoints.registerVerifyOtp,
@@ -93,6 +95,8 @@ class AuthRepository {
           'username': username,
           'code': code,
           'consentAccepted': consentAccepted,
+          if (referralCode != null && referralCode.trim().isNotEmpty)
+            'referralCode': referralCode.trim(),
         },
       );
 

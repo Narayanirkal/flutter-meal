@@ -32,6 +32,21 @@ class QuickServiceProvider with ChangeNotifier {
 
   int get cartItemCount => _cartQty.values.fold(0, (a, b) => a + b);
 
+  final Map<String, Map<String, dynamic>> _itemCache = {};
+  Map<String, Map<String, dynamic>> get itemCache => _itemCache;
+
+  double get cartTotalAmount {
+    double total = 0.0;
+    for (final entry in _cartQty.entries) {
+      final item = _itemCache[entry.key];
+      if (item != null) {
+        final price = double.tryParse(item['price']?.toString() ?? '') ?? 0.0;
+        total += price * entry.value;
+      }
+    }
+    return total;
+  }
+
   BulkDeliveryAddress? _address;
   BulkDeliveryAddress? get address => _address;
 
@@ -98,9 +113,16 @@ class QuickServiceProvider with ChangeNotifier {
   Future<void> loadItems(String categoryId) async {
     _loading = true;
     _error = null;
+    _items = [];
     notifyListeners();
     try {
       _items = await _repository.getSpecialItems(categoryId);
+      for (final item in _items) {
+        final id = item['id']?.toString();
+        if (id != null) {
+          _itemCache[id] = Map<String, dynamic>.from(item);
+        }
+      }
     } catch (e) {
       _error = e.toString();
     } finally {
@@ -133,6 +155,12 @@ class QuickServiceProvider with ChangeNotifier {
     } else {
       _cartQty[itemId] = qty;
     }
+    notifyListeners();
+    _persistCart();
+  }
+
+  void clearCart() {
+    _cartQty.clear();
     notifyListeners();
     _persistCart();
   }

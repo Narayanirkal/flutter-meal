@@ -38,13 +38,17 @@ class SubscriptionProvider with ChangeNotifier {
   }
 
   Future<void> fetchSubscriptions({bool force = false, bool silent = false}) async {
+    if (!NetworkStatusService.instance.isOnline) {
+      if (_subscriptions.isNotEmpty) return;
+      await _loadFromCache();
+      return;
+    }
     final isFresh = _lastFetchedAt != null &&
         DateTime.now().difference(_lastFetchedAt!).inMinutes < 10;
     final canUseFreshOnly =
         !force &&
         _subscriptions.isNotEmpty &&
-        isFresh &&
-        !NetworkStatusService.instance.isOnline;
+        isFresh;
     if (canUseFreshOnly) return;
     if (_inflightFetch != null) return _inflightFetch;
 
