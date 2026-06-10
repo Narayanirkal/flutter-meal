@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:meal_app/core/models/referral_model.dart';
 import 'package:meal_app/core/network/referral_repository.dart';
+import 'package:meal_app/core/storage/cache_store.dart';
 
 class ReferralProvider with ChangeNotifier {
   final ReferralRepository _repository;
 
-  ReferralProvider(this._repository);
+  ReferralProvider(this._repository) {
+    _loadCachedRewards();
+  }
 
   List<ReferralRewardModel> _rewards = [];
   bool _isLoading = false;
@@ -15,15 +18,35 @@ class ReferralProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
 
+  Future<void> _loadCachedRewards() async {
+    try {
+      final cached = await CacheStore.getJson('referral_rewards');
+      if (cached is List) {
+        _rewards = cached
+            .map((e) => ReferralRewardModel.fromJson(Map<String, dynamic>.from(e as Map)))
+            .toList();
+        notifyListeners();
+      }
+    } catch (_) {}
+  }
+
   Future<void> fetchRewards() async {
-    _isLoading = true;
-    _errorMessage = null;
-    notifyListeners();
+    if (_rewards.isEmpty) {
+      _isLoading = true;
+      _errorMessage = null;
+      notifyListeners();
+    }
 
     try {
       _rewards = await _repository.getReferralRewards();
+      await CacheStore.setJson(
+        'referral_rewards',
+        _rewards.map((e) => e.toJson()).toList(),
+        ttl: const Duration(hours: 6),
+      );
+      _errorMessage = null;
     } catch (e) {
-      _errorMessage = e.toString();
+      _errorMessage = _rewards.isNotEmpty ? null : e.toString().replaceFirst('Exception: ', '');
     } finally {
       _isLoading = false;
       notifyListeners();
