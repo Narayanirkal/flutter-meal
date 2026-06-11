@@ -52,14 +52,27 @@ class _MealSkipScreenState extends State<MealSkipScreen> {
     super.dispose();
   }
 
+  // HIGH-04: Guard against concurrent fetch runs triggered by rapid reconnects.
+  bool _fetchInFlight = false;
+
   void _fetchAll() {
-    if (!mounted) return;
-    context.read<MealProvider>().fetchSkips();
-    context.read<MealProvider>().fetchMealStatus();
-    context.read<MealProvider>().fetchSkipPolicy();
-    context.read<ChildrenProvider>().fetchChildren();
-    context.read<ProfileProvider>().fetchProfiles();
+    if (!mounted || _fetchInFlight) return;
+    _fetchInFlight = true;
+    Future(() async {
+      try {
+        await Future.wait([
+          context.read<MealProvider>().fetchSkips(),
+          context.read<MealProvider>().fetchMealStatus(),
+          context.read<MealProvider>().fetchSkipPolicy(),
+          context.read<ChildrenProvider>().fetchChildren(),
+          context.read<ProfileProvider>().fetchProfiles(),
+        ]);
+      } finally {
+        _fetchInFlight = false;
+      }
+    });
   }
+
 
   int _countSkippableMealDays(DateTime start, DateTime end, bool includeSaturday) {
     int count = 0;

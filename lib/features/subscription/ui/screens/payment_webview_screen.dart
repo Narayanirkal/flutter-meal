@@ -141,8 +141,15 @@ class _PaymentWebViewScreenState extends State<PaymentWebViewScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return WillPopScope(
-      onWillPop: () async => _showCancelDialog(),
+    // MEDIUM-07: WillPopScope is deprecated in Flutter 3.12+ and does not support
+    // Android 14+ predictive back gesture. Use PopScope instead.
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        final shouldPop = await _showCancelDialog();
+        if (shouldPop && context.mounted) Navigator.of(context).pop(false);
+      },
       child: Scaffold(
         backgroundColor: isDark ? AppTheme.backgroundDark : Colors.white,
         appBar: AppBar(

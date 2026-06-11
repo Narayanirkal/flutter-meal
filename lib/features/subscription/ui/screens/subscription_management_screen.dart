@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
@@ -25,6 +27,8 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
   late TabController _tabController;
   ConnectivityService? _connectivityService;
   bool _wasOnline = true;
+  // HIGH-05: Prevents concurrent duplicate fetches when connectivity bounces.
+  bool _reconnectFetchInFlight = false;
 
   @override
   void initState() {
@@ -32,11 +36,15 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
     AppRouteTracker.instance.setCurrent(AppScreen.subscriptionManagement);
     _tabController = TabController(length: 2, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Future.wait([
-        context.read<PaymentProvider>().fetchActiveSubscriptions(),
-        context.read<PaymentProvider>().fetchPaymentHistory(silent: true),
-        context.read<MealProvider>().fetchSubscriptionStatus(silent: true),
-      ]);
+      // MEDIUM-09: Wrap in unawaited + catchError so any exception becomes a
+      // handled no-op instead of an unhandled Future rejection.
+      unawaited(
+        Future.wait([
+          context.read<PaymentProvider>().fetchActiveSubscriptions(),
+          context.read<PaymentProvider>().fetchPaymentHistory(silent: true),
+          context.read<MealProvider>().fetchSubscriptionStatus(silent: true),
+        ]).catchError((_) {}),
+      );
     });
   }
 
@@ -61,11 +69,16 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
 
   Future<void> _handleConnectivityChange() async {
     final online = _connectivityService?.isOnline ?? true;
-    if (online && !_wasOnline && mounted) {
-      await Future.wait([
-        context.read<PaymentProvider>().fetchActiveSubscriptions(),
-        context.read<PaymentProvider>().fetchPaymentHistory(),
-      ]);
+    if (online && !_wasOnline && mounted && !_reconnectFetchInFlight) {
+      _reconnectFetchInFlight = true;
+      try {
+        await Future.wait([
+          context.read<PaymentProvider>().fetchActiveSubscriptions(),
+          context.read<PaymentProvider>().fetchPaymentHistory(),
+        ]);
+      } finally {
+        _reconnectFetchInFlight = false;
+      }
     }
     _wasOnline = online;
   }

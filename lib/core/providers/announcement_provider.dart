@@ -23,11 +23,12 @@ class AnnouncementProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
 
   List<AnnouncementModel> getAnnouncementsForLocation(String location) {
-    return _announcements
+    final filtered = _announcements
         .where((a) => a.displayLocation == location || a.displayLocation == 'all')
         .where((a) => a.isActive)
-        .toList()
-      ..sort((a, b) => b.priority.compareTo(a.priority));
+        .toList();
+    _sortAnnouncements(filtered);
+    return filtered;
   }
 
   List<AnnouncementModel> getUnreadAnnouncementsForLocation(String location) {
@@ -55,7 +56,9 @@ class AnnouncementProvider with ChangeNotifier {
     try {
       final cached = await CacheStore.getJson('announcements_v1');
       if (cached is List) {
-        _announcements = cached.map((a) => AnnouncementModel.fromJson(Map<String, dynamic>.from(a))).toList();
+        final loaded = cached.map((a) => AnnouncementModel.fromJson(Map<String, dynamic>.from(a))).toList();
+        _sortAnnouncements(loaded);
+        _announcements = loaded;
         notifyListeners();
       }
     } catch (_) {}
@@ -100,8 +103,11 @@ class AnnouncementProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      await _loadReadAnnouncements();
+      // MEDIUM-03: Removed redundant _loadReadAnnouncements() call here.
+      // _readAnnouncementIds is already loaded in the constructor; re-reading
+      // SharedPreferences on every fetch is unnecessary disk I/O.
       final fetched = await _repository.getAnnouncements(location: location);
+      _sortAnnouncements(fetched);
       _announcements = fetched;
       _lastFetchedAt = DateTime.now();
 
@@ -121,5 +127,13 @@ class AnnouncementProvider with ChangeNotifier {
   bool shouldRefresh() {
     if (_lastFetchedAt == null) return true;
     return DateTime.now().difference(_lastFetchedAt!).inMinutes >= 5;
+  }
+
+  void _sortAnnouncements(List<AnnouncementModel> list) {
+    list.sort((a, b) {
+      final timeA = a.createdAt ?? a.startDate;
+      final timeB = b.createdAt ?? b.startDate;
+      return timeB.compareTo(timeA);
+    });
   }
 }

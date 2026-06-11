@@ -54,37 +54,31 @@ class _ReconnectRefreshCoordinatorState extends State<ReconnectRefreshCoordinato
 
       await context.read<CartProvider>().syncOfflineItemsIfAny();
 
-      // Trigger global background sync for mutated user data.
-      final profileProvider = context.read<ProfileProvider>();
-      final childrenProvider = context.read<ChildrenProvider>();
-      final cartProvider = context.read<CartProvider>();
-      final mealProvider = context.read<MealProvider>();
-
-      unawaited(profileProvider.fetchProfiles(force: true, silent: true));
-      unawaited(childrenProvider.fetchChildren(force: true, silent: true));
-      unawaited(cartProvider.fetchCart(force: true, silent: true));
-      unawaited(mealProvider.fetchSubscriptionStatus(silent: true));
-      unawaited(mealProvider.fetchMealStatus(silent: true));
-
+      // All per-screen API calls are in a single consolidated batch.
+      // Previously there was an unawaited pre-fetch group above the switch that
+      // duplicated cart / children / meal-status / subscriptionStatus calls —
+      // this caused 2x simultaneous requests on every reconnect (CRITICAL-03).
       final screen = AppRouteTracker.instance.current;
       final meal = context.read<MealProvider>();
       final menu = context.read<MenuProvider>();
 
       switch (screen) {
         case AppScreen.home:
-          await context.read<AuthProvider>().refreshMeProfile(silent: true);
-          await meal.fetchSubscriptionStatus(silent: true);
           await Future.wait([
+            context.read<AuthProvider>().refreshMeProfile(silent: true),
             context.read<HomepageProvider>().fetchHomepageEntries(force: true, silent: true),
             context.read<CartProvider>().fetchCart(force: true, silent: true),
-            context.read<ChildrenProvider>().fetchChildren(force: true),
-            meal.fetchMealStatus(),
-            meal.fetchAlerts(),
+            context.read<ChildrenProvider>().fetchChildren(force: true, silent: true),
+            context.read<ProfileProvider>().fetchProfiles(force: true, silent: true),
+            meal.fetchSubscriptionStatus(silent: true),
+            meal.fetchMealStatus(silent: true),
+            meal.fetchAlerts(silent: true),
           ]);
           if (meal.isSubscribed) {
             await menu.fetchTodayMenu(silent: true);
           }
           break;
+
 
         case AppScreen.subscriptionManagement:
           await meal.fetchSubscriptionStatus(silent: true);

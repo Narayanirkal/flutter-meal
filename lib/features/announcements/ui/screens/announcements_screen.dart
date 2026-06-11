@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:meal_app/core/providers/announcement_provider.dart';
 import 'package:meal_app/core/models/announcement_model.dart';
 import 'package:meal_app/core/theme/app_theme.dart';
+import 'package:intl/intl.dart';
 
 class AnnouncementsScreen extends StatefulWidget {
   const AnnouncementsScreen({super.key});
@@ -107,13 +108,30 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              announcement.title,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-                color: isDark ? Colors.white : const Color(0xFF1B1C1C),
-              ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    announcement.title,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      color: isDark ? Colors.white : const Color(0xFF1B1C1C),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  DateFormat('d MMM, h:mm a').format((announcement.createdAt ?? announcement.startDate).toLocal()),
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: isDark ? Colors.white54 : Colors.grey.shade600,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 8),
             Text(

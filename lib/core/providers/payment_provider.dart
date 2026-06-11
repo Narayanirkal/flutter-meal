@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:meal_app/core/network/payment_repository.dart';
 import 'package:meal_app/core/network/api_endpoints.dart';
@@ -334,13 +336,14 @@ class PaymentProvider with ChangeNotifier {
     final status = result['sdkStatus'] as String? ?? 'FAILURE';
     if (status == 'SUCCESS') {
       _paymentStatus = PaymentStatus.success;
-      fetchWallet(silent: true);
+      // MEDIUM-08: Use unawaited() to satisfy the lint rule (fire-and-forget is intentional).
+      unawaited(fetchWallet(silent: true));
     } else if (status == 'INTERRUPTED') {
       _paymentStatus = PaymentStatus.interrupted;
-      fetchWallet(silent: true);
+      unawaited(fetchWallet(silent: true));
     } else {
       _paymentStatus = PaymentStatus.failure;
-      fetchWallet(silent: true);
+      // MEDIUM-08: No wallet fetch on payment failure — wallet balance is unchanged.
     }
     return result;
   }

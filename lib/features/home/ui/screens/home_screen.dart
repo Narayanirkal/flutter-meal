@@ -81,20 +81,16 @@ class _HomeScreenState extends State<HomeScreen> {
         context.read<ReferralProvider>().fetchRewards(),
       ]);
     } else {
-      await _loadAllData();
+      await _loadAllData(); // already calls fetchTodayMenu internally
     }
     if (!mounted) return;
     await _refreshMealDataBundle();
     if (!mounted) return;
     await _maybePromptFourMealsLeftDialog();
-    if (!mounted) return;
-    if (NetworkStatusService.instance.isOnline) {
-      await context.read<MenuProvider>().fetchTodayMenu(
-        silent: true,
-      );
-    }
-
+    // HIGH-01: Removed the unconditional second fetchTodayMenu call here —
+    // _loadAllData() already covers it, causing 2x requests on every cold start.
   }
+
 
   Future<void> _loadAllData() async {
     if (!mounted) return;
