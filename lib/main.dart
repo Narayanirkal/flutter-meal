@@ -59,55 +59,102 @@ void main() async {
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    // Dependency Injection
-    final secureStorage = SecureStorage();
-    final cache = LocalCache();
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
+  // All singletons are created once in initState() — never inside build().
+  late final SecureStorage _secureStorage;
+  late final LocalCache _cache;
+  late final SessionProvider _sessionProvider;
+  late final ConnectivityService _connectivityService;
+  late final DioClient _dioClient;
+  late final AuthRepository _authRepository;
+  late final LookupRepository _lookupRepository;
+  late final ChildrenRepository _childrenRepository;
+  late final ProfileRepository _profileRepository;
+  late final PaymentRepository _paymentRepository;
+  late final HomepageRepository _homepageRepository;
+  late final CartRepository _cartRepository;
+  late final MealRepository _mealRepository;
+  late final BulkOrderRepository _bulkOrderRepository;
+  late final AnnouncementRepository _announcementRepository;
+  late final QuickServiceRepository _quickServiceRepository;
+  late final ReferralRepository _referralRepository;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+
+    _secureStorage = SecureStorage();
+    _cache = LocalCache();
     // The session provider is a long-lived singleton shared between the
     // network layer (to push expire events) and the UI (to react to them).
-    final sessionProvider = SessionProvider();
-    final connectivityService = ConnectivityService()..start();
-    final dioClient = DioClient(secureStorage, sessionProvider: sessionProvider);
-    final authRepository = AuthRepository(dioClient, secureStorage);
-    final lookupRepository = LookupRepository(dioClient);
-    final childrenRepository = ChildrenRepository(dioClient);
-    final profileRepository = ProfileRepository(dioClient);
-    final paymentRepository = PaymentRepository(dioClient);
-    final homepageRepository = HomepageRepository(dioClient);
-    final cartRepository = CartRepository(dioClient);
-    final mealRepository = MealRepository(dioClient);
-    final bulkOrderRepository = BulkOrderRepository(dioClient);
-    final announcementRepository = AnnouncementRepository(dioClient);
-    final quickServiceRepository = QuickServiceRepository(dioClient);
-    final referralRepository = ReferralRepository(dioClient);
+    _sessionProvider = SessionProvider();
+    _connectivityService = ConnectivityService()..start();
+    _dioClient = DioClient(_secureStorage, sessionProvider: _sessionProvider);
+    _authRepository = AuthRepository(_dioClient, _secureStorage);
+    _lookupRepository = LookupRepository(_dioClient);
+    _childrenRepository = ChildrenRepository(_dioClient);
+    _profileRepository = ProfileRepository(_dioClient);
+    _paymentRepository = PaymentRepository(_dioClient);
+    _homepageRepository = HomepageRepository(_dioClient);
+    _cartRepository = CartRepository(_dioClient);
+    _mealRepository = MealRepository(_dioClient);
+    _bulkOrderRepository = BulkOrderRepository(_dioClient);
+    _announcementRepository = AnnouncementRepository(_dioClient);
+    _quickServiceRepository = QuickServiceRepository(_dioClient);
+    _referralRepository = ReferralRepository(_dioClient);
 
     // Start global online/offline monitor + attach Dio for queue replay.
-    NetworkStatusService.instance.attachDioClient(dioClient);
+    NetworkStatusService.instance.attachDioClient(_dioClient);
     NetworkStatusService.instance.start();
+  }
 
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Stop the health-poll timer when the app is backgrounded to save battery.
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.detached) {
+      NetworkStatusService.instance.stop();
+    } else if (state == AppLifecycleState.resumed) {
+      NetworkStatusService.instance.start();
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    NetworkStatusService.instance.stop();
+    _connectivityService.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider.value(value: sessionProvider),
-        ChangeNotifierProvider.value(value: connectivityService),
-        ChangeNotifierProvider(create: (_) => AuthProvider(authRepository)),
-        ChangeNotifierProvider(create: (_) => LookupProvider(lookupRepository)),
-        ChangeNotifierProvider(create: (_) => ChildrenProvider(childrenRepository, cache)),
-        ChangeNotifierProvider(create: (_) => ProfileProvider(profileRepository, cache)),
-        ChangeNotifierProvider(create: (_) => ThemeProvider(secureStorage)),
-        ChangeNotifierProvider(create: (_) => SubscriptionProvider(SubscriptionRepository(dioClient), cache)),
-        ChangeNotifierProvider(create: (_) => MenuProvider(dioClient, cache)),
-        ChangeNotifierProvider(create: (_) => PaymentProvider(paymentRepository, cache)),
-        ChangeNotifierProvider(create: (_) => HomepageProvider(homepageRepository, cache)),
-        ChangeNotifierProvider(create: (_) => CartProvider(cartRepository, cache)),
-        ChangeNotifierProvider(create: (_) => MealProvider(mealRepository, cache)),
-        ChangeNotifierProvider(create: (_) => BulkOrderProvider(bulkOrderRepository)),
-        ChangeNotifierProvider(create: (_) => AnnouncementProvider(announcementRepository)),
-        ChangeNotifierProvider(create: (_) => QuickServiceProvider(quickServiceRepository)),
-        ChangeNotifierProvider(create: (_) => ReferralProvider(referralRepository)),
+        ChangeNotifierProvider.value(value: _sessionProvider),
+        ChangeNotifierProvider.value(value: _connectivityService),
+        ChangeNotifierProvider(create: (_) => AuthProvider(_authRepository)),
+        ChangeNotifierProvider(create: (_) => LookupProvider(_lookupRepository)),
+        ChangeNotifierProvider(create: (_) => ChildrenProvider(_childrenRepository, _cache)),
+        ChangeNotifierProvider(create: (_) => ProfileProvider(_profileRepository, _cache)),
+        ChangeNotifierProvider(create: (_) => ThemeProvider(_secureStorage)),
+        ChangeNotifierProvider(create: (_) => SubscriptionProvider(SubscriptionRepository(_dioClient), _cache)),
+        ChangeNotifierProvider(create: (_) => MenuProvider(_dioClient, _cache)),
+        ChangeNotifierProvider(create: (_) => PaymentProvider(_paymentRepository, _cache)),
+        ChangeNotifierProvider(create: (_) => HomepageProvider(_homepageRepository, _cache)),
+        ChangeNotifierProvider(create: (_) => CartProvider(_cartRepository, _cache)),
+        ChangeNotifierProvider(create: (_) => MealProvider(_mealRepository, _cache)),
+        ChangeNotifierProvider(create: (_) => BulkOrderProvider(_bulkOrderRepository)),
+        ChangeNotifierProvider(create: (_) => AnnouncementProvider(_announcementRepository)),
+        ChangeNotifierProvider(create: (_) => QuickServiceProvider(_quickServiceRepository)),
+        ChangeNotifierProvider(create: (_) => ReferralProvider(_referralRepository)),
       ],
       child: const MainApp(),
     );

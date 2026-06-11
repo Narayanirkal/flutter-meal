@@ -51,6 +51,9 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
   bool _pendingForceSyncAttempted = false;
   bool _abandonAttempted = false;
   String? _lastPollingError;
+  // CRITICAL-02: Prevents concurrent polling loops when 'Check Again' is tapped
+  // while a loop is already running.
+  bool _pollingInFlight = false;
 
   @override
   void initState() {
@@ -58,7 +61,19 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
     _startPolling();
   }
 
+  @override
+  void dispose() {
+    // MEDIUM-06: Stop the polling loop when the screen is popped so we don't
+    // continue firing network requests after the widget is gone.
+    _isPolling = false;
+    super.dispose();
+  }
+
   Future<void> _startPolling() async {
+    // CRITICAL-02: Guard against concurrent polling loops.
+    if (_pollingInFlight) return;
+    _pollingInFlight = true;
+    try {
     while (_isPolling && _retryCount < _maxRetries && mounted) {
       try {
         final paymentProvider = context.read<PaymentProvider>();
@@ -115,6 +130,9 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) => _onPaymentConfirmedSuccess());
     } else if (mounted && _currentStatus == 'FAILED') {
       await _abandonPendingIfNeeded();
+    }
+    } finally {
+      _pollingInFlight = false;
     }
   }
 
@@ -217,13 +235,14 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
     }
 
     // Refresh dashboard-relevant data so Home and management screens stay in sync.
+    // HIGH-03: Removed duplicate MealProvider.fetchTodayMenu — MenuProvider.fetchTodayMenu
+    // covers the same endpoint. Also removed from the parallel batch to avoid a thundering
+    // herd; MenuProvider fetch runs after the main batch settles.
     try {
       final futures = <Future<void>>[
         meal.fetchSubscriptionStatus(),
         meal.fetchMealStatus(),
         meal.fetchAlerts(),
-        meal.fetchTodayMenu(),
-        context.read<MenuProvider>().fetchTodayMenu(silent: true),
         payment.fetchActiveSubscriptions(),
         payment.fetchPaymentHistory(),
         subscriptions.fetchSubscriptions(force: true),
@@ -231,6 +250,9 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
         context.read<ChildrenProvider>().fetchChildren(force: true),
       ];
       await Future.wait(futures);
+      if (mounted) {
+        await context.read<MenuProvider>().fetchTodayMenu(silent: true);
+      }
     } catch (_) {/* ignore — these are best-effort refreshes */}
 
     if (session.isExpired) {
@@ -642,6 +664,8 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
         const SizedBox(height: 24),
         OutlinedButton.icon(
           onPressed: () {
+            // CRITICAL-02: _startPolling() has an in-flight guard — calling it
+            // while a loop is running is a no-op.
             setState(() {
               _isPolling = true;
               _retryCount = 0;
