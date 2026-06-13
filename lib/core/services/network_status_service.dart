@@ -44,6 +44,26 @@ class NetworkStatusService with ChangeNotifier {
   bool _refreshInFlight = false;
 
   final List<VoidCallback> _becameOnlineListeners = [];
+  final List<VoidCallback> _onQueueReplayedListeners = [];
+
+  void addQueueReplayedListener(VoidCallback listener) {
+    if (!_onQueueReplayedListeners.contains(listener)) {
+      _onQueueReplayedListeners.add(listener);
+    }
+  }
+
+  void removeQueueReplayedListener(VoidCallback listener) {
+    _onQueueReplayedListeners.remove(listener);
+  }
+
+  void _notifyQueueReplayed() {
+    final copy = List<VoidCallback>.from(_onQueueReplayedListeners);
+    for (final cb in copy) {
+      try {
+        cb();
+      } catch (_) {/* ignore */}
+    }
+  }
 
   void attachDioClient(DioClient dioClient) {
     _dioClient ??= dioClient;
@@ -182,12 +202,30 @@ class NetworkStatusService with ChangeNotifier {
 
     _processingQueue = true;
     try {
-      await OfflineQueue.process(
+      final result = await OfflineQueue.process(
         executor: (method, path, data) async {
-          final options = Options(method: method);
-          return await dioClient.dio.request(path, data: data, options: options);
+          try {
+            final options = Options(method: method);
+            return await dioClient.dio.request(path, data: data, options: options);
+          } on DioException catch (e) {
+            final statusCode = e.response?.statusCode ?? 0;
+            if (statusCode >= 400) {
+              // F-07/F-04: Surface HTTP status so dead-letter logic can distinguish
+              // permanent 4xx errors (discard) from transient 5xx/network errors (retry).
+              throw OfflineRequestException(
+                statusCode: statusCode,
+                message: e.response?.data?.toString() ?? e.message ?? 'HTTP $statusCode',
+              );
+            }
+            rethrow;
+          }
         },
       );
+      // F-07: After any successful replays, notify providers to force-refresh
+      // so stale 'local-*' IDs are replaced with real server-assigned IDs.
+      if (result.processed > 0) {
+        _notifyQueueReplayed();
+      }
     } catch (e) {
       if (kDebugMode) {
         // ignore in release; queue remains for next reconnect

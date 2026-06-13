@@ -11,6 +11,20 @@ class ProfileProvider with ChangeNotifier {
 
   ProfileProvider(this._repository) {
     _loadFromCache();
+    NetworkStatusService.instance.addQueueReplayedListener(_onQueueReplayed);
+  }
+
+  @override
+  void dispose() {
+    NetworkStatusService.instance.removeQueueReplayedListener(_onQueueReplayed);
+    super.dispose();
+  }
+
+  void _onQueueReplayed() {
+    _lastFetchedAt = null;
+    CacheStore.remove('teacher_profile');
+    CacheStore.remove('professional_profile');
+    fetchProfiles(force: true, silent: true);
   }
 
   TeacherProfileModel? _teacherProfile;

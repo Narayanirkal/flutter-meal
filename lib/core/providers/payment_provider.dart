@@ -381,6 +381,7 @@ class PaymentProvider with ChangeNotifier {
       unawaited(_cache.saveJson(_historyCacheKey, {'items': <dynamic>[]}));
       unawaited(fetchWallet(silent: true));
       unawaited(fetchPaymentHistory(silent: true));
+      unawaited(fetchActiveSubscriptions(silent: true, force: true));
     } else if (status == 'INTERRUPTED') {
       _paymentStatus = PaymentStatus.interrupted;
       unawaited(fetchWallet(silent: true));
