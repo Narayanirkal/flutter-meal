@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:meal_app/core/theme/app_theme.dart';
 import 'package:meal_app/features/children/providers/children_provider.dart';
@@ -79,17 +80,22 @@ class _ChildrenManagementScreenState extends State<ChildrenManagementScreen> {
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
-      backgroundColor: isDark ? AppTheme.surfaceDark : const Color(0xFFFAF8F5),
-      body: SafeArea(
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: AppTheme.overlayFor(
+        background: isDark ? AppTheme.surfaceDark : const Color(0xFFF3EBE0),
+        isDark: isDark,
+        navigationBarColor: isDark ? AppTheme.surfaceDark : const Color(0xFFFAF8F5),
+      ),
+      child: Scaffold(
+        backgroundColor: isDark ? AppTheme.surfaceDark : const Color(0xFFFAF8F5),
+        body: SafeArea(
         child: Column(
           children: [
-            // Custom Header with rounded bottom corners
+            // Custom Header
             Container(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+              padding: const EdgeInsets.fromLTRB(8, 6, 16, 6),
               decoration: BoxDecoration(
-                color: isDark ? Colors.black26 : const Color(0xFFF3EBE0),
-                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
+                color: isDark ? AppTheme.surfaceDark : const Color(0xFFF3EBE0),
               ),
               child: Row(
                 children: [
@@ -168,6 +174,7 @@ class _ChildrenManagementScreenState extends State<ChildrenManagementScreen> {
         ),
       ),
       bottomNavigationBar: null,
+      ),
     );
   }
 

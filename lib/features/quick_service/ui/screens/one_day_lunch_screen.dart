@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:meal_app/core/theme/app_theme.dart';
 import 'package:meal_app/features/home/providers/menu_provider.dart';
@@ -30,6 +31,21 @@ bool _isTodayOrderOpen(String cutoffHhmm) {
 String _tomorrowYmd() {
   final t = DateTime.now().add(const Duration(days: 1));
   return '${t.year}-${t.month.toString().padLeft(2, '0')}-${t.day.toString().padLeft(2, '0')}';
+}
+
+/// Returns true when today is Sunday (no deliveries).
+bool _isTodaySunday() => DateTime.now().weekday == DateTime.sunday;
+
+/// Returns true when tomorrow is Sunday (no deliveries).
+bool _isTomorrowSunday() =>
+    DateTime.now().add(const Duration(days: 1)).weekday == DateTime.sunday;
+
+/// Returns true when the menu map has non-blank item text.
+bool _hasMenuItems(Map<String, dynamic>? menu) {
+  if (menu == null) return false;
+  final items = menu['items']?.toString().trim() ?? '';
+  final name = menu['name']?.toString().trim() ?? '';
+  return items.isNotEmpty || name.isNotEmpty;
 }
 
 // ---------------------------------------------------------------------------
@@ -98,12 +114,15 @@ class _OneDayLunchScreenState extends State<OneDayLunchScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final pageBg = isDark ? AppTheme.backgroundDark : Colors.white;
 
-    return Scaffold(
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: AppTheme.overlayFor(background: pageBg, isDark: isDark),
+      child: Scaffold(
       backgroundColor: pageBg,
       appBar: AppBar(
         title: const Text('One Day Lunch'),
         backgroundColor: pageBg,
         surfaceTintColor: Colors.transparent,
+        systemOverlayStyle: AppTheme.overlayFor(background: pageBg, isDark: isDark),
       ),
       body: SafeArea(
         top: false,
@@ -152,6 +171,7 @@ class _OneDayLunchScreenState extends State<OneDayLunchScreen> {
           },
         ),
       ),
+    ),
     );
   }
 }
@@ -190,10 +210,39 @@ class _OneDayLunchBody extends StatelessWidget {
     final todayPrice = double.tryParse(cfg['today_price']?.toString() ?? '') ?? 100.0;
     final nextDayPrice = double.tryParse(cfg['next_day_price']?.toString() ?? '') ?? 90.0;
     final cutoff = cfg['today_cutoff_time']?.toString() ?? '09:00';
-    final todayOpen = _isTodayOrderOpen(cutoff);
+    final todayCutoffOpen = _isTodayOrderOpen(cutoff);
+    final todaySunday = _isTodaySunday();
+    final tomorrowSunday = _isTomorrowSunday();
+
+    // Today option is disabled when: cutoff passed OR today is Sunday
+    final todayDisabled = !todayCutoffOpen || todaySunday;
+    // Next-day option is disabled when tomorrow is Sunday
+    final nextDayDisabled = tomorrowSunday;
+
     final selectedPrice = deliveryType == 'today' ? todayPrice : nextDayPrice;
     final total = selectedPrice * quantity;
     final activeMenu = deliveryType == 'today' ? todayMenu : tomorrowMenu;
+
+    // Determine subtitle messages
+    String todaySubtitle;
+    if (todaySunday) {
+      todaySubtitle = 'No delivery on Sundays';
+    } else if (!todayCutoffOpen) {
+      todaySubtitle = 'Order window closed';
+    } else {
+      todaySubtitle = '₹${todayPrice.toStringAsFixed(0)} / meal · order before $cutoff';
+    }
+
+    final nextDaySubtitle = tomorrowSunday
+        ? 'No delivery on Sundays'
+        : '₹${nextDayPrice.toStringAsFixed(0)} / meal';
+
+    // Pay is only allowed when menu is available AND selected day is not Sunday
+    final selectedDaySunday =
+        (deliveryType == 'today' && todaySunday) ||
+        (deliveryType == 'next_day' && tomorrowSunday);
+    final menuAvailable = _hasMenuItems(activeMenu);
+    final canPay = !isLoading && menuAvailable && !selectedDaySunday;
 
     return CustomScrollView(
       slivers: [
@@ -206,26 +255,25 @@ class _OneDayLunchBody extends StatelessWidget {
                 menu: activeMenu,
                 label: deliveryType == 'today' ? "Today's meal" : "Tomorrow's meal",
                 isDark: isDark,
+                isSunday: selectedDaySunday,
               ),
               const SizedBox(height: 16),
 
               // ── Delivery type ─────────────────────────────────────────
               _OptionTile(
                 title: 'Next Day',
-                subtitle: '₹${nextDayPrice.toStringAsFixed(0)} / meal',
+                subtitle: nextDaySubtitle,
                 selected: deliveryType == 'next_day',
-                disabled: false,
-                onTap: () => onDeliveryTypeChanged('next_day'),
+                disabled: nextDayDisabled,
+                onTap: nextDayDisabled ? null : () => onDeliveryTypeChanged('next_day'),
               ),
               const SizedBox(height: 10),
               _OptionTile(
                 title: 'Today',
-                subtitle: todayOpen
-                    ? '₹${todayPrice.toStringAsFixed(0)} / meal · order before $cutoff'
-                    : 'Order window closed',
+                subtitle: todaySubtitle,
                 selected: deliveryType == 'today',
-                disabled: !todayOpen,
-                onTap: todayOpen ? () => onDeliveryTypeChanged('today') : null,
+                disabled: todayDisabled,
+                onTap: todayDisabled ? null : () => onDeliveryTypeChanged('today'),
               ),
               const SizedBox(height: 20),
 
@@ -281,14 +329,18 @@ class _OneDayLunchBody extends StatelessWidget {
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton(
-                  onPressed: isLoading ? null : onPay,
+                  onPressed: canPay ? onPay : null,
                   child: isLoading
                       ? const SizedBox(
                           height: 22,
                           width: 22,
                           child: CircularProgressIndicator(strokeWidth: 2))
-                      : const Text('Pay & Order',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800)),
+                      : Text(
+                          selectedDaySunday
+                              ? 'No Delivery on Sunday'
+                              : (!menuAvailable ? 'Menu Not Available' : 'Pay & Order'),
+                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                        ),
                 ),
               ),
               const SizedBox(height: 16),
@@ -305,11 +357,17 @@ class _OneDayLunchBody extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class _MenuCard extends StatelessWidget {
-  const _MenuCard({required this.menu, required this.label, required this.isDark});
+  const _MenuCard({
+    required this.menu,
+    required this.label,
+    required this.isDark,
+    this.isSunday = false,
+  });
 
   final Map<String, dynamic>? menu;
   final String label;
   final bool isDark;
+  final bool isSunday;
 
   @override
   Widget build(BuildContext context) {
@@ -332,7 +390,16 @@ class _MenuCard extends StatelessWidget {
               height: 150,
               width: double.infinity,
               fit: BoxFit.cover,
-              errorWidget: (_, __, ___) => const SizedBox.shrink(),
+              placeholder: (_, __) => const SizedBox(
+                height: 150,
+                width: double.infinity,
+                child: Center(child: CupertinoActivityIndicator()),
+              ),
+              errorWidget: (_, __, ___) => const SizedBox(
+                height: 150,
+                width: double.infinity,
+                child: Center(child: Icon(CupertinoIcons.photo, color: Colors.grey)),
+              ),
             ),
           Padding(
             padding: const EdgeInsets.all(14),
@@ -350,18 +417,30 @@ class _MenuCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  menu != null
-                      ? (menu!['items']?.toString() ??
-                          menu!['name']?.toString() ??
-                          'Menu available')
-                      : 'Menu not available yet',
+                  isSunday
+                      ? 'No deliveries on Sundays'
+                      : (menu != null
+                          ? (menu!['items']?.toString() ??
+                              menu!['name']?.toString() ??
+                              'Menu available')
+                          : 'Menu not available yet'),
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
-                    color: isDark ? Colors.white : const Color(0xFF1B1C1C),
+                    color: isSunday
+                        ? Colors.orange.shade700
+                        : (isDark ? Colors.white : const Color(0xFF1B1C1C)),
                   ),
                 ),
-                if (menu == null)
+                if (isSunday)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      'Please select a weekday for delivery.',
+                      style: TextStyle(fontSize: 12, color: subtitleColor),
+                    ),
+                  )
+                else if (menu == null)
                   Padding(
                     padding: const EdgeInsets.only(top: 4),
                     child: Text(

@@ -36,7 +36,6 @@ import 'package:meal_app/core/services/app_route_tracker.dart';
 import 'package:meal_app/core/services/offline_cache_bootstrap.dart';
 import 'package:meal_app/core/widgets/app_skeleton.dart';
 import 'package:meal_app/core/providers/announcement_provider.dart';
-import 'package:meal_app/features/announcements/ui/screens/announcements_screen.dart';
 import 'package:meal_app/features/quick_service/ui/widgets/quick_order_section.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -184,6 +183,15 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  void _openUpgradeWithFirstProfile(BuildContext context) {
+    Navigator.push(
+      context,
+      CupertinoPageRoute(
+        builder: (_) => const SubscriptionManagementScreen(),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -238,17 +246,17 @@ class _HomeScreenState extends State<HomeScreen> {
                     10,
                   ),
                   sliver: SliverList(
-                    delegate: SliverChildListDelegate([
-                      _buildWelcomeHeader(context, isDark),
-                      const SizedBox(height: 12),
-                      _buildUpcomingPlanCard(context, isDark),
-                      _buildTodayMealCard(context, isDark),
-                      const QuickOrderSection(),
-                      _buildAlertsBanner(context, isDark),
-                      _buildFeatureQuickLinks(context, isDark),
-                      const SizedBox(height: 18),
-                      _buildAboutBuuttiiCard(context, isDark),
-                      const SizedBox(height: 30),
+                    delegate: SliverChildListDelegate(const [
+                      HomeWelcomeHeader(),
+                      SizedBox(height: 6),
+                      UpcomingPlanCard(),
+                      TodayMealCard(),
+                      QuickOrderSection(),
+                      AlertsBanner(),
+                      FeatureQuickLinks(),
+                      SizedBox(height: 18),
+                      AboutBuuttiiCard(),
+                      SizedBox(height: 30),
                     ]),
                   ),
                 ),
@@ -267,10 +275,23 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+}
 
-  Widget _buildWelcomeHeader(BuildContext context, bool isDark) {
+// ─── EXTRACTED DECOUPLED UI WIDGETS FOR HIERARCHY PERFORMANCE ────────────────
+
+class HomeWelcomeHeader extends StatelessWidget {
+  const HomeWelcomeHeader({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final unreadCount = context.watch<AnnouncementProvider>().getUnreadCountForLocation('home');
+    final hasBulkCartItems = context.watch<BulkOrderProvider>().hasBulkCartItems;
+    final bulkCartTotalMeals = context.watch<BulkOrderProvider>().bulkCartTotalMeals;
+    final cartItemCount = context.watch<CartProvider>().itemCount;
+
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: 4),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -290,14 +311,14 @@ class _HomeScreenState extends State<HomeScreen> {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _buildAnnouncementsButton(context, isDark),
+              _buildAnnouncementsButton(context, isDark, unreadCount),
               const SizedBox(width: 4),
-              if (context.watch<BulkOrderProvider>().hasBulkCartItems) ...[
-                _buildBulkCartActionButton(context),
+              if (hasBulkCartItems) ...[
+                _buildBulkCartActionButton(context, isDark, bulkCartTotalMeals),
                 const SizedBox(width: 4),
               ],
-              if (context.watch<CartProvider>().itemCount > 0) ...[
-                _buildCartActionButton(context),
+              if (cartItemCount > 0) ...[
+                _buildCartActionButton(context, isDark, cartItemCount),
                 const SizedBox(width: 4),
               ],
               _buildPlansButton(context),
@@ -308,9 +329,7 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildAnnouncementsButton(BuildContext context, bool isDark) {
-    final unreadCount = context.watch<AnnouncementProvider>().getUnreadCountForLocation('home');
-    
+  Widget _buildAnnouncementsButton(BuildContext context, bool isDark, int unreadCount) {
     return GestureDetector(
       onTap: () {
         Navigator.pushNamed(context, AppRoutes.announcements);
@@ -332,7 +351,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 top: -4,
                 child: Container(
                   padding: const EdgeInsets.all(3),
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     color: AppTheme.primaryColor,
                     shape: BoxShape.circle,
                   ),
@@ -357,10 +376,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildCartActionButton(BuildContext context) {
-    final itemCount = context.watch<CartProvider>().itemCount;
+  Widget _buildCartActionButton(BuildContext context, bool isDark, int itemCount) {
     final badgeColor = Theme.of(context).colorScheme.error;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return GestureDetector(
       onTap: () {
@@ -412,10 +429,8 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildBulkCartActionButton(BuildContext context) {
-    final count = context.watch<BulkOrderProvider>().bulkCartTotalMeals;
+  Widget _buildBulkCartActionButton(BuildContext context, bool isDark, int count) {
     final badgeColor = Theme.of(context).colorScheme.secondary;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return GestureDetector(
       onTap: () {
@@ -467,46 +482,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  void _navigateToChildrenManage(BuildContext context) {
-    Navigator.push(context, CupertinoPageRoute(builder: (_) => const ChildrenManagementScreen()));
-  }
-
-  void _navigateToTeacherProfile(BuildContext context) {
-    Navigator.push(context, CupertinoPageRoute(builder: (_) => const TeacherProfileScreen()));
-  }
-
-  void _navigateToProfessionalProfile(BuildContext context) {
-    Navigator.push(context, CupertinoPageRoute(builder: (_) => const ProfessionalProfileScreen()));
-  }
-
-  Future<void> _openFirstAvailableManageScreen(BuildContext context) async {
-    await Future.wait([
-      context.read<ChildrenProvider>().fetchChildren(silent: true),
-      context.read<ProfileProvider>().fetchProfiles(silent: true),
-    ]);
-    if (!context.mounted) return;
-    final children = context.read<ChildrenProvider>().children.where((c) => (c.id ?? '').toString().isNotEmpty).toList();
-    if (children.isNotEmpty) {
-      _navigateToChildrenManage(context);
-      return;
-    }
-    final teacher = context.read<ProfileProvider>().teacherProfile;
-    if (teacher != null && (teacher.id ?? '').toString().isNotEmpty) {
-      _navigateToTeacherProfile(context);
-      return;
-    }
-    final professional = context.read<ProfileProvider>().professionalProfile;
-    if (professional != null && (professional.id ?? '').toString().isNotEmpty) {
-      _navigateToProfessionalProfile(context);
-      return;
-    }
-    _navigateToChildrenManage(context);
-  }
-
-  Future<void> _openUpgradeWithFirstProfile(BuildContext context) async {
-    await _openFirstAvailableManageScreen(context);
-  }
-
   Widget _buildPlansButton(BuildContext context) {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 10),
@@ -555,8 +530,12 @@ class _HomeScreenState extends State<HomeScreen> {
     .shimmer(duration: 2500.ms, color: Colors.white.withValues(alpha: 0.4))
     .scale(duration: 2000.ms, begin: const Offset(1, 1), end: const Offset(1.02, 1.02), curve: Curves.easeInOut);
   }
+}
 
-  String _formatUpcomingMessage(Map<String, dynamic> row) {
+class UpcomingPlanCard extends StatelessWidget {
+  const UpcomingPlanCard({super.key});
+
+  String _formatUpcomingMessage(BuildContext context, Map<String, dynamic> row) {
     final startYmd = row['start_date']?.toString();
     if (startYmd == null) return '';
     final formattedDate = MealDate.formatDisplay(startYmd);
@@ -644,7 +623,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       itemCount: upcomingRows.length,
                       itemBuilder: (context, index) {
                         final row = upcomingRows[index];
-                        final message = _formatUpcomingMessage(row);
+                        final message = _formatUpcomingMessage(context, row);
                         final planName = row['plan_name']?.toString() ?? 'Subscription Plan';
                         
                         return Container(
@@ -712,7 +691,9 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildUpcomingPlanCard(BuildContext context, bool isDark) {
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final statusData = context.watch<MealProvider>().subscriptionStatusData;
     if (statusData == null) return const SizedBox.shrink();
 
@@ -729,7 +710,6 @@ class _HomeScreenState extends State<HomeScreen> {
       return const SizedBox.shrink();
     }
 
-    // Sort upcoming rows by start date so the earliest shows first
     upcomingRows.sort((a, b) {
       final aStart = a['start_date']?.toString() ?? '';
       final bStart = b['start_date']?.toString() ?? '';
@@ -737,7 +717,7 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     final firstRow = upcomingRows.first;
-    final message = _formatUpcomingMessage(firstRow);
+    final message = _formatUpcomingMessage(context, firstRow);
     if (message.isEmpty) return const SizedBox.shrink();
 
     return Padding(
@@ -786,10 +766,9 @@ class _HomeScreenState extends State<HomeScreen> {
                             child: Text(
                               '•  View all (${upcomingRows.length})',
                               style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w900,
-                                color: AppTheme.primaryColor,
-                              ),
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w900,
+                                  color: AppTheme.primaryColor),
                             ),
                           ),
                         ),
@@ -803,8 +782,98 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+}
 
-  Widget _buildTodayMealCard(BuildContext context, bool isDark) {
+class TodayMealCard extends StatelessWidget {
+  const TodayMealCard({super.key});
+
+  Widget? _buildPlanStatusBadge(BuildContext context, bool isDark) {
+    final statusData = context.watch<MealProvider>().subscriptionStatusData;
+    if (statusData == null) return null;
+
+    final hasActive = statusData['has_active_subscription'] == true;
+    final hasUpcoming = statusData['has_upcoming_subscription'] == true;
+
+    final Color bg;
+    final String label;
+    if (hasActive) {
+      bg = const Color(0xFF10B981);
+      label = 'Your plan includes this';
+    } else if (hasUpcoming) {
+      bg = const Color(0xFFD97706);
+      label = 'Upcoming plan';
+    } else {
+      bg = const Color(0xFF64748B);
+      label = 'Not subscribed';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.15),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMealImage(BuildContext context, String? imageUrl, double height) {
+    if (imageUrl != null && imageUrl.isNotEmpty) {
+      return ClipRRect(
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        child: ColoredBox(
+          color: Theme.of(context).brightness == Brightness.dark
+              ? AppTheme.surfaceDark
+              : const Color(0xFFF7F2EA),
+          child: CachedNetworkImage(
+            imageUrl: imageUrl,
+            width: double.infinity,
+            height: height,
+            fit: BoxFit.contain,
+            placeholder: (_, __) => _buildMealPlaceholder(height),
+            errorWidget: (_, __, ___) => _buildMealPlaceholder(height),
+          ),
+        ),
+      );
+    }
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      child: _buildMealPlaceholder(height),
+    );
+  }
+
+  Widget _buildMealPlaceholder(double height) {
+    return SkeletonBone(
+      height: height,
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final statusData = context.watch<MealProvider>().subscriptionStatusData;
+    final hasActive = statusData?['has_active_subscription'] == true;
+    final hasUpcoming = statusData?['has_upcoming_subscription'] == true;
+
+    if (statusData != null && !hasActive && !hasUpcoming) {
+      return const SizedBox.shrink();
+    }
+
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final menuProvider = context.watch<MenuProvider>();
     final msg = menuProvider.homeMealMessage?.trim() ?? '';
     if (menuProvider.isLoading && menuProvider.todayMenu == null && msg.isEmpty) {
@@ -883,7 +952,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ImagePreviewDialog.show(context, imageUrl, title: items);
                     }
                   },
-                  child: _buildMealImage(imageUrl, 180),
+                  child: _buildMealImage(context, imageUrl, 180),
                 ),
                 if (planBadge != null)
                   Positioned(
@@ -970,83 +1039,14 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+}
 
-  Widget? _buildPlanStatusBadge(BuildContext context, bool isDark) {
-    final statusData = context.watch<MealProvider>().subscriptionStatusData;
-    if (statusData == null) return null;
+class AlertsBanner extends StatelessWidget {
+  const AlertsBanner({super.key});
 
-    final hasActive = statusData['has_active_subscription'] == true;
-    final hasUpcoming = statusData['has_upcoming_subscription'] == true;
-
-    final Color bg;
-    final String label;
-    if (hasActive) {
-      return null;
-    } else if (hasUpcoming) {
-      bg = const Color(0xFFD97706);
-      label = 'Upcoming plan';
-    } else {
-      bg = const Color(0xFF64748B);
-      label = 'Not subscribed';
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(10),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.15),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 11,
-          fontWeight: FontWeight.w800,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMealImage(String? imageUrl, double height) {
-    if (imageUrl != null && imageUrl.isNotEmpty) {
-      return ClipRRect(
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        child: ColoredBox(
-          color: Theme.of(context).brightness == Brightness.dark
-              ? AppTheme.surfaceDark
-              : const Color(0xFFF7F2EA),
-          child: CachedNetworkImage(
-            imageUrl: imageUrl,
-            width: double.infinity,
-            height: height,
-            fit: BoxFit.contain,
-            placeholder: (_, __) => _buildMealPlaceholder(height),
-            errorWidget: (_, __, ___) => _buildMealPlaceholder(height),
-          ),
-        ),
-      );
-    }
-    return ClipRRect(
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-      child: _buildMealPlaceholder(height),
-    );
-  }
-
-  Widget _buildMealPlaceholder(double height) {
-    return SkeletonBone(
-      height: height,
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-    );
-  }
-
-  Widget _buildAlertsBanner(BuildContext context, bool isDark) {
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final mealProvider = context.watch<MealProvider>();
     final alerts = mealProvider.alerts;
     
@@ -1132,8 +1132,68 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+}
 
-  Widget _buildFeatureQuickLinks(BuildContext context, bool isDark) {
+class FeatureQuickLinks extends StatelessWidget {
+  const FeatureQuickLinks({super.key});
+
+  Widget _buildQuickLinkCard({
+    required BuildContext context,
+    required String title,
+    required IconData icon,
+    required Color bgColor,
+    required Color iconColor,
+    required bool isDark,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      constraints: const BoxConstraints(minHeight: 130),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, color: iconColor, size: 22),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    height: 1.2,
+                    color: isDark ? Colors.white : const Color(0xFF1E293B),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 24),
       child: Column(
@@ -1228,65 +1288,18 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
+}
 
-  Widget _buildQuickLinkCard({
-    required BuildContext context,
-    required String title,
-    required IconData icon,
-    required Color bgColor,
-    required Color iconColor,
-    required bool isDark,
-    required VoidCallback onTap,
-  }) {
-    return Container(
-      constraints: const BoxConstraints(minHeight: 130),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(20),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(icon, color: iconColor, size: 22),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  title,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    height: 1.2,
-                    color: isDark ? Colors.white : const Color(0xFF1E293B),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+class AboutBuuttiiCard extends StatelessWidget {
+  const AboutBuuttiiCard({super.key});
 
-  Widget _buildAboutBuuttiiCard(BuildContext context, bool isDark) {
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final provider = context.watch<LookupProvider>();
     final contactInfo = provider.contactUsInfo;
-    final aboutTitle = contactInfo == null ? null : contactInfo.aboutTitle!.trim();
-    final aboutDescription = contactInfo == null ? null : contactInfo.aboutDescription!.trim();
+    final aboutTitle = contactInfo == null ? null : contactInfo.aboutTitle.trim();
+    final aboutDescription = contactInfo == null ? null : contactInfo.aboutDescription.trim();
     final title = aboutTitle != null && aboutTitle.isNotEmpty ? aboutTitle : 'About Us';
     final description = aboutDescription != null && aboutDescription.isNotEmpty
         ? aboutDescription
@@ -1346,7 +1359,5 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-/////////////////
-///////////////
 }
 

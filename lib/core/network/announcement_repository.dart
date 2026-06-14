@@ -1,4 +1,4 @@
-import 'package:dio/dio.dart';
+
 import 'package:meal_app/core/models/announcement_model.dart';
 import 'package:meal_app/core/network/api_endpoints.dart';
 import 'package:meal_app/core/network/dio_client.dart';

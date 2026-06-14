@@ -405,20 +405,26 @@ class _PlanPickerSheetState extends State<_PlanPickerSheet> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
+                      // Label — full width so "Without Saturday" is never clipped
+                      Text(
+                        variant.label,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 15,
+                          color: isDark ? Colors.white : AppTheme.textPrimaryLight,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.visible,
+                      ),
+                      const SizedBox(height: 6),
+                      // Days badge + hint on the same line beneath the label
+                      Wrap(
+                        spacing: 8,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
-                          Text(
-                            variant.label,
-                            style: TextStyle(
-                              fontWeight: FontWeight.w800,
-                              fontSize: 15,
-                              color: isDark ? Colors.white : AppTheme.textPrimaryLight,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
                           if (days > 0)
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
                               decoration: BoxDecoration(
                                 color: AppTheme.primaryColor.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(6),
@@ -432,16 +438,15 @@ class _PlanPickerSheetState extends State<_PlanPickerSheet> {
                                 ),
                               ),
                             ),
+                          Text(
+                            variant.hint,
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: isDark ? Colors.white54 : AppTheme.textSecondaryLight,
+                            ),
+                          ),
                         ],
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        variant.hint,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: isDark ? Colors.white54 : AppTheme.textSecondaryLight,
-                        ),
                       ),
                     ],
                   ),

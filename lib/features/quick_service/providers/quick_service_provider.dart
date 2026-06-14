@@ -69,6 +69,7 @@ class QuickServiceProvider with ChangeNotifier {
 
   final Map<String, Map<String, dynamic>> _itemCache = {};
   Map<String, Map<String, dynamic>> get itemCache => _itemCache;
+  final Map<String, List<dynamic>> _categoryItemsMemoryCache = {};
 
   double get cartTotalAmount {
     double total = 0.0;
@@ -182,8 +183,15 @@ class QuickServiceProvider with ChangeNotifier {
   }
 
   Future<void> loadItems(String categoryId, {bool force = false}) async {
-    // Skip API if this category's items are fresh in memory
-    if (!force && _items.isNotEmpty && _isItemsFresh(categoryId)) return;
+    // Check memory cache first
+    if (!force && _isItemsFresh(categoryId)) {
+      final cached = _categoryItemsMemoryCache[categoryId];
+      if (cached != null) {
+        _items = cached;
+        notifyListeners();
+        return;
+      }
+    }
 
     _loading = true;
     _error = null;
@@ -194,6 +202,7 @@ class QuickServiceProvider with ChangeNotifier {
       final cachedItems = await CacheStore.getJson('special_items_$categoryId');
       if (cachedItems is List && _items.isEmpty) {
         _items = cachedItems;
+        _categoryItemsMemoryCache[categoryId] = cachedItems;
         for (final item in _items) {
           final id = item['id']?.toString();
           if (id != null) {
@@ -201,12 +210,18 @@ class QuickServiceProvider with ChangeNotifier {
           }
         }
         notifyListeners();
+        if (!force && _isItemsFresh(categoryId)) {
+          _loading = false;
+          notifyListeners();
+          return;
+        }
       }
     } catch (_) {}
     
     notifyListeners();
     try {
       _items = await _repository.getSpecialItems(categoryId);
+      _categoryItemsMemoryCache[categoryId] = _items;
       for (final item in _items) {
         final id = item['id']?.toString();
         if (id != null) {

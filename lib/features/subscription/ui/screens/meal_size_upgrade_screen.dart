@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:intl/intl.dart';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:provider/provider.dart';
 
@@ -509,64 +510,45 @@ class _MealSizeUpgradeScreenState extends State<MealSizeUpgradeScreen> {
             ? _currentSizeName!
             : _trim(selectedMap?['meal_size_name']);
 
-    return Scaffold(
-      backgroundColor: isDark ? AppTheme.surfaceDark : const Color(0xFFFAF8F5),
-      body: SafeArea(
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: AppTheme.overlayFor(
+        background: isDark ? AppTheme.surfaceDark : const Color(0xFFF3EBE0),
+        isDark: isDark,
+        navigationBarColor: isDark ? AppTheme.surfaceDark : const Color(0xFFFAF8F5),
+      ),
+      child: Scaffold(
+        backgroundColor: isDark ? AppTheme.surfaceDark : const Color(0xFFFAF8F5),
+        body: SafeArea(
         child: _loading && subs.isEmpty
             ? const Center(child: CupertinoActivityIndicator())
             : Column(
                 children: [
-                  // Custom Header with rounded bottom corners
+                  // Custom Header
                   Container(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+                    padding: const EdgeInsets.fromLTRB(8, 6, 16, 6),
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: isDark 
-                            ? [const Color(0xFF2C2520), const Color(0xFF1E1A17)]
-                            : [const Color(0xFFF5EBE0), const Color(0xFFE3D5CA)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      borderRadius: const BorderRadius.vertical(bottom: Radius.circular(36)),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.06),
-                          blurRadius: 16,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
+                      color: isDark ? AppTheme.surfaceDark : const Color(0xFFF3EBE0),
                     ),
-                    child: Column(
+                    child: Row(
                       children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            IconButton(
-                              icon: const Icon(CupertinoIcons.back, color: Color(0xFF8B7A66)),
-                              onPressed: () => Navigator.pop(context),
-                            ),
-                            const Text(
-                              'Buuttii',
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.w900,
-                                color: AppTheme.primaryColor,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
-                            const SizedBox(width: 48),
-                          ],
+                        IconButton(
+                          icon: const Icon(CupertinoIcons.back, color: Color(0xFF8B7A66)),
+                          onPressed: () => Navigator.pop(context),
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Resize meal pack',
-                          style: TextStyle(
-                            fontSize: 26,
-                            fontWeight: FontWeight.w900,
-                            color: isDark ? Colors.white : const Color(0xFF4A3E3D),
-                            letterSpacing: -0.5,
+                        Expanded(
+                          child: Text(
+                            'Resize meal pack',
+                            textAlign: TextAlign.center,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w900,
+                              color: isDark ? Colors.white : const Color(0xFF5A4D42),
+                            ),
                           ),
                         ),
+                        const SizedBox(width: 48),
                       ],
                     ),
                   ),
@@ -876,7 +858,7 @@ class _MealSizeUpgradeScreenState extends State<MealSizeUpgradeScreen> {
                                               ),
                                               const SizedBox(width: 10),
                                               Icon(
-                                                CupertinoIcons.right_chevron,
+                                                isDowngrade ? CupertinoIcons.left_chevron : CupertinoIcons.right_chevron,
                                                 color: isDowngrade ? const Color(0xFF22C55E) : AppTheme.primaryColor,
                                                 size: 16,
                                               ),
@@ -1091,8 +1073,9 @@ class _MealSizeUpgradeScreenState extends State<MealSizeUpgradeScreen> {
                   ),
                 ],
               ),
-      ),
-    );
+    ),
+  ),
+);
   }
 
   Widget _sectionTitle(BuildContext context, String text) {

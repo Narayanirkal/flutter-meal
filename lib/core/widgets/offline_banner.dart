@@ -137,8 +137,6 @@ class _OfflineBannerState extends State<OfflineBanner>
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final net = NetworkStatusService.instance;
-    final isOffline = !net.isOnline;
-    final visible = isOffline && !_dismissed;
 
     if (_mode == _BannerMode.hidden && !_controller.isAnimating) {
       return widget.child;
@@ -163,9 +161,6 @@ class _OfflineBannerState extends State<OfflineBanner>
     final textColor = theme.colorScheme.onSurface;
 
     final icon = isBackOnline ? CupertinoIcons.wifi : CupertinoIcons.wifi_slash;
-    final message = isBackOnline
-        ? 'Back online! Your data is refreshing.'
-        : 'No internet connection. Check your Wi‑Fi or mobile data.';
 
     return Stack(
       clipBehavior: Clip.none,

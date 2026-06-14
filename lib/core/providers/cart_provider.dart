@@ -5,7 +5,6 @@ import 'package:meal_app/core/services/network_status_service.dart';
 import 'package:meal_app/core/services/offline_queue.dart';
 import 'package:meal_app/core/utils/wallet_payment_flow.dart';
 import 'package:meal_app/core/storage/cache_store.dart';
-import 'package:meal_app/core/storage/local_cache.dart';
 import 'package:meal_app/core/utils/meal_date.dart';
 import 'package:meal_app/core/utils/error_handler.dart';
 
@@ -63,11 +62,8 @@ class CartItem {
 /// All operations hit the backend — no local-only state.
 class CartProvider with ChangeNotifier {
   final CartRepository _repository;
-  final LocalCache _cache;
-  static const _cartCacheKey = 'cache_cart_v1';
-  int _nextOfflineTempId = -1;
 
-  CartProvider(this._repository, this._cache) {
+  CartProvider(this._repository) {
     _loadCachedCart();
   }
 

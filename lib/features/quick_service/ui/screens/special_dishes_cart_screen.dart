@@ -1,6 +1,7 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:meal_app/core/theme/app_theme.dart';
 import 'package:meal_app/features/quick_service/providers/quick_service_provider.dart';
@@ -35,18 +36,23 @@ class _SpecialDishesCartScreenState extends State<SpecialDishesCartScreen> {
     final cartItems = p.cartQty.entries.where((e) => e.value > 0).toList();
     final hasItems = cartItems.isNotEmpty;
 
-    return Scaffold(
-      backgroundColor: isDark ? AppTheme.surfaceDark : const Color(0xFFFAF8F5),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Custom Header with rounded bottom corners
-            Container(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-              decoration: BoxDecoration(
-                color: isDark ? Colors.black26 : const Color(0xFFF3EBE0),
-                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(32)),
-              ),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: AppTheme.overlayFor(
+        background: isDark ? AppTheme.surfaceDark : const Color(0xFFF3EBE0),
+        isDark: isDark,
+        navigationBarColor: isDark ? AppTheme.surfaceDark : const Color(0xFFFAF8F5),
+      ),
+      child: Scaffold(
+        backgroundColor: isDark ? AppTheme.surfaceDark : const Color(0xFFFAF8F5),
+        body: SafeArea(
+          child: Column(
+            children: [
+              // Custom Header
+              Container(
+                padding: const EdgeInsets.fromLTRB(8, 6, 16, 6),
+                decoration: BoxDecoration(
+                  color: isDark ? AppTheme.surfaceDark : const Color(0xFFF3EBE0),
+                ),
               child: Row(
                 children: [
                   IconButton(
@@ -222,6 +228,7 @@ class _SpecialDishesCartScreenState extends State<SpecialDishesCartScreen> {
           ],
         ),
       ),
+    ),
     );
   }
 

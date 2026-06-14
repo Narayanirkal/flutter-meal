@@ -88,84 +88,6 @@ class _MealSkipScreenState extends State<MealSkipScreen> {
     return count;
   }
 
-  Widget _buildSummaryBanner(BuildContext context, bool isDark, MealProvider mealProvider) {
-    final now = DateTime.now();
-    final todayYmd = DateTime(now.year, now.month, now.day);
-
-    int activeSkips = 0;
-    for (final skip in mealProvider.skips) {
-      final status = skip['status']?.toString().toLowerCase() ?? '';
-      if (status != 'approved' && status != 'active') continue;
-      final start = DateTime.tryParse(skip['skip_start_date']?.toString() ?? '');
-      final end = DateTime.tryParse(skip['skip_end_date']?.toString() ?? '');
-      if (start == null || end == null) continue;
-      final startYmd = DateTime(start.year, start.month, start.day);
-      final endYmd = DateTime(end.year, end.month, end.day);
-      if (!todayYmd.isBefore(startYmd) && !todayYmd.isAfter(endYmd)) {
-        activeSkips++;
-      }
-    }
-
-    final minSkipDays = int.tryParse(mealProvider.skipPolicy['min_skip_days']?.toString() ?? '') ?? 3;
-
-    return Container(
-      margin: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: isDark
-              ? [const Color(0xFF2C1A04), const Color(0xFF1C1C1E)]
-              : [const Color(0xFFFFF2EC), const Color(0xFFFFF9F5)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: isDark ? AppTheme.borderDark : const Color(0xFFFFE0D2),
-          width: 1.5,
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: AppTheme.primaryColor.withValues(alpha: 0.12),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(CupertinoIcons.info_circle_fill, color: AppTheme.primaryColor, size: 22),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  activeSkips > 0
-                      ? 'Currently Skipping: $activeSkips profile(s)'
-                      : 'All deliveries running normal',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 14,
-                    color: activeSkips > 0 ? AppTheme.primaryColor : (isDark ? Colors.white : AppTheme.textPrimaryLight),
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'Minimum skip length is $minSkipDays days. Skip balances are returned as extra meals.',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: isDark ? Colors.white54 : AppTheme.textSecondaryLight,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    ).animate().fadeIn().slideY(begin: -0.1, end: 0);
-  }
-
   @override
   Widget build(BuildContext context) {
     final mealProvider = context.watch<MealProvider>();
@@ -185,7 +107,11 @@ class _MealSkipScreenState extends State<MealSkipScreen> {
         Navigator.of(context).popUntil((route) => route.isFirst);
       },
       child: AnnotatedRegion<SystemUiOverlayStyle>(
-        value: AppTheme.overlayFor(background: pageBg, isDark: isDark, navigationBarColor: navBarColor),
+        value: AppTheme.overlayFor(
+          background: isDark ? AppTheme.surfaceDark : const Color(0xFFF3EBE0),
+          isDark: isDark,
+          navigationBarColor: navBarColor,
+        ),
         child: Scaffold(
           backgroundColor: pageBg,
           floatingActionButton: FloatingActionButton.extended(
@@ -197,12 +123,10 @@ class _MealSkipScreenState extends State<MealSkipScreen> {
           body: SafeArea(
             child: Column(
               children: [
-                // Header
                 Container(
-                  padding: const EdgeInsets.fromLTRB(8, 8, 16, 16),
+                  padding: const EdgeInsets.fromLTRB(8, 6, 16, 6),
                   decoration: BoxDecoration(
-                    color: isDark ? Colors.black26 : const Color(0xFFF3EBE0),
-                    borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
+                    color: isDark ? AppTheme.surfaceDark : const Color(0xFFF3EBE0),
                   ),
                   child: Row(
                     children: [
@@ -240,7 +164,6 @@ class _MealSkipScreenState extends State<MealSkipScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                _buildSummaryBanner(context, isDark, mealProvider),
 
                                 // Meal Balances
                                 if (mealProvider.mealStatus.isNotEmpty) ...[
@@ -290,6 +213,21 @@ class _MealSkipScreenState extends State<MealSkipScreen> {
                                         final name = ms['entity_name']?.toString() ?? 'Profile';
                                         final type = ms['entity_type']?.toString() ?? '';
                                         final plan = ms['plan_name']?.toString() ?? 'No Plan';
+                                        final startDateStr = ms['start_date']?.toString();
+                                        bool isUpcoming = false;
+                                        if (startDateStr != null) {
+                                          try {
+                                            final parsedStart = DateTime.parse(startDateStr);
+                                            final now = DateTime.now();
+                                            final todayDate = DateTime(now.year, now.month, now.day);
+                                            if (parsedStart.isAfter(todayDate)) {
+                                              isUpcoming = true;
+                                            }
+                                          } catch (_) {}
+                                        }
+                                        final planDisplay = isUpcoming && startDateStr != null
+                                            ? 'Upcoming • Starts $startDateStr'
+                                            : plan;
 
                                         Color typeColor;
                                         IconData typeIcon;
@@ -399,10 +337,12 @@ class _MealSkipScreenState extends State<MealSkipScreen> {
                                                     ),
                                                     const SizedBox(height: 2),
                                                     Text(
-                                                      plan,
+                                                      planDisplay,
                                                       style: TextStyle(
                                                         fontSize: 10,
-                                                        color: isDark ? Colors.white54 : AppTheme.textSecondaryLight,
+                                                        color: isUpcoming
+                                                            ? const Color(0xFFD97706)
+                                                            : (isDark ? Colors.white54 : AppTheme.textSecondaryLight),
                                                       ),
                                                       maxLines: 1,
                                                       overflow: TextOverflow.ellipsis,
@@ -920,13 +860,16 @@ class _MealSkipScreenState extends State<MealSkipScreen> {
     int resolveEntityRemainingMeals(String entityKey) {
       final parsed = parseMealSkipEntityKey(entityKey);
       if (parsed == null) return 0;
-      final match = mealProvider.mealStatus.firstWhere(
+      final matches = mealProvider.mealStatus.where(
         (s) => s['entity_type'] == parsed.type && s['entity_id']?.toString() == parsed.id,
-        orElse: () => <String, dynamic>{},
       );
-      if (match.isEmpty) return 0;
-      final remaining = match['remaining_meals'] ?? match['remainingMeals'];
-      return int.tryParse(remaining?.toString() ?? '0') ?? 0;
+      if (matches.isEmpty) return 0;
+      int total = 0;
+      for (final match in matches) {
+        final remaining = match['remaining_meals'] ?? match['remainingMeals'];
+        total += int.tryParse(remaining?.toString() ?? '0') ?? 0;
+      }
+      return total;
     }
 
     bool resolveEntityIncludesSaturday(String entityKey) {
