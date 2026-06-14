@@ -239,9 +239,9 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
     // herd; MenuProvider fetch runs after the main batch settles.
     try {
       final futures = <Future<void>>[
-        meal.fetchSubscriptionStatus(),
-        meal.fetchMealStatus(),
-        meal.fetchAlerts(),
+        meal.fetchSubscriptionStatus(force: true),
+        meal.fetchMealStatus(force: true),
+        meal.fetchAlerts(force: true),
         payment.fetchActiveSubscriptions(),
         payment.fetchPaymentHistory(),
         subscriptions.fetchSubscriptions(force: true),

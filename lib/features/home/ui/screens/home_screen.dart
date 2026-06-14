@@ -102,13 +102,13 @@ class _HomeScreenState extends State<HomeScreen> {
     ]);
   }
 
-  Future<void> _refreshMealDataBundle() async {
+  Future<void> _refreshMealDataBundle({bool force = false}) async {
     if (!mounted || !NetworkStatusService.instance.isOnline) return;
     final meal = context.read<MealProvider>();
     await Future.wait([
-      meal.fetchAlerts(silent: true),
-      meal.fetchMealStatus(silent: true),
-      meal.fetchSubscriptionStatus(silent: true),
+      meal.fetchAlerts(silent: true, force: force),
+      meal.fetchMealStatus(silent: true, force: force),
+      meal.fetchSubscriptionStatus(silent: true, force: force),
     ]);
   }
 
@@ -231,7 +231,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 context.read<AnnouncementProvider>().fetchAnnouncements(location: 'home', force: true),
               ]);
               if (!mounted) return;
-              await _refreshMealDataBundle();
+              await _refreshMealDataBundle(force: true);
               if (!mounted) return;
               await _maybePromptFourMealsLeftDialog();
             },
