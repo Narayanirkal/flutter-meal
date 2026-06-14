@@ -25,7 +25,6 @@ class _AnnouncementBannerState extends State<AnnouncementBanner> {
     if (widget.announcements.isEmpty) return const SizedBox.shrink();
 
     final announcement = widget.announcements[_currentIndex];
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),

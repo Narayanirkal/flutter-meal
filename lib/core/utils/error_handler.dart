@@ -275,22 +275,8 @@ class ErrorHandler {
       }
     }
   }
-
-  /// Resolves the topmost [ScaffoldMessengerState] by walking up via the root
-  /// navigator context. This ensures snackbars appear above modal bottom sheets
-  /// and dialogs, where the local context has no Scaffold ancestor.
-  static ScaffoldMessengerState _rootMessenger(BuildContext context) {
-    try {
-      final rootContext =
-          Navigator.of(context, rootNavigator: true).context;
-      final messenger = ScaffoldMessenger.maybeOf(rootContext);
-      if (messenger != null) return messenger;
-    } catch (_) {
-      // If root navigator is unavailable, fall through to local lookup.
-    }
-    return ScaffoldMessenger.of(context);
-  }
 }
+
 
 class _OverlayToast extends StatefulWidget {
   final String message;

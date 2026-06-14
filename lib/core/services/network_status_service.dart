@@ -166,17 +166,6 @@ class NetworkStatusService with ChangeNotifier {
     }
   }
 
-  static bool _healthBodyOk(dynamic data) {
-    if (data is Map) {
-      final status = data['status']?.toString().toLowerCase();
-      if (status == 'ok') return true;
-    }
-    if (data is String) {
-      return data.toLowerCase().contains('ok');
-    }
-    return false;
-  }
-
   Future<bool> _checkBackendHealth() async {
     try {
       final dio = Dio(BaseOptions(

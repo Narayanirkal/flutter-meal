@@ -448,9 +448,11 @@ class _CartScreenState extends State<CartScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                '${cartProvider.itemCount} ${cartProvider.itemCount == 1 ? 'item' : 'items'}',
-                style: TextStyle(fontSize: 14, color: isDark ? Colors.white54 : AppTheme.textSecondaryLight),
+              Expanded(
+                child: Text(
+                  '${cartProvider.itemCount} ${cartProvider.itemCount == 1 ? 'item' : 'items'}',
+                  style: TextStyle(fontSize: 14, color: isDark ? Colors.white54 : AppTheme.textSecondaryLight),
+                ),
               ),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,

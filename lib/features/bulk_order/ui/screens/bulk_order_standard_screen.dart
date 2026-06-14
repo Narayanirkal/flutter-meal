@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:meal_app/core/theme/app_theme.dart';
 import 'package:meal_app/core/utils/error_handler.dart';
@@ -97,30 +98,35 @@ class _BulkOrderStandardScreenState extends State<BulkOrderStandardScreen> {
     final estimatedTotal = _qty * pricePerMeal;
     final canAdd = _selectedDate != null && p.deliveryMenu != null && !p.isLoading;
 
-    return Scaffold(
-      backgroundColor: isDark ? AppTheme.surfaceDark : const Color(0xFFFAF8F5),
-      floatingActionButton: cartTotal > 0
-          ? FloatingActionButton.extended(
-              heroTag: 'standard_bulk_cart_fab',
-              onPressed: () => Navigator.push(
-                context,
-                CupertinoPageRoute(builder: (_) => const BulkOrderCartScreen()),
-              ),
-              icon: const Icon(CupertinoIcons.cart_fill),
-              label: Text('Cart ($cartTotal)', style: const TextStyle(fontWeight: FontWeight.w800)),
-            )
-          : null,
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Custom Header with rounded bottom corners
-            Container(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              decoration: BoxDecoration(
-                color: isDark ? Colors.black26 : const Color(0xFFF3EBE0),
-                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
-              ),
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: AppTheme.overlayFor(
+        background: isDark ? AppTheme.surfaceDark : const Color(0xFFF3EBE0),
+        isDark: isDark,
+        navigationBarColor: isDark ? AppTheme.surfaceDark : const Color(0xFFFAF8F5),
+      ),
+      child: Scaffold(
+        backgroundColor: isDark ? AppTheme.surfaceDark : const Color(0xFFFAF8F5),
+        floatingActionButton: cartTotal > 0
+            ? FloatingActionButton.extended(
+                heroTag: 'standard_bulk_cart_fab',
+                onPressed: () => Navigator.push(
+                  context,
+                  CupertinoPageRoute(builder: (_) => const BulkOrderCartScreen()),
+                ),
+                icon: const Icon(CupertinoIcons.cart_fill),
+                label: Text('Cart ($cartTotal)', style: const TextStyle(fontWeight: FontWeight.w800)),
+              )
+            : null,
+        floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+        body: SafeArea(
+          child: Column(
+            children: [
+              // Custom Header
+              Container(
+                padding: const EdgeInsets.fromLTRB(8, 6, 16, 6),
+                decoration: BoxDecoration(
+                  color: isDark ? AppTheme.surfaceDark : const Color(0xFFF3EBE0),
+                ),
               child: Row(
                 children: [
                   IconButton(
@@ -298,7 +304,8 @@ class _BulkOrderStandardScreenState extends State<BulkOrderStandardScreen> {
         ],
       ),
     ),
-  );
+      ),
+    );
 }
 }
 

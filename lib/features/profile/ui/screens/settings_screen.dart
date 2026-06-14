@@ -238,9 +238,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               CupertinoIcons.info_circle_fill,
               (() {
                 final contactInfo = _contactInfo;
-                final aboutTitle = contactInfo == null ? null : contactInfo.aboutTitle?.trim();
+                final aboutTitle = contactInfo == null ? null : contactInfo.aboutTitle.trim();
                 if (aboutTitle != null && aboutTitle.isNotEmpty) return aboutTitle;
-                final appName = contactInfo == null ? null : contactInfo.appName?.trim();
+                final appName = contactInfo == null ? null : contactInfo.appName.trim();
                 return appName != null && appName.isNotEmpty ? 'About $appName' : 'About Us';
               })(),
               isDark,
@@ -321,14 +321,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
       onTap: onTap,
       leading: Icon(icon, color: AppTheme.primaryColor, size: 20),
       title: Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: isDark ? Colors.white : AppTheme.textPrimaryLight,
+          Expanded(
+            child: Text(
+              title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: title.length > 20 ? 13.5 : 15,
+                fontWeight: FontWeight.w600,
+                color: isDark ? Colors.white : AppTheme.textPrimaryLight,
+              ),
             ),
           ),
           if (showBadge) ...[
@@ -365,9 +368,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Text(
                 (() {
                   final contactInfo = _contactInfo;
-                  final aboutTitle = contactInfo == null ? null : contactInfo.aboutTitle?.trim();
+                  final aboutTitle = contactInfo == null ? null : contactInfo.aboutTitle.trim();
                   if (aboutTitle != null && aboutTitle.isNotEmpty) return aboutTitle;
-                  final appName = contactInfo == null ? null : contactInfo.appName?.trim();
+                  final appName = contactInfo == null ? null : contactInfo.appName.trim();
                   return appName != null && appName.isNotEmpty ? 'About $appName' : 'About Us';
                 })(),
                 style: TextStyle(
@@ -392,7 +395,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Text(
                 (() {
                   final contactInfo = _contactInfo;
-                  final aboutDescription = contactInfo == null ? null : contactInfo.aboutDescription?.trim();
+                  final aboutDescription = contactInfo == null ? null : contactInfo.aboutDescription.trim();
                   return aboutDescription != null && aboutDescription.isNotEmpty
                       ? aboutDescription
                       : 'This app helps you manage meal subscriptions, menus, and skips in one place.';
@@ -445,9 +448,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Text(
               (() {
                 final contactInfo = _contactInfo;
-                final licenseText = contactInfo == null ? null : contactInfo.licenseText?.trim();
+                final licenseText = contactInfo == null ? null : contactInfo.licenseText.trim();
                 if (licenseText != null && licenseText.isNotEmpty) return licenseText;
-                final appName = contactInfo == null ? null : contactInfo.appName?.trim();
+                final appName = contactInfo == null ? null : contactInfo.appName.trim();
                 final brand = appName != null && appName.isNotEmpty ? appName : 'This App';
                 return 'Copyright (c) ${DateTime.now().year} $brand.\n\n'
                     'This mobile application and its content are proprietary to $brand and intended for authorized meal subscription use only.\n\n'

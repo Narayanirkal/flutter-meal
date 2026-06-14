@@ -74,7 +74,7 @@ class OfflineQueue {
     try {
       final decoded = jsonDecode(raw);
       if (decoded is List) {
-        return decoded.whereType<Map>().map((e) => Map<String, dynamic>.from(e as Map)).toList();
+        return decoded.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList();
       }
     } catch (_) {}
     return <Map<String, dynamic>>[];
@@ -96,7 +96,7 @@ class OfflineQueue {
       if (decoded is List) {
         return decoded
             .whereType<Map>()
-            .map((e) => DeadLetterItem.fromJson(Map<String, dynamic>.from(e as Map)))
+            .map((e) => DeadLetterItem.fromJson(Map<String, dynamic>.from(e)))
             .toList();
       }
     } catch (_) {}

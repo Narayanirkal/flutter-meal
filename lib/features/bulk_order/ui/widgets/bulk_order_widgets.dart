@@ -16,14 +16,16 @@ Widget bulkMenuImage(String? imageUrl) {
         width: double.infinity,
         height: 180,
         fit: BoxFit.contain,
-        placeholder: (_, __) => const Padding(
-          padding: EdgeInsets.symmetric(vertical: 48),
+        placeholder: (_, __) => const SizedBox(
+          height: 180,
+          width: double.infinity,
           child: Center(child: CupertinoActivityIndicator()),
         ),
-        errorWidget: (_, __, ___) => Padding(
-          padding: const EdgeInsets.symmetric(vertical: 40),
+        errorWidget: (_, __, ___) => SizedBox(
+          height: 180,
+          width: double.infinity,
           child: Center(
-            child: Icon(CupertinoIcons.photo, color: Colors.grey.withValues(alpha: 0.4)),
+            child: Icon(CupertinoIcons.photo, size: 32, color: Colors.grey.withValues(alpha: 0.4)),
           ),
         ),
       ),

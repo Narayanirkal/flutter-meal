@@ -204,6 +204,8 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
         final startDateStr = _safeString(sub['start_date'], '');
         final startDate = startDateStr.isNotEmpty ? MealDate.parseYmdLocal(startDateStr) : null;
 
+        final isUpcoming = sessionToday != null && startDate != null && startDate.isAfter(sessionToday);
+
         return AppleCard(
           margin: const EdgeInsets.only(bottom: 12),
           child: Column(
@@ -223,9 +225,9 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
                       style: const TextStyle(color: AppTheme.primaryColor, fontSize: 10, fontWeight: FontWeight.w900),
                     ),
                   ),
-                  const Icon(
+                  Icon(
                     CupertinoIcons.checkmark_seal_fill,
-                    color: Color(0xFF22C55E),
+                    color: isUpcoming ? Colors.orange : const Color(0xFF22C55E),
                     size: 20,
                   ),
                 ],
@@ -465,6 +467,30 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
         final mealTimingRaw = _safeString(payment['meal_timing'], '');
         final isSuccess = pStatus == 'COMPLETED' || pStatus == 'SUCCESS';
 
+        String fallbackEntityName = 'System / Referral';
+        if (orderType == 'bulk') {
+          fallbackEntityName = 'Bulk Order';
+        } else if (orderType == 'one_day_lunch') {
+          fallbackEntityName = 'One Day Lunch';
+        } else if (orderType == 'special_dish') {
+          fallbackEntityName = 'Buuttii Specials';
+        } else if (orderType == 'meal_size_upgrade' || orderType == 'meal_size_downgrade') {
+          fallbackEntityName = 'Resizer Pack';
+        }
+
+        final showSaturday = orderType != 'special_dish' &&
+            orderType != 'one_day_lunch' &&
+            orderType != 'bulk' &&
+            orderType != 'meal_size_upgrade' &&
+            orderType != 'meal_size_downgrade';
+
+        final metaList = [
+          if (showSaturday) includeSaturday ? 'With Saturday' : 'Without Saturday',
+          if (mealSizeName.isNotEmpty) mealSizeName,
+          if (mealTimingRaw.isNotEmpty) TimeUtils.formatToDisplay(mealTimingRaw),
+        ];
+        final metaText = metaList.join(' • ');
+
         final dateStr = _safeString(payment['created_at'] ?? payment['payment_date'], '');
         DateTime date = DateTime.now();
         if (dateStr.isNotEmpty) {
@@ -565,7 +591,7 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      entityName.isNotEmpty ? entityName : 'System / Referral',
+                      entityName.isNotEmpty ? entityName : fallbackEntityName,
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
@@ -586,7 +612,7 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
               ),
               
               // Third block: Meta details if applicable (Saturday option, Size, Time etc.)
-              if (orderType != 'referral_reward' && orderType != 'referral_applied') ...[
+              if (orderType != 'referral_reward' && orderType != 'referral_applied' && metaText.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Row(
                   children: [
@@ -598,11 +624,7 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
-                        [
-                          includeSaturday ? 'With Saturday' : 'Without Saturday',
-                          if (mealSizeName.isNotEmpty) mealSizeName,
-                          if (mealTimingRaw.isNotEmpty) TimeUtils.formatToDisplay(mealTimingRaw),
-                        ].join(' • '),
+                        metaText,
                         style: TextStyle(
                           color: isDark ? Colors.white38 : AppTheme.textSecondaryLight,
                           fontSize: 11,

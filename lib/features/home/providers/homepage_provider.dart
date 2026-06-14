@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:meal_app/core/storage/cache_store.dart';
-import 'package:meal_app/core/storage/local_cache.dart';
 import 'package:meal_app/core/utils/error_handler.dart';
 import 'package:meal_app/features/home/data/models/homepage_entry.dart';
 import 'package:meal_app/features/home/data/repositories/homepage_repository.dart';
 
 class HomepageProvider with ChangeNotifier {
   final HomepageRepository _repository;
-  final LocalCache _cache;
-  static const _cacheKey = 'cache_homepage_entries_v1';
 
   bool _isLoading = false;
   String _errorMessage = '';
@@ -17,7 +14,7 @@ class HomepageProvider with ChangeNotifier {
   Future<void>? _inflightRequest;
   bool _hasInitiallyLoaded = false;
 
-  HomepageProvider(this._repository, this._cache) {
+  HomepageProvider(this._repository) {
     _loadFromCache();
   }
 

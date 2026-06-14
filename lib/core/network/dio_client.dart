@@ -1,7 +1,10 @@
   import 'dart:convert';
+import 'dart:io';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
+import 'package:dio/io.dart';
 import 'package:flutter/foundation.dart';
 import 'package:meal_app/core/network/api_endpoints.dart';
 import 'package:meal_app/core/providers/session_provider.dart';
@@ -12,6 +15,19 @@ class DioClient {
   final SecureStorage _secureStorage;
   final SessionProvider? _sessionProvider;
   static bool _sessionRecoveryFailed = false;
+
+  /// SHA-256 fingerprints of the production API server certificate(s).
+  /// Add backup fingerprints here to ensure service continuity during
+  /// routine certificate rotations. Format: uppercase hex with colons.
+  /// Example: 'A1:B2:C3:D4:E5:F6:...'
+  ///
+  /// To obtain your certificate fingerprint, run:
+  ///   openssl s_client -connect <your-api-host>:443 < /dev/null 2>/dev/null \
+  ///     | openssl x509 -fingerprint -sha256 -noout
+  static const List<String> _pinnedCertFingerprints = [
+    // TODO: Replace with your production API certificate SHA-256 fingerprint(s).
+    // 'AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99',
+  ];
 
   static void resetSessionGate() {
     _sessionRecoveryFailed = false;
@@ -29,6 +45,26 @@ class DioClient {
         'Accept': 'application/json',
       },
     ));
+
+    // SSL Certificate Pinning — enforce only in release builds.
+    // In debug/profile mode, proxies (e.g. Charles, Burp) must work unimpeded.
+    if (kReleaseMode && _pinnedCertFingerprints.isNotEmpty) {
+      _dio.httpClientAdapter = IOHttpClientAdapter(
+        createHttpClient: () {
+          final client = HttpClient();
+          client.badCertificateCallback =
+              (X509Certificate cert, String host, int port) {
+            // Compute the SHA-256 fingerprint of the presented certificate.
+            final serverFingerprint = sha256.convert(cert.der).bytes
+                .map((b) => b.toRadixString(16).padLeft(2, '0'))
+                .join(':')
+                .toUpperCase();
+            return _pinnedCertFingerprints.contains(serverFingerprint);
+          };
+          return client;
+        },
+      );
+    }
 
     // Never emit full HTTP logs in release builds to avoid leaking tokens/PII.
     if (!kReleaseMode) {

@@ -28,7 +28,7 @@ class _ViewAllPlansScreenState extends State<ViewAllPlansScreen> {
     _scrollController.addListener(_syncSelectedSegmentFromScroll);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      context.read<SubscriptionProvider>().fetchSubscriptions(force: true, silent: true);
+      context.read<SubscriptionProvider>().fetchSubscriptions(force: true, silent: false);
       context.read<LookupProvider>().fetchInitialData(force: true);
       _syncSelectedSegmentFromScroll();
     });
@@ -122,7 +122,8 @@ class _ViewAllPlansScreenState extends State<ViewAllPlansScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final lookup = context.watch<LookupProvider>();
-    final plans = [...context.watch<SubscriptionProvider>().subscriptions]
+    final subProvider = context.watch<SubscriptionProvider>();
+    final plans = [...subProvider.subscriptions]
       ..sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
 
     final segments = _segments(plans, lookup);
@@ -136,6 +137,10 @@ class _ViewAllPlansScreenState extends State<ViewAllPlansScreen> {
       backgroundColor: isDark ? AppTheme.surfaceDark : const Color(0xFFFAF8F5),
       appBar: AppBar(
         backgroundColor: isDark ? AppTheme.surfaceDark : const Color(0xFFF3EBE0),
+        systemOverlayStyle: AppTheme.overlayFor(
+          background: isDark ? AppTheme.surfaceDark : const Color(0xFFF3EBE0),
+          isDark: isDark,
+        ),
         elevation: 0,
         centerTitle: true,
         title: Text(
@@ -167,26 +172,28 @@ class _ViewAllPlansScreenState extends State<ViewAllPlansScreen> {
               ),
             Expanded(
               child: plans.isEmpty
-                  ? SingleChildScrollView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(20, 48, 20, 32),
-                        child: Center(
-                          child: Text(
-                            'Plans are unavailable right now. Pull down to retry.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: isDark ? Colors.white70 : AppTheme.textSecondaryLight,
+                  ? (subProvider.isLoading
+                      ? const Center(child: CupertinoActivityIndicator())
+                      : SingleChildScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          child: Padding(
+                            padding: const EdgeInsets.fromLTRB(20, 48, 20, 32),
+                            child: Center(
+                              child: Text(
+                                'Plans are unavailable right now. Pull down to retry.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: isDark ? Colors.white70 : AppTheme.textSecondaryLight,
+                                ),
+                              ),
                             ),
                           ),
-                        ),
-                      ),
-                    )
+                        ))
                   : RefreshIndicator(
                       onRefresh: () async {
                         await Future.wait([
-                          context.read<SubscriptionProvider>().fetchSubscriptions(force: true, silent: true),
+                          context.read<SubscriptionProvider>().fetchSubscriptions(force: true, silent: false),
                           context.read<LookupProvider>().fetchInitialData(force: true),
                         ]);
                       },

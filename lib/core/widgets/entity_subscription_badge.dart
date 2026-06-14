@@ -35,7 +35,7 @@ class EntitySubscriptionBadge extends StatelessWidget {
     }
 
     return Icon(
-      CupertinoIcons.time_solid,
+      CupertinoIcons.checkmark_seal_fill,
       size: size,
       color: Colors.amber.shade700,
     );
