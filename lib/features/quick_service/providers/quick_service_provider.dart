@@ -239,6 +239,9 @@ class QuickServiceProvider with ChangeNotifier {
   }
 
   Future<void> loadCartFromServer() async {
+    _loading = true;
+    _error = null;
+    notifyListeners();
     try {
       final data = await _repository.getSpecialCart();
       final items = data['items'];
@@ -248,12 +251,30 @@ class QuickServiceProvider with ChangeNotifier {
           if (row is Map) {
             final id = row['item_id']?.toString() ?? row['special_dish_item_id']?.toString();
             final qty = int.tryParse('${row['quantity']}') ?? 0;
-            if (id != null && id.isNotEmpty && qty > 0) _cartQty[id] = qty;
+            if (id != null && id.isNotEmpty && qty > 0) {
+              _cartQty[id] = qty;
+            }
           }
         }
       }
+      if (_cartQty.isNotEmpty) {
+        try {
+          final allItems = await _repository.getSpecialItems('all');
+          for (final item in allItems) {
+            final id = item['id']?.toString();
+            if (id != null) {
+              _itemCache[id] = Map<String, dynamic>.from(item);
+            }
+          }
+        } catch (_) {}
+      }
+      _error = null;
+    } catch (e) {
+      _error = e.toString();
+    } finally {
+      _loading = false;
       notifyListeners();
-    } catch (_) {}
+    }
   }
 
   void setCartQty(String itemId, int qty) {

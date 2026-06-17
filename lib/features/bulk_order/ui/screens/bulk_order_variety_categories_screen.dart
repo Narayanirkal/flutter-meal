@@ -200,19 +200,26 @@ class _CategoryCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 if (category.imageUrl != null && category.imageUrl!.isNotEmpty)
-                  ColoredBox(
-                    color: AppTheme.primaryColor.withValues(alpha: 0.06),
+                  SizedBox(
+                    height: 180,
+                    width: double.infinity,
                     child: CachedNetworkImage(
                       imageUrl: category.imageUrl!,
-                      width: double.infinity,
-                      fit: BoxFit.contain,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => const Center(
+                        child: CircularProgressIndicator(),
+                      ),
+                      errorWidget: (context, url, error) => Container(
+                        color: AppTheme.primaryColor.withValues(alpha: 0.08),
+                        child: Icon(CupertinoIcons.square_grid_2x2, color: AppTheme.primaryColor, size: 40),
+                      ),
                     ),
                   )
                 else
                   Container(
-                    height: 72,
+                    height: 180,
                     color: AppTheme.primaryColor.withValues(alpha: 0.08),
-                    child: Icon(CupertinoIcons.square_grid_2x2, color: AppTheme.primaryColor),
+                    child: Icon(CupertinoIcons.square_grid_2x2, color: AppTheme.primaryColor, size: 40),
                   ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),

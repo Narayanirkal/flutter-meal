@@ -616,6 +616,22 @@ class _AddressFormSheetState extends State<_AddressFormSheet> {
     super.dispose();
   }
 
+  void _formatPhoneInput(String val, TextEditingController controller) {
+    String digits = val.replaceAll(RegExp(r'\D'), '');
+    if (digits.startsWith('91') && digits.length > 10) {
+      digits = digits.substring(2);
+    }
+    if (digits.length > 10) {
+      digits = digits.substring(0, 10);
+    }
+    if (digits != controller.text) {
+      controller.value = TextEditingValue(
+        text: digits,
+        selection: TextSelection.collapsed(offset: digits.length),
+      );
+    }
+  }
+
   Future<void> _save() async {
     final state = _selectedState;
     final city = _selectedCity;
@@ -629,6 +645,12 @@ class _AddressFormSheetState extends State<_AddressFormSheet> {
     }
     final line = allowedAddress.addressLine;
     final pin = allowedAddress.pincode;
+
+    final houseId = _labelController.text.trim();
+    if (houseId.isEmpty) {
+      setState(() => _formError = 'House ID / Flat No is required.');
+      return;
+    }
 
     if (phone.isEmpty) {
       setState(() => _formError = 'Phone number is required.');
@@ -745,18 +767,6 @@ class _AddressFormSheetState extends State<_AddressFormSheet> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Label field
-                    TextField(
-                      controller: _labelController,
-                      textCapitalization: TextCapitalization.words,
-                      decoration: const InputDecoration(
-                        labelText: 'Label (optional)',
-                        hintText: 'e.g. Home, Office, School',
-                        prefixIcon:
-                            Icon(CupertinoIcons.tag),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
                     // State
                     SearchableDropdown<StateModel>(
                       label: 'State',
@@ -775,6 +785,9 @@ class _AddressFormSheetState extends State<_AddressFormSheet> {
                         setState(() {
                           _selectedState = v;
                           _selectedCity = null;
+                          _selectedAllowedAddress = null;
+                          _addressController.clear();
+                          _pincodeController.clear();
                           _formError = null;
                           if (v != null) lookup.fetchCitiesByState(v.id);
                         });
@@ -868,11 +881,21 @@ class _AddressFormSheetState extends State<_AddressFormSheet> {
                       ),
                     ),
                     const SizedBox(height: 16),
+                    // House ID / Flat No field
+                    TextField(
+                      controller: _labelController,
+                      textCapitalization: TextCapitalization.words,
+                      decoration: const InputDecoration(
+                        labelText: 'House ID / Flat No *',
+                        hintText: 'e.g. Flat 101, Building A',
+                        prefixIcon: Icon(CupertinoIcons.house),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                     // Phone number
                     TextField(
                       controller: _phoneController,
                       keyboardType: TextInputType.phone,
-                      maxLength: 10,
                       decoration: InputDecoration(
                         labelText: 'Phone number *',
                         counterText: '',
@@ -883,14 +906,16 @@ class _AddressFormSheetState extends State<_AddressFormSheet> {
                             ? 'Must be 10 digits'
                             : null,
                       ),
-                      onChanged: (_) => setState(() {}),
+                      onChanged: (val) {
+                        _formatPhoneInput(val, _phoneController);
+                        setState(() {});
+                      },
                     ),
                     const SizedBox(height: 16),
                     // Alternate phone number
                     TextField(
                       controller: _altPhoneController,
                       keyboardType: TextInputType.phone,
-                      maxLength: 10,
                       decoration: InputDecoration(
                         labelText: 'Alternate phone (optional)',
                         counterText: '',
@@ -901,7 +926,10 @@ class _AddressFormSheetState extends State<_AddressFormSheet> {
                             ? 'Must be 10 digits'
                             : null,
                       ),
-                      onChanged: (_) => setState(() {}),
+                      onChanged: (val) {
+                        _formatPhoneInput(val, _altPhoneController);
+                        setState(() {});
+                      },
                     ),
                     // Inline error
                     if (_formError != null) ...[

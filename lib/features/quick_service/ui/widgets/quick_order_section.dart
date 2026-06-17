@@ -244,11 +244,12 @@ class _SpecialsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg = isDark ? AppTheme.surfaceDark : const Color(0xFFF3EBE0);
-    final borderCol = isDark ? AppTheme.borderDark : const Color(0xFFE6D6C6);
-    final titleColor = isDark ? Colors.white : const Color(0xFF5A4D42);
-    final subtitleColor = isDark ? Colors.white70 : const Color(0xFF8A7A6A);
-    final iconColor = const Color(0xFF8B7A66);
+    final bg = isDark ? AppTheme.surfaceDark : Colors.white;
+    final borderCol = isDark ? AppTheme.borderDark : AppTheme.borderLight;
+    final titleColor = isDark ? Colors.white : AppTheme.textPrimaryLight;
+    final subtitleColor = isDark ? Colors.white60 : const Color(0xFF64748B);
+    final orangeColor = const Color(0xFFFF5722);
+    final lightOrange = orangeColor.withValues(alpha: 0.12);
 
     return Material(
       color: Colors.transparent,
@@ -280,11 +281,11 @@ class _SpecialsCard extends StatelessWidget {
                       width: 34,
                       height: 34,
                       decoration: BoxDecoration(
-                        color: iconColor.withValues(alpha: 0.15),
+                        color: lightOrange,
                         shape: BoxShape.circle,
-                        border: Border.all(color: iconColor.withValues(alpha: 0.35)),
+                        border: Border.all(color: orangeColor.withValues(alpha: 0.3)),
                       ),
-                      child: Icon(CupertinoIcons.star_fill, size: 16, color: iconColor),
+                      child: Icon(CupertinoIcons.star_fill, size: 16, color: orangeColor),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
@@ -297,7 +298,7 @@ class _SpecialsCard extends StatelessWidget {
                         ),
                       ),
                     ),
-                    Icon(CupertinoIcons.chevron_right, size: 14, color: isDark ? Colors.white70 : const Color(0xFF8B7A66)),
+                    Icon(CupertinoIcons.chevron_right, size: 14, color: Colors.grey.shade500),
                   ],
                 ),
                 const SizedBox(height: 8),
@@ -311,7 +312,7 @@ class _SpecialsCard extends StatelessWidget {
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 10),
                   decoration: BoxDecoration(
-                    color: iconColor.withValues(alpha: isDark ? 0.25 : 0.15),
+                    color: lightOrange,
                     borderRadius: BorderRadius.circular(10),
                   ),
                   alignment: Alignment.center,
@@ -320,7 +321,7 @@ class _SpecialsCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w800,
-                      color: isDark ? Colors.white : iconColor,
+                      color: orangeColor,
                     ),
                   ),
                 ),

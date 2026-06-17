@@ -78,12 +78,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
         child: Scaffold(
           backgroundColor: pageBg,
         appBar: AppBar(
+          backgroundColor: isDark ? AppTheme.surfaceDark : const Color(0xFFF3EBE0),
+          systemOverlayStyle: AppTheme.overlayFor(
+            background: isDark ? AppTheme.surfaceDark : const Color(0xFFF3EBE0),
+            isDark: isDark,
+            navigationBarColor: isDark ? AppTheme.surfaceDark : Colors.white,
+          ),
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          centerTitle: true,
           title: Text(
             'Settings',
-            style: TextStyle(color: isDark ? Colors.white : AppTheme.textPrimaryLight),
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              color: isDark ? Colors.white : const Color(0xFF5A4D42),
+            ),
           ),
           leading: IconButton(
-            icon: const Icon(CupertinoIcons.back),
+            icon: const Icon(CupertinoIcons.back, color: Color(0xFF8B7A66)),
             onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
           ),
         ),
@@ -319,40 +332,61 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildNavigationTile(BuildContext context, IconData icon, String title, bool isDark, VoidCallback onTap, {bool showBadge = false}) {
-    return ListTile(
-      onTap: onTap,
-      leading: Icon(icon, color: AppTheme.primaryColor, size: 20),
-      title: Row(
-        children: [
-          Expanded(
-            child: Text(
-              title,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: isDark ? Colors.white : AppTheme.textPrimaryLight,
-              ),
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.surfaceDark : const Color(0xFFF7F4EF),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: isDark ? Colors.white10 : Colors.grey.withValues(alpha: 0.1),
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(20),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(20),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Icon(icon, color: AppTheme.primaryColor, size: 20),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? Colors.white : AppTheme.textPrimaryLight,
+                          ),
+                        ),
+                      ),
+                      if (showBadge) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Icon(CupertinoIcons.chevron_right, size: 16, color: Colors.grey),
+              ],
             ),
           ),
-          if (showBadge) ...[
-            const SizedBox(width: 8),
-            Container(
-              width: 8,
-              height: 8,
-              decoration: const BoxDecoration(
-                color: Colors.red,
-                shape: BoxShape.circle,
-              ),
-            ),
-          ],
-        ],
-      ),
-      trailing: const Icon(CupertinoIcons.chevron_right, size: 16, color: Colors.grey),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
+        ),
       ),
     );
   }

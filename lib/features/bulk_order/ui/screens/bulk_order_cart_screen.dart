@@ -23,11 +23,18 @@ class _BulkOrderCartScreenState extends State<BulkOrderCartScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (!mounted) return;
       final provider = context.read<BulkOrderProvider>();
+      if (provider.config == null) {
+        await provider.loadConfig();
+      }
+      if (!mounted) return;
+      await provider.loadCartFromServer();
+      if (!mounted) return;
       final date = provider.standardDeliveryDate;
       if ((provider.standardQty ?? 0) > 0 && date != null && date.length >= 10) {
-        provider.loadMenusForDate(date);
+        await provider.loadMenusForDate(date);
       }
     });
   }

@@ -35,30 +35,34 @@ class _SpecialDishesCartScreenState extends State<SpecialDishesCartScreen> {
 
     final cartItems = p.cartQty.entries.where((e) => e.value > 0).toList();
     final hasItems = cartItems.isNotEmpty;
+    final detailsLoaded = !hasItems || cartItems.every((e) => p.itemCache.containsKey(e.key));
+    final showLoading = p.isLoading && !detailsLoaded;
+
+    final appBarBg = isDark ? AppTheme.surfaceDark : const Color(0xFFF3EBE0);
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: AppTheme.overlayFor(
-        background: AppTheme.primaryColor,
-        isDark: true,
+        background: appBarBg,
+        isDark: isDark,
         navigationBarColor: isDark ? AppTheme.surfaceDark : const Color(0xFFFAF8F5),
       ),
       child: Scaffold(
         backgroundColor: isDark ? AppTheme.surfaceDark : const Color(0xFFFAF8F5),
         appBar: AppBar(
-          backgroundColor: AppTheme.primaryColor,
+          backgroundColor: appBarBg,
           elevation: 0,
           scrolledUnderElevation: 0,
           centerTitle: true,
-          title: const Text(
+          title: Text(
             'Specials Cart',
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w800,
-              color: Colors.white,
+              color: isDark ? Colors.white : const Color(0xFF5A4D42),
             ),
           ),
           leading: IconButton(
-            icon: const Icon(CupertinoIcons.back, color: Colors.white),
+            icon: const Icon(CupertinoIcons.back, color: Color(0xFF8B7A66)),
             onPressed: () => Navigator.pop(context),
           ),
           actions: [
@@ -68,25 +72,27 @@ class _SpecialDishesCartScreenState extends State<SpecialDishesCartScreen> {
                   p.clearCart();
                   Navigator.pop(context);
                 },
-                child: const Text(
+                child: Text(
                   'Clear',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: isDark ? Colors.white : const Color(0xFF8B7A66),
                     fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
           ],
           systemOverlayStyle: AppTheme.overlayFor(
-            background: AppTheme.primaryColor,
-            isDark: true,
+            background: appBarBg,
+            isDark: isDark,
             navigationBarColor: isDark ? AppTheme.surfaceDark : const Color(0xFFFAF8F5),
           ),
         ),
         body: SafeArea(
           top: false,
-          child: !hasItems
-              ? _buildEmptyCart(isDark)
+          child: showLoading
+              ? const Center(child: CircularProgressIndicator())
+              : !hasItems
+                  ? _buildEmptyCart(isDark)
               : Column(
                       children: [
                         Expanded(

@@ -565,7 +565,7 @@ class HomeWelcomeHeader extends StatelessWidget {
             Icon(
               CupertinoIcons.star_circle_fill,
               size: 24,
-              color: const Color(0xFF8B7A66),
+              color: const Color(0xFFFF5722),
             ),
             if (count > 0)
               Positioned(
