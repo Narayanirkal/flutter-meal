@@ -174,45 +174,45 @@ class _CartScreenState extends State<CartScreen> {
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: AppTheme.overlayFor(
-        background: AppTheme.primaryColor,
-        isDark: true,
+        background: isDark ? AppTheme.surfaceDark : const Color(0xFFF3EBE0),
+        isDark: isDark,
         navigationBarColor: isDark ? AppTheme.surfaceDark : const Color(0xFFFAF8F5),
       ),
       child: Scaffold(
         backgroundColor: isDark ? AppTheme.surfaceDark : const Color(0xFFFAF8F5),
         appBar: AppBar(
-          backgroundColor: AppTheme.primaryColor,
+          backgroundColor: isDark ? AppTheme.surfaceDark : const Color(0xFFF3EBE0),
           elevation: 0,
           scrolledUnderElevation: 0,
           centerTitle: true,
-          title: const Text(
+          title: Text(
             'Cart',
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w800,
-              color: Colors.white,
+              color: isDark ? Colors.white : const Color(0xFF5A4D42),
             ),
           ),
           leading: IconButton(
-            icon: const Icon(CupertinoIcons.back, color: Colors.white),
+            icon: const Icon(CupertinoIcons.back, color: Color(0xFF8B7A66)),
             onPressed: () => Navigator.pop(context),
           ),
           actions: [
             if (items.isNotEmpty)
               TextButton(
                 onPressed: () => _confirmClearCart(context, cartProvider),
-                child: const Text(
+                child: Text(
                   'Clear All',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: isDark ? Colors.white : const Color(0xFF8B7A66),
                     fontWeight: FontWeight.w600,
                   ),
                 ),
               ),
           ],
           systemOverlayStyle: AppTheme.overlayFor(
-            background: AppTheme.primaryColor,
-            isDark: true,
+            background: isDark ? AppTheme.surfaceDark : const Color(0xFFF3EBE0),
+            isDark: isDark,
             navigationBarColor: isDark ? AppTheme.surfaceDark : const Color(0xFFFAF8F5),
           ),
         ),

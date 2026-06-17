@@ -24,6 +24,7 @@ import 'package:meal_app/core/navigation/app_routes.dart';
 import 'package:meal_app/features/announcements/ui/screens/announcements_screen.dart';
 import 'package:meal_app/features/profile/ui/screens/refer_earn_screen.dart';
 import 'package:meal_app/features/profile/providers/referral_provider.dart';
+import 'package:meal_app/core/storage/cache_store.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -329,7 +330,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
-                fontSize: title.length > 20 ? 13.5 : 15,
+                fontSize: 15,
                 fontWeight: FontWeight.w600,
                 color: isDark ? Colors.white : AppTheme.textPrimaryLight,
               ),
@@ -494,6 +495,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 onPressed: () async {
                   Navigator.of(context).pop();
                   OfflineCacheBootstrap.clearMemory(context);
+                  await CacheStore.clearAll();
+                  OfflineCacheBootstrap.resetSession();
                   await authProvider.logout();
                   if (!context.mounted) return;
                   Navigator.of(context).popUntil((route) => route.isFirst);

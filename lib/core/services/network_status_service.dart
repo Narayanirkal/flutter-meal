@@ -97,7 +97,10 @@ class NetworkStatusService with ChangeNotifier {
   }
 
   /// Force an immediate connectivity + health re-check (e.g. cart screen open).
-  Future<void> refreshNow() => _refreshStatus();
+  Future<void> refreshNow() async {
+    await _refreshStatus();
+    notifyListeners();
+  }
 
   void _scheduleRefresh() {
     _debounceTimer?.cancel();

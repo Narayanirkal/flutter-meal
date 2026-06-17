@@ -46,38 +46,33 @@ class _BulkOrderHubScreenState extends State<BulkOrderHubScreen> {
       ),
       child: Scaffold(
         backgroundColor: isDark ? AppTheme.surfaceDark : const Color(0xFFFAF8F5),
-        body: SafeArea(
-        child: Column(
-          children: [
-            // Custom Header
-            Container(
-              padding: const EdgeInsets.fromLTRB(8, 6, 16, 6),
-              decoration: BoxDecoration(
-                color: isDark ? AppTheme.surfaceDark : const Color(0xFFF3EBE0),
-              ),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(CupertinoIcons.back, color: Color(0xFF8B7A66)),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                  Expanded(
-                    child: Text(
-                      'Bulk Order',
-                      textAlign: TextAlign.center,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w900,
-                        color: isDark ? Colors.white : const Color(0xFF5A4D42),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 48),
-                ],
-              ),
+        appBar: AppBar(
+          backgroundColor: isDark ? AppTheme.surfaceDark : const Color(0xFFF3EBE0),
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          centerTitle: true,
+          title: Text(
+            'Bulk Order',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              color: isDark ? Colors.white : const Color(0xFF5A4D42),
             ),
+          ),
+          leading: IconButton(
+            icon: const Icon(CupertinoIcons.back, color: Color(0xFF8B7A66)),
+            onPressed: () => Navigator.pop(context),
+          ),
+          systemOverlayStyle: AppTheme.overlayFor(
+            background: isDark ? AppTheme.surfaceDark : const Color(0xFFF3EBE0),
+            isDark: isDark,
+            navigationBarColor: isDark ? AppTheme.surfaceDark : const Color(0xFFFAF8F5),
+          ),
+        ),
+        body: SafeArea(
+          top: false,
+          child: Column(
+            children: [
             Expanded(
               child: p.isLoading && cfg == null
                   ? const Center(child: CupertinoActivityIndicator())

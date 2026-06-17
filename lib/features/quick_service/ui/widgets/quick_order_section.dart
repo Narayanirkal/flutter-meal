@@ -79,7 +79,8 @@ class _QuickOrderSectionState extends State<QuickOrderSection> {
             ],
           ),
           const SizedBox(height: 12),
-          IntrinsicHeight(
+          SizedBox(
+            height: 190.0,
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -104,8 +105,6 @@ class _QuickOrderSectionState extends State<QuickOrderSection> {
                 Expanded(
                   child: _SpecialsCard(
                     isDark: isDark,
-                    cardBg: cardBg,
-                    borderColor: borderColor,
                     onTap: () {
                       Navigator.push(
                         context,
@@ -117,6 +116,7 @@ class _QuickOrderSectionState extends State<QuickOrderSection> {
               ],
             ),
           ),
+
         ],
       ),
     );
@@ -236,20 +236,19 @@ class _OneDayLunchCard extends StatelessWidget {
 class _SpecialsCard extends StatelessWidget {
   const _SpecialsCard({
     required this.isDark,
-    required this.cardBg,
-    required this.borderColor,
     required this.onTap,
   });
 
   final bool isDark;
-  final Color cardBg;
-  final Color borderColor;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final titleColor = isDark ? Colors.white : AppTheme.textPrimaryLight;
-    final subtitleColor = isDark ? Colors.white60 : const Color(0xFF64748B);
+    final bg = isDark ? AppTheme.surfaceDark : const Color(0xFFF3EBE0);
+    final borderCol = isDark ? AppTheme.borderDark : const Color(0xFFE6D6C6);
+    final titleColor = isDark ? Colors.white : const Color(0xFF5A4D42);
+    final subtitleColor = isDark ? Colors.white70 : const Color(0xFF8A7A6A);
+    final iconColor = const Color(0xFF8B7A66);
 
     return Material(
       color: Colors.transparent,
@@ -259,9 +258,9 @@ class _SpecialsCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         child: Ink(
           decoration: BoxDecoration(
-            color: cardBg,
+            color: bg,
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: borderColor, width: 1.5),
+            border: Border.all(color: borderCol, width: 1.5),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.04),
@@ -275,58 +274,58 @@ class _SpecialsCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-              Row(
-                children: [
-                  Container(
-                    width: 34,
-                    height: 34,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFF7ED),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: AppTheme.primaryColor.withValues(alpha: 0.25)),
+                Row(
+                  children: [
+                    Container(
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(
+                        color: iconColor.withValues(alpha: 0.15),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: iconColor.withValues(alpha: 0.35)),
+                      ),
+                      child: Icon(CupertinoIcons.star_fill, size: 16, color: iconColor),
                     ),
-                    child: const Icon(CupertinoIcons.star_fill, size: 16, color: AppTheme.primaryColor),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Buuttii Specials',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                        color: titleColor,
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Buuttii Specials',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: titleColor,
+                        ),
                       ),
                     ),
-                  ),
-                  Icon(CupertinoIcons.chevron_right, size: 14, color: Colors.grey.shade500),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Special dishes with categories, prices & quantities.',
-                style: TextStyle(fontSize: 11, height: 1.35, color: subtitleColor),
-              ),
-              const Spacer(),
-              const SizedBox(height: 16),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryColor.withValues(alpha: isDark ? 0.2 : 0.1),
-                  borderRadius: BorderRadius.circular(10),
+                    Icon(CupertinoIcons.chevron_right, size: 14, color: isDark ? Colors.white70 : const Color(0xFF8B7A66)),
+                  ],
                 ),
-                alignment: Alignment.center,
-                child: const Text(
-                  'Browse & order',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                    color: AppTheme.primaryColor,
+                const SizedBox(height: 8),
+                Text(
+                  'Special dishes with categories, prices & quantities.',
+                  style: TextStyle(fontSize: 11, height: 1.35, color: subtitleColor),
+                ),
+                const Spacer(),
+                const SizedBox(height: 16),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  decoration: BoxDecoration(
+                    color: iconColor.withValues(alpha: isDark ? 0.25 : 0.15),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    'Browse & order',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      color: isDark ? Colors.white : iconColor,
+                    ),
                   ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
           ),
         ),
       ),

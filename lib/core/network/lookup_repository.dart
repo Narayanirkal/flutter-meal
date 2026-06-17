@@ -109,6 +109,24 @@ class LookupRepository {
     }
   }
 
+  Future<List<AllowedAddressModel>> getAllowedAddresses({int? cityId}) async {
+    try {
+      final response = await _dioClient.dio.get(
+        ApiEndpoints.allowedAddresses,
+        queryParameters: {
+          if (cityId != null) 'cityId': cityId,
+        },
+      );
+      if (response.data['success'] == true) {
+        final List data = response.data['data'];
+        return data.map((a) => AllowedAddressModel.fromJson(a)).toList();
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
+
   Future<List<CompanyModel>> getCompanies({int? cityId}) async {
     try {
       final response = await _dioClient.dio.get(

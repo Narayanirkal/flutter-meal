@@ -559,6 +559,7 @@ class _AddressFormSheetState extends State<_AddressFormSheet> {
   final _altPhoneController = TextEditingController();
   StateModel? _selectedState;
   CityModel? _selectedCity;
+  AllowedAddressModel? _selectedAllowedAddress;
   bool _saving = false;
   String? _formError;
 
@@ -586,10 +587,21 @@ class _AddressFormSheetState extends State<_AddressFormSheet> {
     if (_selectedState != null) {
       await lookup.fetchCitiesByState(_selectedState!.id);
       if (!mounted) return;
-      setState(() {
-        _selectedCity =
-            lookup.cities.where((c) => c.id == existing.cityId).firstOrNull;
-      });
+      _selectedCity =
+          lookup.cities.where((c) => c.id == existing.cityId).firstOrNull;
+      if (_selectedCity != null) {
+        await lookup.fetchAllowedAddressesByCity(_selectedCity!.id);
+        if (!mounted) return;
+        setState(() {
+          _selectedAllowedAddress = lookup.allowedAddresses
+              .where((a) => a.addressLine.trim().toLowerCase() == existing.addressLine.trim().toLowerCase())
+              .firstOrNull;
+          if (_selectedAllowedAddress != null) {
+            _addressController.text = _selectedAllowedAddress!.addressLine;
+            _pincodeController.text = _selectedAllowedAddress!.pincode;
+          }
+        });
+      }
     }
     if (mounted) setState(() {});
   }
@@ -607,19 +619,17 @@ class _AddressFormSheetState extends State<_AddressFormSheet> {
   Future<void> _save() async {
     final state = _selectedState;
     final city = _selectedCity;
-    final line = _addressController.text.trim();
-    final pin = _pincodeController.text.trim();
+    final allowedAddress = _selectedAllowedAddress;
     final phone = _phoneController.text.trim();
     final altPhone = _altPhoneController.text.trim();
 
-    if (state == null || city == null || line.length < 5) {
-      setState(() => _formError = 'Select state, city and enter a full address.');
+    if (state == null || city == null || allowedAddress == null) {
+      setState(() => _formError = 'Select state, city and an allowed delivery address.');
       return;
     }
-    if (pin.isNotEmpty && !RegExp(r'^\d{6}$').hasMatch(pin)) {
-      setState(() => _formError = 'Pincode must be exactly 6 digits.');
-      return;
-    }
+    final line = allowedAddress.addressLine;
+    final pin = allowedAddress.pincode;
+
     if (phone.isEmpty) {
       setState(() => _formError = 'Phone number is required.');
       return;
@@ -672,6 +682,7 @@ class _AddressFormSheetState extends State<_AddressFormSheet> {
         context, _isEditing ? 'Address updated' : 'Address saved');
     Navigator.pop(context);
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -790,42 +801,71 @@ class _AddressFormSheetState extends State<_AddressFormSheet> {
                       onChanged: (v) {
                         setState(() {
                           _selectedCity = v;
+                          _selectedAllowedAddress = null;
+                          _addressController.clear();
+                          _pincodeController.clear();
                           _formError = null;
+                          if (v != null) {
+                            lookup.fetchAllowedAddressesByCity(v.id);
+                          }
+                        });
+                      },
+                    ),
+                    if (_selectedCity != null && !lookup.isLoading && lookup.allowedAddresses.isEmpty) ...[
+                      const SizedBox(height: 8),
+                      const Text(
+                        'We do not deliver to this city yet. Please select another city.',
+                        style: TextStyle(
+                          color: Colors.orange,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 16),
+                    // Street (SearchableDropdown for AllowedAddresses)
+                    SearchableDropdown<AllowedAddressModel>(
+                      label: 'Delivery Area / Address Line *',
+                      items: lookup.allowedAddresses,
+                      itemLabel: (a) => '${a.addressLine} (${a.pincode})',
+                      value: _selectedAllowedAddress,
+                      isLoading: lookup.isLoading,
+                      listenable: lookup,
+                      itemsGetter: () => lookup.allowedAddresses,
+                      loadingGetter: () => lookup.isLoading,
+                      onInteraction: () {
+                        FocusScope.of(context).unfocus();
+                        if (_selectedCity == null) {
+                          setState(() => _formError = 'Select a city first.');
+                        }
+                      },
+                      onChanged: (v) {
+                        setState(() {
+                          _selectedAllowedAddress = v;
+                          _formError = null;
+                          if (v != null) {
+                            _addressController.text = v.addressLine;
+                            _pincodeController.text = v.pincode;
+                          } else {
+                            _addressController.clear();
+                            _pincodeController.clear();
+                          }
                         });
                       },
                     ),
                     const SizedBox(height: 16),
-                    // Street
-                    TextField(
-                      controller: _addressController,
-                      maxLines: 3,
-                      minLines: 2,
-                      textCapitalization: TextCapitalization.sentences,
-                      decoration: const InputDecoration(
-                        labelText: 'Street / building address',
-                        hintText: 'House no., street, landmark',
-                        alignLabelWithHint: true,
-                        prefixIcon: Icon(CupertinoIcons.house),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    // Pincode
+                    // Pincode (read-only and pre-filled)
                     TextField(
                       controller: _pincodeController,
                       keyboardType: TextInputType.number,
+                      readOnly: true,
                       maxLength: 6,
-                      decoration: InputDecoration(
+                      decoration: const InputDecoration(
                         labelText: 'Pincode',
                         counterText: '',
-                        hintText: '6-digit pincode',
-                        prefixIcon:
-                            const Icon(CupertinoIcons.number),
-                        errorText: _pincodeController.text.isNotEmpty &&
-                                _pincodeController.text.trim().length != 6
-                            ? 'Must be 6 digits'
-                            : null,
+                        hintText: 'Pincode is auto-filled',
+                        prefixIcon: Icon(CupertinoIcons.number),
                       ),
-                      onChanged: (_) => setState(() {}),
                     ),
                     const SizedBox(height: 16),
                     // Phone number

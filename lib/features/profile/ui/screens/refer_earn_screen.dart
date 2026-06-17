@@ -178,38 +178,44 @@ class _ReferEarnScreenState extends State<ReferEarnScreen> {
     for (final child in childrenProvider.children) {
       if (child.id != null) {
         final state = SubscriptionStatusNormalizer.entityPlanState(statusMap, 'child', child.id!);
-        candidates.add(CandidateProfile(
-          id: child.id!,
-          name: child.name,
-          type: 'child',
-          displayName: '${child.name} (Child)',
-          planStatus: state,
-        ));
+        if (state == 'active' || state == 'upcoming') {
+          candidates.add(CandidateProfile(
+            id: child.id!,
+            name: child.name,
+            type: 'child',
+            displayName: '${child.name} (Child)',
+            planStatus: state,
+          ));
+        }
       }
     }
 
     final teacher = profileProvider.teacherProfile;
     if (teacher != null && teacher.id != null) {
       final state = SubscriptionStatusNormalizer.entityPlanState(statusMap, 'teacher', teacher.id!);
-      candidates.add(CandidateProfile(
-        id: teacher.id!,
-        name: teacher.name,
-        type: 'teacher',
-        displayName: '${teacher.name} (Teacher)',
-        planStatus: state,
-      ));
+      if (state == 'active' || state == 'upcoming') {
+        candidates.add(CandidateProfile(
+          id: teacher.id!,
+          name: teacher.name,
+          type: 'teacher',
+          displayName: '${teacher.name} (Teacher)',
+          planStatus: state,
+        ));
+      }
     }
 
     final professional = profileProvider.professionalProfile;
     if (professional != null && professional.id != null) {
       final state = SubscriptionStatusNormalizer.entityPlanState(statusMap, 'professional', professional.id!);
-      candidates.add(CandidateProfile(
-        id: professional.id!,
-        name: professional.name,
-        type: 'professional',
-        displayName: '${professional.name} (Professional)',
-        planStatus: state,
-      ));
+      if (state == 'active' || state == 'upcoming') {
+        candidates.add(CandidateProfile(
+          id: professional.id!,
+          name: professional.name,
+          type: 'professional',
+          displayName: '${professional.name} (Professional)',
+          planStatus: state,
+        ));
+      }
     }
 
     // Pending rewards for allocation
@@ -227,17 +233,33 @@ class _ReferEarnScreenState extends State<ReferEarnScreen> {
     return Scaffold(
       backgroundColor: isDark ? AppTheme.backgroundDark : const Color(0xFFFAF8F5),
       appBar: AppBar(
-        title: const Text('Refer & Earn'),
+        backgroundColor: isDark ? AppTheme.surfaceDark : const Color(0xFFF3EBE0),
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        centerTitle: true,
+        title: Text(
+          'Refer & Earn',
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w800,
+            color: isDark ? Colors.white : const Color(0xFF5A4D42),
+          ),
+        ),
         leading: IconButton(
-          icon: const Icon(CupertinoIcons.back),
+          icon: const Icon(CupertinoIcons.back, color: Color(0xFF8B7A66)),
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
           IconButton(
-            icon: const Icon(CupertinoIcons.refresh, size: 24, color: AppTheme.primaryColor),
+            icon: const Icon(CupertinoIcons.refresh, size: 24, color: Color(0xFF8B7A66)),
             onPressed: () => _refreshAllData(silent: false),
           ),
         ],
+        systemOverlayStyle: AppTheme.overlayFor(
+          background: isDark ? AppTheme.surfaceDark : const Color(0xFFF3EBE0),
+          isDark: isDark,
+          navigationBarColor: isDark ? AppTheme.surfaceDark : const Color(0xFFFAF8F5),
+        ),
       ),
       body: Stack(
         children: [
@@ -253,6 +275,10 @@ class _ReferEarnScreenState extends State<ReferEarnScreen> {
 
                 // 2. Share referral code section
                 _buildShareCard(referralCode, mealsReward, isDark),
+                const SizedBox(height: 24),
+
+                // 2.5 Referral Rewards Summary card
+                _buildReferralSummaryCard(referralProvider.rewards, isDark),
                 const SizedBox(height: 24),
 
                 // 3. Pending Reward allocation section
@@ -499,7 +525,7 @@ class _ReferEarnScreenState extends State<ReferEarnScreen> {
               separatorBuilder: (_, __) => const SizedBox(height: 10),
               itemBuilder: (ctx, idx) {
                 final candidate = candidates[idx];
-                final isActive = candidate.planStatus == 'active';
+                final isActive = candidate.planStatus == 'active' || candidate.planStatus == 'upcoming';
                 final isSelected = _selectedCandidate?.id == candidate.id &&
                     _selectedCandidate?.type == candidate.type;
 
@@ -568,7 +594,9 @@ class _ReferEarnScreenState extends State<ReferEarnScreen> {
                               ),
                               const SizedBox(height: 2),
                               Text(
-                                isActive ? 'Active Subscription' : 'No Active Plan',
+                                isActive 
+                                    ? (candidate.planStatus == 'active' ? 'Active Subscription' : 'Upcoming Subscription')
+                                    : 'No Active Plan',
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
@@ -793,6 +821,96 @@ class _ReferEarnScreenState extends State<ReferEarnScreen> {
                 ),
               ),
             ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildReferralSummaryCard(List<ReferralRewardModel> rewards, bool isDark) {
+    final friendsReferred = rewards.length;
+    final extraMealsEarned = rewards.fold<int>(0, (sum, r) => sum + r.mealsRewarded);
+    final mealsClaimed = rewards.fold<int>(0, (sum, r) => sum + r.mealsClaimed);
+    final unclaimedMealsRemaining = rewards.fold<int>(0, (sum, r) => sum + r.mealsRemaining);
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.surfaceDark : Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: isDark ? Colors.white10 : Colors.grey.withValues(alpha: 0.1),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'REFERRAL REWARDS SUMMARY',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 1.2,
+              color: isDark ? Colors.grey : AppTheme.textSecondaryLight,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(child: _buildSummaryItem('Friends Referred', '$friendsReferred', CupertinoIcons.person_2_fill, Colors.blue, isDark)),
+              Container(width: 1, height: 40, color: isDark ? Colors.white10 : Colors.grey.withValues(alpha: 0.2)),
+              Expanded(child: _buildSummaryItem('Meals Earned', '$extraMealsEarned', CupertinoIcons.sparkles, Colors.orange, isDark)),
+            ],
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Divider(color: isDark ? Colors.white10 : Colors.grey.withValues(alpha: 0.15)),
+          ),
+          Row(
+            children: [
+              Expanded(child: _buildSummaryItem('Meals Claimed', '$mealsClaimed', CupertinoIcons.checkmark_seal_fill, Colors.green, isDark)),
+              Container(width: 1, height: 40, color: isDark ? Colors.white10 : Colors.grey.withValues(alpha: 0.2)),
+              Expanded(child: _buildSummaryItem('Unclaimed Remaining', '$unclaimedMealsRemaining', CupertinoIcons.gift_fill, Colors.red, isDark)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryItem(String label, String value, IconData icon, Color color, bool isDark) {
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: color, size: 16),
+            const SizedBox(width: 6),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w900,
+                color: isDark ? Colors.white : AppTheme.textPrimaryLight,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: isDark ? Colors.white54 : AppTheme.textSecondaryLight,
           ),
         ),
       ],

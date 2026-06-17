@@ -81,6 +81,7 @@ class LookupProvider with ChangeNotifier {
   List<StateModel> _states = [];
   List<CityModel> _cities = [];
   List<CompanyModel> _companies = [];
+  List<AllowedAddressModel> _allowedAddresses = [];
   ContactUsModel? _contactUsInfo;
   DeliveryTimeSettingsModel? _deliveryTimeSettings;
 
@@ -97,6 +98,7 @@ class LookupProvider with ChangeNotifier {
   List<StateModel> get states => _states;
   List<CityModel> get cities => _cities;
   List<CompanyModel> get companies => _companies;
+  List<AllowedAddressModel> get allowedAddresses => _allowedAddresses;
   ContactUsModel? get contactUsInfo => _contactUsInfo;
   DeliveryTimeSettingsModel? get deliveryTimeSettings => _deliveryTimeSettings;
   bool get isLoading => _isLoading;
@@ -169,6 +171,7 @@ class LookupProvider with ChangeNotifier {
     try {
       _cities = await _repository.getCities(stateId: stateId);
       _companies = []; // Reset companies when state/city changes
+      _allowedAddresses = []; // Reset allowed addresses when state changes
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -180,6 +183,17 @@ class LookupProvider with ChangeNotifier {
     notifyListeners();
     try {
       _companies = await _repository.getCompanies(cityId: cityId);
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchAllowedAddressesByCity(int cityId) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      _allowedAddresses = await _repository.getAllowedAddresses(cityId: cityId);
     } finally {
       _isLoading = false;
       notifyListeners();

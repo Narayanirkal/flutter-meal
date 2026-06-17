@@ -1,4 +1,5 @@
-  import 'dart:convert';
+import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -8,6 +9,7 @@ import 'package:dio/io.dart';
 import 'package:flutter/foundation.dart';
 import 'package:meal_app/core/network/api_endpoints.dart';
 import 'package:meal_app/core/providers/session_provider.dart';
+import 'package:meal_app/core/services/network_status_service.dart';
 import 'package:meal_app/core/storage/secure_storage.dart';
 
 class DioClient {
@@ -83,6 +85,7 @@ class DioClient {
       },
       onError: (DioException e, handler) async {
         if (_isTransientNetworkError(e)) {
+          unawaited(NetworkStatusService.instance.refreshNow());
           final retried = await _retryRequest(e.requestOptions);
           if (retried != null) {
             return handler.resolve(retried);

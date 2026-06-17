@@ -265,6 +265,7 @@ class ContactUsModel {
   final String aboutFooter;
   final String licenseText;
   final String websiteUrl;
+  final bool aboutActive;
 
   ContactUsModel({
     required this.title,
@@ -278,6 +279,7 @@ class ContactUsModel {
     this.aboutFooter = '',
     this.licenseText = '',
     this.websiteUrl = 'https://buuttii.com/',
+    this.aboutActive = true,
   });
 
   factory ContactUsModel.fromJson(Map<String, dynamic> json) {
@@ -293,6 +295,11 @@ class ContactUsModel {
       aboutFooter: (json['about_footer'] ?? json['aboutFooter'] ?? '').toString(),
       licenseText: (json['license_text'] ?? json['licenseText'] ?? '').toString(),
       websiteUrl: (json['website_url'] ?? json['websiteUrl'] ?? 'https://buuttii.com/').toString(),
+      aboutActive: json['about_active'] != null 
+          ? (json['about_active'] is bool 
+              ? json['about_active'] as bool 
+              : (json['about_active'] == 1 || json['about_active'].toString() == 'true' || json['about_active'].toString() == '1'))
+          : true,
     );
   }
 
@@ -309,6 +316,7 @@ class ContactUsModel {
       'about_footer': aboutFooter,
       'license_text': licenseText,
       'website_url': websiteUrl,
+      'about_active': aboutActive,
     };
   }
 }
@@ -363,4 +371,44 @@ class DeliveryTimeSettingsModel {
 
   TimeOfDay? get start => _parseTime(startTime);
   TimeOfDay? get end => _parseTime(endTime);
+}
+
+class AllowedAddressModel {
+  final int id;
+  final int stateId;
+  final int cityId;
+  final String addressLine;
+  final String pincode;
+  final bool isActive;
+
+  AllowedAddressModel({
+    required this.id,
+    required this.stateId,
+    required this.cityId,
+    required this.addressLine,
+    required this.pincode,
+    this.isActive = true,
+  });
+
+  factory AllowedAddressModel.fromJson(Map<String, dynamic> json) {
+    return AllowedAddressModel(
+      id: json['id'] is String ? int.parse(json['id']) : json['id'],
+      stateId: json['state_id'] is String ? int.parse(json['state_id']) : json['state_id'],
+      cityId: json['city_id'] is String ? int.parse(json['city_id']) : json['city_id'],
+      addressLine: json['address_line'] ?? '',
+      pincode: json['pincode'] ?? '',
+      isActive: json['is_active'] ?? true,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'state_id': stateId,
+      'city_id': cityId,
+      'address_line': addressLine,
+      'pincode': pincode,
+      'is_active': isActive,
+    };
+  }
 }

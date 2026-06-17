@@ -22,7 +22,6 @@ class _OfflineBannerState extends State<OfflineBanner>
   late final AnimationController _controller;
   late final Animation<double> _fade;
   late final Animation<Offset> _slide;
-  bool _dismissed = false;
   bool _wasOffline = false;
 
   @override
@@ -52,6 +51,9 @@ class _OfflineBannerState extends State<OfflineBanner>
       if (!context.mounted) return;
       if (!NetworkStatusService.instance.isOnline) {
         _show(_BannerMode.offline);
+        setState(() {
+          _wasOffline = true;
+        });
       }
     });
   }
@@ -72,6 +74,7 @@ class _OfflineBannerState extends State<OfflineBanner>
   }
 
   void _hide() {
+    _autoDismissTimer?.cancel();
     _controller.reverse().then((_) {
       if (mounted) setState(() => _mode = _BannerMode.hidden);
     });
@@ -83,28 +86,28 @@ class _OfflineBannerState extends State<OfflineBanner>
 
     if (isOffline) {
       _autoDismissTimer?.cancel();
-      if (!_wasOffline) {
+      _wasOffline = true;
+      if (_mode != _BannerMode.offline) {
         setState(() {
-          _dismissed = false;
-          _wasOffline = true;
+          _mode = _BannerMode.offline;
         });
       }
       _controller.forward();
       _startReconnectPoll();
     } else {
       _stopReconnectPoll();
-      if (_wasOffline || _controller.isAnimating || _mode != _BannerMode.hidden) {
+      if (_wasOffline) {
         _wasOffline = false;
         _autoDismissTimer?.cancel();
-        if (!_dismissed) {
-          _controller.reverse().then((_) {
-            if (mounted) setState(() => _mode = _BannerMode.hidden);
-          });
-        }
-        _autoDismissTimer = Timer(const Duration(milliseconds: 2400), () {
-          if (!context.mounted) return;
-          setState(() => _dismissed = false);
+        setState(() {
+          _mode = _BannerMode.backOnline;
         });
+        _controller.forward();
+        _autoDismissTimer = Timer(const Duration(milliseconds: 2500), () {
+          _hide();
+        });
+      } else if (_mode == _BannerMode.offline) {
+        _hide();
       }
     }
   }
@@ -208,9 +211,11 @@ class _OfflineBannerState extends State<OfflineBanner>
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(
-                                net.hasDeviceConnectivity
-                                    ? 'Cannot reach the server. We will reconnect automatically.'
-                                    : 'No internet connection. Check your Wi‑Fi or mobile data.',
+                                isBackOnline
+                                    ? 'You are online. Internet connection restored.'
+                                    : (net.hasDeviceConnectivity
+                                        ? 'Cannot reach the server. We will reconnect automatically.'
+                                        : 'No internet connection. Check your Wi‑Fi or mobile data.'),
                                 style: TextStyle(
                                   color: textColor.withValues(alpha: 0.94),
                                   fontWeight: FontWeight.w600,

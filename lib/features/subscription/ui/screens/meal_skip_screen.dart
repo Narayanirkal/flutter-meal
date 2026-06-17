@@ -13,6 +13,7 @@ import 'package:meal_app/features/profile/providers/profile_provider.dart';
 import 'package:meal_app/core/services/app_route_tracker.dart';
 import 'package:meal_app/features/home/ui/widgets/bottom_footer_nav.dart';
 import 'package:meal_app/core/navigation/app_routes.dart';
+import 'package:meal_app/core/utils/subscription_status_normalize.dart';
 
 /// Keys are `${entityType}_${entityId}` where type is child, teacher, or professional.
 ({String type, String id})? parseMealSkipEntityKey(String key) {
@@ -123,37 +124,33 @@ class _MealSkipScreenState extends State<MealSkipScreen> {
             icon: const Icon(CupertinoIcons.calendar_badge_plus, color: Colors.white),
             label: const Text('New Skip', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
           ),
+          appBar: AppBar(
+            backgroundColor: isDark ? AppTheme.surfaceDark : const Color(0xFFF3EBE0),
+            elevation: 0,
+            scrolledUnderElevation: 0,
+            centerTitle: true,
+            title: Text(
+              'Meal Skips',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                color: isDark ? Colors.white : const Color(0xFF5A4D42),
+              ),
+            ),
+            leading: IconButton(
+              icon: const Icon(CupertinoIcons.back, color: Color(0xFF8B7A66)),
+              onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
+            ),
+            systemOverlayStyle: AppTheme.overlayFor(
+              background: isDark ? AppTheme.surfaceDark : const Color(0xFFF3EBE0),
+              isDark: isDark,
+              navigationBarColor: navBarColor,
+            ),
+          ),
           body: SafeArea(
+            top: false,
             child: Column(
               children: [
-                Container(
-                  padding: const EdgeInsets.fromLTRB(8, 6, 16, 6),
-                  decoration: BoxDecoration(
-                    color: isDark ? AppTheme.surfaceDark : const Color(0xFFF3EBE0),
-                  ),
-                  child: Row(
-                    children: [
-                      IconButton(
-                        icon: const Icon(CupertinoIcons.back, color: Color(0xFF8B7A66)),
-                        onPressed: () => Navigator.of(context).popUntil((route) => route.isFirst),
-                      ),
-                      Expanded(
-                        child: Text(
-                          'Meal Skips',
-                          textAlign: TextAlign.center,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w900,
-                            color: isDark ? Colors.white : const Color(0xFF5A4D42),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 48),
-                    ],
-                  ),
-                ),
 
                 // Body
                 Expanded(
@@ -845,13 +842,16 @@ class _MealSkipScreenState extends State<MealSkipScreen> {
 
     // Build entity list
     final List<Map<String, String>> entities = [];
+    final statusData = mealProvider.subscriptionStatusData;
     for (final child in childrenProvider.children) {
-      if (resolveEntityRemainingMeals('child_${child.id}') > 0) {
+      final state = SubscriptionStatusNormalizer.entityPlanState(statusData, 'child', child.id ?? '');
+      if (state == 'active' || state == 'upcoming') {
         entities.add({'type': 'child', 'id': child.id!, 'name': child.name});
       }
     }
     if (profileProvider.teacherProfile != null) {
-      if (resolveEntityRemainingMeals('teacher_${profileProvider.teacherProfile!.id}') > 0) {
+      final state = SubscriptionStatusNormalizer.entityPlanState(statusData, 'teacher', profileProvider.teacherProfile!.id ?? '');
+      if (state == 'active' || state == 'upcoming') {
         entities.add({
           'type': 'teacher',
           'id': profileProvider.teacherProfile!.id!,
@@ -860,7 +860,8 @@ class _MealSkipScreenState extends State<MealSkipScreen> {
       }
     }
     if (profileProvider.professionalProfile != null) {
-      if (resolveEntityRemainingMeals('professional_${profileProvider.professionalProfile!.id}') > 0) {
+      final state = SubscriptionStatusNormalizer.entityPlanState(statusData, 'professional', profileProvider.professionalProfile!.id ?? '');
+      if (state == 'active' || state == 'upcoming') {
         entities.add({
           'type': 'professional',
           'id': profileProvider.professionalProfile!.id!,
@@ -878,9 +879,9 @@ class _MealSkipScreenState extends State<MealSkipScreen> {
     DateTimeRange? selectedRange;
     String? sheetError;
     bool isSubmitting = false;
-    int skipType = 0; // 0 for single day, 1 for multiple days
     final minSkipDays = int.tryParse(mealProvider.skipPolicy['min_skip_days']?.toString() ?? '') ?? 3;
     final minNoticeDays = int.tryParse(mealProvider.skipPolicy['min_notice_days']?.toString() ?? '') ?? 1;
+    int skipType = minSkipDays >= 2 ? 1 : 0; // 0 for single day, 1 for multiple days
 
     bool resolveEntityIncludesSaturday(String entityKey) {
       final parsed = parseMealSkipEntityKey(entityKey);
@@ -988,59 +989,61 @@ class _MealSkipScreenState extends State<MealSkipScreen> {
                     const SizedBox(height: 20),
 
                     // Skip Type Toggle
-                    Text(
-                      'Skip Duration',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        color: isDark ? Colors.white : AppTheme.textPrimaryLight,
+                    if (minSkipDays == 1) ...[
+                      Text(
+                        'Skip Duration',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: isDark ? Colors.white : AppTheme.textPrimaryLight,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      width: double.infinity,
-                      child: CupertinoSlidingSegmentedControl<int>(
-                        groupValue: skipType,
-                        children: {
-                          0: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            child: Text(
-                              'Single Day',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: skipType == 0 ? FontWeight.w700 : FontWeight.w500,
-                                color: skipType == 0 
-                                    ? (isDark ? Colors.white : AppTheme.textPrimaryLight)
-                                    : (isDark ? Colors.white54 : AppTheme.textSecondaryLight),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: CupertinoSlidingSegmentedControl<int>(
+                          groupValue: skipType,
+                          children: {
+                            0: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              child: Text(
+                                'Single Day',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: skipType == 0 ? FontWeight.w700 : FontWeight.w500,
+                                  color: skipType == 0 
+                                      ? (isDark ? Colors.white : AppTheme.textPrimaryLight)
+                                      : (isDark ? Colors.white54 : AppTheme.textSecondaryLight),
+                                ),
                               ),
                             ),
-                          ),
-                          1: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            child: Text(
-                              'Multiple Days',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: skipType == 1 ? FontWeight.w700 : FontWeight.w500,
-                                color: skipType == 1 
-                                    ? (isDark ? Colors.white : AppTheme.textPrimaryLight)
-                                    : (isDark ? Colors.white54 : AppTheme.textSecondaryLight),
+                            1: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              child: Text(
+                                'Multiple Days',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: skipType == 1 ? FontWeight.w700 : FontWeight.w500,
+                                  color: skipType == 1 
+                                      ? (isDark ? Colors.white : AppTheme.textPrimaryLight)
+                                      : (isDark ? Colors.white54 : AppTheme.textSecondaryLight),
+                                ),
                               ),
                             ),
-                          ),
-                        },
-                        onValueChanged: (val) {
-                          if (val != null) {
-                            setSheetState(() {
-                              skipType = val;
-                              selectedRange = null;
-                            });
-                          }
-                        },
-                        backgroundColor: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.grey.shade100,
-                        thumbColor: isDark ? const Color(0xFF333333) : Colors.white,
+                          },
+                          onValueChanged: (val) {
+                            if (val != null) {
+                              setSheetState(() {
+                                skipType = val;
+                                selectedRange = null;
+                              });
+                            }
+                          },
+                          backgroundColor: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.grey.shade100,
+                          thumbColor: isDark ? const Color(0xFF333333) : Colors.white,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 20),
+                      const SizedBox(height: 20),
+                    ],
 
                     // Date range picker
                     Text(

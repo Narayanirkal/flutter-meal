@@ -37,6 +37,8 @@ import 'package:meal_app/core/services/offline_cache_bootstrap.dart';
 import 'package:meal_app/core/widgets/app_skeleton.dart';
 import 'package:meal_app/core/providers/announcement_provider.dart';
 import 'package:meal_app/features/quick_service/ui/widgets/quick_order_section.dart';
+import 'package:meal_app/features/quick_service/providers/quick_service_provider.dart';
+import 'package:meal_app/features/quick_service/ui/screens/special_dishes_cart_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -78,6 +80,8 @@ class _HomeScreenState extends State<HomeScreen> {
         context.read<CartProvider>().fetchCart(force: true, silent: true),
         context.read<AuthProvider>().refreshMeProfile(silent: true, forceNetwork: true),
         context.read<ReferralProvider>().fetchRewards(),
+        context.read<QuickServiceProvider>().loadCartFromServer(),
+        context.read<BulkOrderProvider>().loadCartFromServer(),
       ]);
     } else {
       await _loadAllData(); // already calls fetchTodayMenu internally
@@ -99,6 +103,8 @@ class _HomeScreenState extends State<HomeScreen> {
       context.read<CartProvider>().fetchCart(silent: true),
       context.read<AuthProvider>().refreshMeProfile(silent: true),
       context.read<ReferralProvider>().fetchRewards(),
+      context.read<QuickServiceProvider>().loadCartFromServer(),
+      context.read<BulkOrderProvider>().loadCartFromServer(),
     ]);
   }
 
@@ -195,6 +201,8 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final lookupProvider = context.watch<LookupProvider>();
+    final showAbout = lookupProvider.contactUsInfo?.aboutActive != false;
     
     final pageBg = isDark ? AppTheme.backgroundDark : Colors.white;
     final navBarColor = isDark ? AppTheme.surfaceDark : Colors.white;
@@ -229,6 +237,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   forceNetwork: NetworkStatusService.instance.isOnline,
                 ),
                 context.read<AnnouncementProvider>().fetchAnnouncements(location: 'home', force: true),
+                context.read<QuickServiceProvider>().loadCartFromServer(),
+                context.read<BulkOrderProvider>().loadCartFromServer(),
               ]);
               if (!mounted) return;
               await _refreshMealDataBundle(force: true);
@@ -246,17 +256,19 @@ class _HomeScreenState extends State<HomeScreen> {
                     10,
                   ),
                   sliver: SliverList(
-                    delegate: SliverChildListDelegate(const [
-                      HomeWelcomeHeader(),
-                      SizedBox(height: 6),
-                      UpcomingPlanCard(),
-                      TodayMealCard(),
-                      QuickOrderSection(),
-                      AlertsBanner(),
-                      FeatureQuickLinks(),
-                      SizedBox(height: 18),
-                      AboutBuuttiiCard(),
-                      SizedBox(height: 30),
+                    delegate: SliverChildListDelegate([
+                      const HomeWelcomeHeader(),
+                      const SizedBox(height: 6),
+                      const UpcomingPlanCard(),
+                      const TodayMealCard(),
+                      const QuickOrderSection(),
+                      const AlertsBanner(),
+                      const FeatureQuickLinks(),
+                      if (showAbout) ...[
+                        const SizedBox(height: 18),
+                        const AboutBuuttiiCard(),
+                      ],
+                      const SizedBox(height: 30),
                     ]),
                   ),
                 ),
@@ -289,6 +301,7 @@ class HomeWelcomeHeader extends StatelessWidget {
     final hasBulkCartItems = context.watch<BulkOrderProvider>().hasBulkCartItems;
     final bulkCartTotalMeals = context.watch<BulkOrderProvider>().bulkCartTotalMeals;
     final cartItemCount = context.watch<CartProvider>().itemCount;
+    final specialsCartItemCount = context.watch<QuickServiceProvider>().cartItemCount;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
@@ -315,6 +328,10 @@ class HomeWelcomeHeader extends StatelessWidget {
               const SizedBox(width: 4),
               if (hasBulkCartItems) ...[
                 _buildBulkCartActionButton(context, isDark, bulkCartTotalMeals),
+                const SizedBox(width: 4),
+              ],
+              if (specialsCartItemCount > 0) ...[
+                _buildSpecialsCartActionButton(context, isDark, specialsCartItemCount),
                 const SizedBox(width: 4),
               ],
               if (cartItemCount > 0) ...[
@@ -529,6 +546,57 @@ class HomeWelcomeHeader extends StatelessWidget {
     .animate(onPlay: (controller) => controller.repeat())
     .shimmer(duration: 2500.ms, color: Colors.white.withValues(alpha: 0.4))
     .scale(duration: 2000.ms, begin: const Offset(1, 1), end: const Offset(1.02, 1.02), curve: Curves.easeInOut);
+  }
+
+  Widget _buildSpecialsCartActionButton(BuildContext context, bool isDark, int count) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          CupertinoPageRoute(builder: (_) => const SpecialDishesCartScreen()),
+        );
+      },
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Icon(
+              CupertinoIcons.star_circle_fill,
+              size: 24,
+              color: const Color(0xFF8B7A66),
+            ),
+            if (count > 0)
+              Positioned(
+                right: -6,
+                top: -4,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                  constraints: const BoxConstraints(minWidth: 14, minHeight: 14),
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    borderRadius: BorderRadius.circular(7),
+                    border: Border.all(
+                      color: Theme.of(context).scaffoldBackgroundColor,
+                      width: 1.2,
+                    ),
+                  ),
+                  child: Text(
+                    count > 99 ? '99+' : '$count',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 8,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
