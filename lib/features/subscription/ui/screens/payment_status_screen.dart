@@ -73,10 +73,11 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
     // CRITICAL-02: Guard against concurrent polling loops.
     if (_pollingInFlight) return;
     _pollingInFlight = true;
+    final paymentProvider = context.read<PaymentProvider>();
+    final sessionProvider = context.read<SessionProvider>();
     try {
     while (_isPolling && _retryCount < _maxRetries && mounted) {
       try {
-        final paymentProvider = context.read<PaymentProvider>();
         final data = await paymentProvider.checkStatus(widget.txnId);
 
         if (mounted) {
@@ -114,16 +115,15 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
       _pendingForceSyncAttempted = true;
 
       try {
-        await context.read<PaymentProvider>().forceSyncPayment(widget.txnId);
-        final synced = await context.read<PaymentProvider>().checkStatus(widget.txnId);
+        await paymentProvider.forceSyncPayment(widget.txnId);
+        final synced = await paymentProvider.checkStatus(widget.txnId);
         if (mounted && synced != null) {
           setState(() => _statusData = synced);
         }
       } catch (e) {
         // Check for session expiry first.
-        final session = mounted ? context.read<SessionProvider>() : null;
-        if (session != null && session.isExpired) {
-          _handle401Redirect(session.reason);
+        if (sessionProvider.isExpired) {
+          _handle401Redirect(sessionProvider.reason);
           return;
         }
         // For other errors, show a user-facing message.
@@ -186,6 +186,11 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
     final payment = context.read<PaymentProvider>();
     final subscriptions = context.read<SubscriptionProvider>();
     final session = context.read<SessionProvider>();
+    final bulk = context.read<BulkOrderProvider>();
+    final quick = context.read<QuickServiceProvider>();
+    final profile = context.read<ProfileProvider>();
+    final children = context.read<ChildrenProvider>();
+    final menu = context.read<MenuProvider>();
 
     final orderType = (_statusData?['orderType']?.toString() ?? widget.orderType ?? '').toLowerCase();
     final isCartOrder = orderType == 'cart';
@@ -218,16 +223,16 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
 
     if (isBulkOrder) {
       try {
-        context.read<BulkOrderProvider>().clearBulkCart();
-        await context.read<BulkOrderProvider>().clearServerCart();
+        bulk.clearBulkCart();
+        await bulk.clearServerCart();
       } catch (_) {/* ignore */}
     }
 
     if (isOneDayLunch || isSpecialDish) {
       try {
-        await context.read<QuickServiceProvider>().loadOneDayConfig();
+        await quick.loadOneDayConfig();
         if (isSpecialDish) {
-          await context.read<QuickServiceProvider>().loadCartFromServer();
+          await quick.loadCartFromServer();
         }
       } catch (_) {/* ignore */}
     }
@@ -264,12 +269,12 @@ class _PaymentStatusScreenState extends State<PaymentStatusScreen> {
         payment.fetchActiveSubscriptions(),
         payment.fetchPaymentHistory(),
         subscriptions.fetchSubscriptions(force: true),
-        context.read<ProfileProvider>().fetchProfiles(force: true),
-        context.read<ChildrenProvider>().fetchChildren(force: true),
+        profile.fetchProfiles(force: true),
+        children.fetchChildren(force: true),
       ];
       await Future.wait(futures);
       if (mounted) {
-        await context.read<MenuProvider>().fetchTodayMenu(silent: true);
+        await menu.fetchTodayMenu(silent: true);
       }
     } catch (_) {/* ignore — these are best-effort refreshes */}
 

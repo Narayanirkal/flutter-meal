@@ -27,12 +27,15 @@ class OfflineCacheBootstrap {
     try {
       final meal = context.read<MealProvider>();
       final menu = context.read<MenuProvider>();
+      final auth = context.read<AuthProvider>();
+      final cart = context.read<CartProvider>();
+      final home = context.read<HomepageProvider>();
 
-      await context.read<AuthProvider>().refreshMeProfile(silent: true);
+      await auth.refreshMeProfile(silent: true);
       await Future.wait([
         meal.fetchSubscriptionStatus(silent: true),
-        context.read<CartProvider>().fetchCart(silent: true),
-        context.read<HomepageProvider>().fetchHomepageEntries(force: true, silent: true),
+        cart.fetchCart(silent: true),
+        home.fetchHomepageEntries(force: true, silent: true),
         meal.fetchMealStatus(),
         meal.fetchAlerts(),
       ]);

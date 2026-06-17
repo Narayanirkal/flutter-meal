@@ -58,14 +58,17 @@ class _MealSkipScreenState extends State<MealSkipScreen> {
   void _fetchAll() {
     if (!mounted || _fetchInFlight) return;
     _fetchInFlight = true;
+    final mealProvider = context.read<MealProvider>();
+    final childrenProvider = context.read<ChildrenProvider>();
+    final profileProvider = context.read<ProfileProvider>();
     Future(() async {
       try {
         await Future.wait([
-          context.read<MealProvider>().fetchSkips(),
-          context.read<MealProvider>().fetchMealStatus(),
-          context.read<MealProvider>().fetchSkipPolicy(),
-          context.read<ChildrenProvider>().fetchChildren(),
-          context.read<ProfileProvider>().fetchProfiles(),
+          mealProvider.fetchSkips(),
+          mealProvider.fetchMealStatus(),
+          mealProvider.fetchSkipPolicy(),
+          childrenProvider.fetchChildren(),
+          profileProvider.fetchProfiles(),
         ]);
       } finally {
         _fetchInFlight = false;
@@ -733,7 +736,7 @@ class _MealSkipScreenState extends State<MealSkipScreen> {
                           mainAxisAlignment: MainAxisAlignment.end,
                           children: [
                             OutlinedButton.icon(
-                              onPressed: () => _confirmCancelSkip(context, skip, mealProvider),
+                              onPressed: () => _confirmCancelSkip(skip, mealProvider),
                               icon: const Icon(CupertinoIcons.xmark_circle, size: 14),
                               label: const Text('Cancel Skip', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                               style: OutlinedButton.styleFrom(
@@ -757,7 +760,7 @@ class _MealSkipScreenState extends State<MealSkipScreen> {
     );
   }
 
-  void _confirmCancelSkip(BuildContext context, Map<String, dynamic> skip, MealProvider mealProvider) {
+  void _confirmCancelSkip(Map<String, dynamic> skip, MealProvider mealProvider) {
     showCupertinoDialog(
       context: context,
       builder: (_) => CupertinoAlertDialog(
@@ -772,7 +775,7 @@ class _MealSkipScreenState extends State<MealSkipScreen> {
               final id = skip['id'];
               if (id != null) {
                 final success = await mealProvider.cancelSkip(id is int ? id : int.tryParse(id.toString()) ?? 0);
-                if (!context.mounted) return;
+                if (!mounted) return;
                 if (success) {
                   ErrorHandler.showSuccess(context, 'Skip cancelled successfully');
                 } else {

@@ -5,9 +5,9 @@ import 'package:phonepe_payment_sdk/phonepe_payment_sdk.dart';
 
 /// Wraps the official PhonePe Flutter SDK.
 ///
-/// The backend returns a [paymentUrl] like:
-///   https://mercury-uat.phonepe.com/transact/uat_v3?token=<JWT>&routingKey=W
-///
+  /// The backend returns a [paymentUrl] like:
+  ///   https://mercury-uat.phonepe.com/transact/uat_v3?token=[JWT]&routingKey=W
+  ///
 /// This service extracts the JWT token and merchantId from the URL,
 /// builds the SDK request payload, and starts the transaction.
 class PhonePeService {

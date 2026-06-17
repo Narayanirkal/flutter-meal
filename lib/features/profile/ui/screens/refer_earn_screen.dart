@@ -92,6 +92,7 @@ class _ReferEarnScreenState extends State<ReferEarnScreen> {
     final text = 'Hey! Subscribe to Buuttii using my referral code: $code '
         'and get delicious, healthy meals delivered to you. I will earn $mealsReward extra meals once you purchase your first plan! '
         'Sign up now: https://buuttii.com/download';
+    // ignore: deprecated_member_use
     Share.share(text);
   }
 
@@ -479,7 +480,19 @@ class _ReferEarnScreenState extends State<ReferEarnScreen> {
               ),
             )
           else ...[
-            ListView.separated(
+            RadioGroup<String>(
+              groupValue: _selectedCandidate != null ? '${_selectedCandidate!.id}_${_selectedCandidate!.type}' : null,
+              onChanged: (val) {
+                if (val != null) {
+                  final parts = val.split('_');
+                  final id = parts[0];
+                  final type = parts[1];
+                  setState(() {
+                    _selectedCandidate = candidates.firstWhere((c) => c.id == id && c.type == type);
+                  });
+                }
+              },
+              child: ListView.separated(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: candidates.length,
@@ -566,21 +579,16 @@ class _ReferEarnScreenState extends State<ReferEarnScreen> {
                           ),
                         ),
                         if (isActive)
-                          Radio<bool>(
-                            value: true,
-                            groupValue: isSelected,
+                          Radio<String>(
+                            value: '${candidate.id}_${candidate.type}',
                             activeColor: AppTheme.primaryColor,
-                            onChanged: (_) {
-                              setState(() {
-                                _selectedCandidate = candidate;
-                              });
-                            },
                           ),
                       ],
                     ),
                   ),
                 );
               },
+            ),
             ),
             const SizedBox(height: 16),
             Text(

@@ -402,7 +402,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               elevation: 4,
-                              shadowColor: const Color(0xFFFF7A00).withOpacity(0.3),
+                              shadowColor: const Color(0xFFFF7A00).withValues(alpha: 0.3),
                             ),
                             child: isLoading
                                 ? const SizedBox(
@@ -515,7 +515,7 @@ class _LoginScreenState extends State<LoginScreen> {
           isCollapsed: true,
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           hintStyle: TextStyle(
-            color: isDark ? AppTheme.textSecondaryDark.withOpacity(0.6) : const Color(0xFF584235),
+            color: isDark ? AppTheme.textSecondaryDark.withValues(alpha: 0.6) : const Color(0xFF584235),
             fontSize: 16,
             fontWeight: FontWeight.w400,
           ),
@@ -592,7 +592,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16),
                 counterText: '',
                 hintStyle: TextStyle(
-                  color: isDark ? AppTheme.textSecondaryDark.withOpacity(0.6) : const Color(0xFF584235),
+                  color: isDark ? AppTheme.textSecondaryDark.withValues(alpha: 0.6) : const Color(0xFF584235),
                   fontSize: 16,
                   fontWeight: FontWeight.w400,
                 ),

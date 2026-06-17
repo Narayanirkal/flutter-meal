@@ -181,7 +181,9 @@ class _PaymentWebViewScreenState extends State<PaymentWebViewScreen> {
             icon: const Icon(CupertinoIcons.xmark_circle_fill,
                 color: Colors.grey, size: 22),
             onPressed: () async {
-              if (await _showCancelDialog()) Navigator.of(context).pop(false);
+              if (await _showCancelDialog()) {
+                if (context.mounted) Navigator.of(context).pop(false);
+              }
             },
           ),
           bottom: PreferredSize(

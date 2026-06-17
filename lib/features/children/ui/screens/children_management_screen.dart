@@ -281,7 +281,7 @@ class _ChildrenManagementScreenState extends State<ChildrenManagementScreen> {
                   ),
                   _buildIconButton(CupertinoIcons.pencil, Colors.blue, () => _showChildForm(context, child: child)),
                   const SizedBox(width: 8),
-                  _buildIconButton(CupertinoIcons.trash, Colors.red, () => _confirmDelete(context, child)),
+                  _buildIconButton(CupertinoIcons.trash, Colors.red, () => _confirmDelete(child)),
                 ],
               ),
             ),
@@ -404,21 +404,21 @@ class _ChildrenManagementScreenState extends State<ChildrenManagementScreen> {
     );
   }
 
-  void _confirmDelete(BuildContext context, ChildModel child) {
+  void _confirmDelete(ChildModel child) {
     showCupertinoDialog(
       context: context,
-      builder: (context) => CupertinoAlertDialog(
+      builder: (ctx) => CupertinoAlertDialog(
         title: const Text('Delete Child'),
         content: Text('Are you sure you want to delete ${child.name}?'),
         actions: [
           CupertinoDialogAction(
             child: const Text('Cancel'),
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(ctx),
           ),
           CupertinoDialogAction(
             isDestructiveAction: true,
             onPressed: () async {
-              Navigator.pop(context); // Close dialog first
+              Navigator.pop(ctx); // Close dialog first
               final success = await context.read<ChildrenProvider>().deleteChild(child.id!);
               if (success) {
                 if (mounted) ErrorHandler.showSuccess(context, 'Child deleted successfully');
@@ -585,7 +585,7 @@ class _ChildFormState extends State<_ChildForm> {
     super.dispose();
   }
 
-  Future<void> _selectTime(BuildContext context) async {
+  Future<void> _selectTime() async {
     FocusScope.of(context).unfocus();
     final lookup = context.read<LookupProvider>();
     if (lookup.deliveryTimeSettings == null) {
@@ -615,6 +615,7 @@ class _ChildFormState extends State<_ChildForm> {
       },
     );
     if (picked != null) {
+      if (!mounted) return;
       if (!DeliveryTimeWindow.allows(picked, window)) {
         ErrorHandler.showError(context, DeliveryTimeWindow.message(window));
         return;
@@ -813,10 +814,10 @@ class _ChildFormState extends State<_ChildForm> {
                           ],
                         ),
                       );
-                      if (leave == 'discard' && mounted) Navigator.pop(context);
-                      if (leave == 'save' && mounted) {
+                      if (leave == 'discard' && context.mounted) Navigator.pop(context);
+                      if (leave == 'save' && context.mounted) {
                         final ok = await _submitForm();
-                        if (ok && mounted) Navigator.pop(context);
+                        if (ok && context.mounted) Navigator.pop(context);
                       }
                     },
                   ),
@@ -1123,7 +1124,7 @@ class _ChildFormState extends State<_ChildForm> {
               const SizedBox(height: 16),
               // 8. Meal Time
               InkWell(
-                onTap: () => _selectTime(context),
+                onTap: () => _selectTime(),
                 child: IgnorePointer(
                   child: TextFormField(
                     controller: _timeDisplayController,

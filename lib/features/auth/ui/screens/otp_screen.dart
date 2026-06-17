@@ -256,7 +256,7 @@ class _OtpScreenState extends State<OtpScreen> {
                             },
                             onLongPress: () async {
                               final data = await Clipboard.getData('text/plain');
-                              if (!mounted || data?.text == null) return;
+                              if (!context.mounted || data?.text == null) return;
                               final digits = data!.text!.replaceAll(RegExp(r'\D'), '');
                               final pasted = digits.substring(0, digits.length < 6 ? digits.length : 6);
                               if (pasted.isNotEmpty) {

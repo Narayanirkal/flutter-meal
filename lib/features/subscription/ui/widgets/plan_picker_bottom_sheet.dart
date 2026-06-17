@@ -401,7 +401,6 @@ class _PlanPickerSheetState extends State<_PlanPickerSheet> {
     final days = _durationDays(plan, includeSaturday);
     final double extra = _getExtraAmount();
     final double baseVal = MoneyFormat.parseAmount(price);
-    final double finalVal = baseVal + extra;
     final inCart = context.watch<CartProvider>().hasExactCartItem(
           entityType: widget.entityType,
           entityId: widget.entityId,

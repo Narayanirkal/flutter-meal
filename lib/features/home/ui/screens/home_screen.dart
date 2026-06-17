@@ -1298,8 +1298,8 @@ class AboutBuuttiiCard extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final provider = context.watch<LookupProvider>();
     final contactInfo = provider.contactUsInfo;
-    final aboutTitle = contactInfo == null ? null : contactInfo.aboutTitle.trim();
-    final aboutDescription = contactInfo == null ? null : contactInfo.aboutDescription.trim();
+    final aboutTitle = contactInfo?.aboutTitle.trim();
+    final aboutDescription = contactInfo?.aboutDescription.trim();
     final title = aboutTitle != null && aboutTitle.isNotEmpty ? aboutTitle : 'About Us';
     final description = aboutDescription != null && aboutDescription.isNotEmpty
         ? aboutDescription

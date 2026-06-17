@@ -118,6 +118,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
       await provider.fetchProfiles(force: true, silent: false);
       if (mounted) {
         await context.read<MealProvider>().fetchSubscriptionStatus(silent: false);
+        if (!mounted) return;
         context.read<CartProvider>().fetchCart(silent: true);
       }
       
@@ -191,7 +192,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
     super.dispose();
   }
 
-  Future<void> _selectTime(BuildContext context) async {
+  Future<void> _selectTime() async {
     FocusScope.of(context).unfocus();
     final lookup = context.read<LookupProvider>();
     if (lookup.deliveryTimeSettings == null) {
@@ -221,6 +222,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
       },
     );
     if (picked != null) {
+      if (!mounted) return;
       if (!DeliveryTimeWindow.allows(picked, window)) {
         ErrorHandler.showError(context, DeliveryTimeWindow.message(window));
         return;
@@ -617,7 +619,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
 
                     // 6. Meal Time
                     InkWell(
-                      onTap: () => _selectTime(context),
+                      onTap: () => _selectTime(),
                       child: IgnorePointer(
                         child: TextFormField(
                           controller: TextEditingController(text: TimeUtils.formatToDisplay(_timeController.text)),

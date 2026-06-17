@@ -22,8 +22,10 @@ class DioClient {
   /// Example: 'A1:B2:C3:D4:E5:F6:...'
   ///
   /// To obtain your certificate fingerprint, run:
-  ///   openssl s_client -connect <your-api-host>:443 < /dev/null 2>/dev/null \
-  ///     | openssl x509 -fingerprint -sha256 -noout
+  /// ```sh
+  /// openssl s_client -connect <your-api-host>:443 < /dev/null 2>/dev/null \
+  ///   | openssl x509 -fingerprint -sha256 -noout
+  /// ```
   static const List<String> _pinnedCertFingerprints = [
     // TODO: Replace with your production API certificate SHA-256 fingerprint(s).
     // 'AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99:AA:BB:CC:DD:EE:FF:00:11:22:33:44:55:66:77:88:99',

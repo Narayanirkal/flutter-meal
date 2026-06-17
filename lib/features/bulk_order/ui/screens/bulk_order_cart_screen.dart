@@ -185,7 +185,7 @@ class _BulkOrderCartScreenState extends State<BulkOrderCartScreen> {
                         _BottomPayBar(
                           totalMeals: p.bulkCartTotalMeals,
                           isLoading: p.isLoading,
-                          onPay: () => _startPay(context, p, cfg),
+                          onPay: () => _startPay(p, cfg),
                           isDark: isDark,
                         ),
                       ],
@@ -280,7 +280,7 @@ class _BulkOrderCartScreenState extends State<BulkOrderCartScreen> {
     );
   }
 
-  Future<void> _startPay(BuildContext context, BulkOrderProvider p, cfg) async {
+  Future<void> _startPay(BulkOrderProvider p, cfg) async {
     if (p.standardQty != null && p.standardQty! > 0) {
       final err = p.validateStandardDraft(cfg);
       if (err != null) {
@@ -308,7 +308,7 @@ class _BulkOrderCartScreenState extends State<BulkOrderCartScreen> {
       onConfirm: (deliveryDate) async {
         if (isStandard && isVariety) {
           await p.loadMenusForDate(deliveryDate);
-          if (!context.mounted) return;
+          if (!mounted) return;
           if (p.deliveryMenu == null) {
             ErrorHandler.showError(context, 'No menu available for this delivery date');
             return;
@@ -340,7 +340,7 @@ class _BulkOrderCartScreenState extends State<BulkOrderCartScreen> {
         if (isStandard) {
           final dateForMenu = p.standardDeliveryDate ?? deliveryDate;
           await p.loadMenusForDate(dateForMenu);
-          if (!context.mounted) return;
+          if (!mounted) return;
           if (p.deliveryMenu == null) {
             ErrorHandler.showError(context, 'No menu available for this delivery date');
             return;

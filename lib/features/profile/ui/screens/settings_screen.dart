@@ -205,7 +205,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               CupertinoIcons.globe,
               'Visit Website',
               isDark,
-              () => _launchUrl(context, _contactInfo?.websiteUrl ?? 'https://buuttii.com/'),
+              () => _launchUrl(_contactInfo?.websiteUrl ?? 'https://buuttii.com/'),
             ),
             const SizedBox(height: 30),
 
@@ -239,9 +239,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               CupertinoIcons.info_circle_fill,
               (() {
                 final contactInfo = _contactInfo;
-                final aboutTitle = contactInfo == null ? null : contactInfo.aboutTitle.trim();
+                final aboutTitle = contactInfo?.aboutTitle.trim();
                 if (aboutTitle != null && aboutTitle.isNotEmpty) return aboutTitle;
-                final appName = contactInfo == null ? null : contactInfo.appName.trim();
+                final appName = contactInfo?.appName.trim();
                 return appName != null && appName.isNotEmpty ? 'About $appName' : 'About Us';
               })(),
               isDark,
@@ -369,9 +369,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Text(
                 (() {
                   final contactInfo = _contactInfo;
-                  final aboutTitle = contactInfo == null ? null : contactInfo.aboutTitle.trim();
+                  final aboutTitle = contactInfo?.aboutTitle.trim();
                   if (aboutTitle != null && aboutTitle.isNotEmpty) return aboutTitle;
-                  final appName = contactInfo == null ? null : contactInfo.appName.trim();
+                  final appName = contactInfo?.appName.trim();
                   return appName != null && appName.isNotEmpty ? 'About $appName' : 'About Us';
                 })(),
                 style: TextStyle(
@@ -396,7 +396,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Text(
                 (() {
                   final contactInfo = _contactInfo;
-                  final aboutDescription = contactInfo == null ? null : contactInfo.aboutDescription.trim();
+                  final aboutDescription = contactInfo?.aboutDescription.trim();
                   return aboutDescription != null && aboutDescription.isNotEmpty
                       ? aboutDescription
                       : 'This app helps you manage meal subscriptions, menus, and skips in one place.';
@@ -449,9 +449,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Text(
               (() {
                 final contactInfo = _contactInfo;
-                final licenseText = contactInfo == null ? null : contactInfo.licenseText.trim();
+                final licenseText = contactInfo?.licenseText.trim();
                 if (licenseText != null && licenseText.isNotEmpty) return licenseText;
-                final appName = contactInfo == null ? null : contactInfo.appName.trim();
+                final appName = contactInfo?.appName.trim();
                 final brand = appName != null && appName.isNotEmpty ? appName : 'This App';
                 return 'Copyright (c) ${DateTime.now().year} $brand.\n\n'
                     'This mobile application and its content are proprietary to $brand and intended for authorized meal subscription use only.\n\n'
@@ -495,7 +495,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   Navigator.of(context).pop();
                   OfflineCacheBootstrap.clearMemory(context);
                   await authProvider.logout();
-                  if (!mounted) return;
+                  if (!context.mounted) return;
                   Navigator.of(context).popUntil((route) => route.isFirst);
                 },
                 child: const Text('Logout'),
@@ -513,14 +513,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Future<void> _launchUrl(BuildContext context, String urlString) async {
+  Future<void> _launchUrl(String urlString) async {
     final Uri url = Uri.parse(urlString);
     try {
       if (await canLaunchUrl(url)) {
         await launchUrl(url, mode: LaunchMode.externalApplication);
         return;
       }
-      if (!context.mounted) return;
+      if (!mounted) return;
       final isEmail = url.scheme == 'mailto';
       ErrorHandler.showError(
         context,
@@ -529,7 +529,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             : 'Could not open this link right now.',
       );
     } catch (_) {
-      if (!context.mounted) return;
+      if (!mounted) return;
       final isEmail = url.scheme == 'mailto';
       ErrorHandler.showError(
         context,

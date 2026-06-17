@@ -1,5 +1,4 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
 
 /// Minimal premium indicator — verified seal using theme primary.
 class SubscriptionBadge extends StatelessWidget {

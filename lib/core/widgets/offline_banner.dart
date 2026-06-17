@@ -49,7 +49,7 @@ class _OfflineBannerState extends State<OfflineBanner>
 
     // Show immediately if already offline at build time
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
+      if (!context.mounted) return;
       if (!NetworkStatusService.instance.isOnline) {
         _show(_BannerMode.offline);
       }
@@ -66,7 +66,7 @@ class _OfflineBannerState extends State<OfflineBanner>
   }
 
   void _show(_BannerMode mode) {
-    if (!mounted) return;
+    if (!context.mounted) return;
     setState(() => _mode = mode);
     _controller.forward();
   }
@@ -78,7 +78,7 @@ class _OfflineBannerState extends State<OfflineBanner>
   }
 
   void _onNetworkChange() {
-    if (!mounted) return;
+    if (!context.mounted) return;
     final isOffline = !NetworkStatusService.instance.isOnline;
 
     if (isOffline) {
@@ -102,7 +102,7 @@ class _OfflineBannerState extends State<OfflineBanner>
           });
         }
         _autoDismissTimer = Timer(const Duration(milliseconds: 2400), () {
-          if (!mounted) return;
+          if (!context.mounted) return;
           setState(() => _dismissed = false);
         });
       }
@@ -114,7 +114,7 @@ class _OfflineBannerState extends State<OfflineBanner>
   void _startReconnectPoll() {
     _reconnectPoll?.cancel();
     _reconnectPoll = Timer.periodic(const Duration(seconds: 5), (_) {
-      if (!mounted) {
+      if (!context.mounted) {
         _reconnectPoll?.cancel();
         return;
       }

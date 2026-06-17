@@ -53,6 +53,9 @@ dependencies:
   webview_flutter_android: any
   share_plus: ^13.1.0
   flutter_native_splash: ^2.4.6
+dependency_overrides:
+  path_provider_android: 2.2.19
+  path_provider_foundation: 2.4.2
 dev_dependencies:
   flutter_test:
     sdk: flutter

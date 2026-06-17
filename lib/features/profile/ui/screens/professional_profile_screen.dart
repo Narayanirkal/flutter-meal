@@ -111,6 +111,7 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
       await profileProvider.fetchProfiles(force: true);
       if (mounted) {
         await context.read<MealProvider>().fetchSubscriptionStatus(silent: false);
+        if (!mounted) return;
         context.read<CartProvider>().fetchCart(silent: true);
       }
 
@@ -184,7 +185,7 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
     super.dispose();
   }
 
-  Future<void> _selectTime(BuildContext context) async {
+  Future<void> _selectTime() async {
     FocusScope.of(context).unfocus();
     final lookup = context.read<LookupProvider>();
     if (lookup.deliveryTimeSettings == null) {
@@ -214,6 +215,7 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
       },
     );
     if (picked != null) {
+      if (!mounted) return;
       if (!DeliveryTimeWindow.allows(picked, window)) {
         ErrorHandler.showError(context, DeliveryTimeWindow.message(window));
         return;
@@ -592,7 +594,7 @@ class _ProfessionalProfileScreenState extends State<ProfessionalProfileScreen> {
                     const SizedBox(height: 20),
                     // 6. Lunch Time
                     InkWell(
-                      onTap: () => _selectTime(context),
+                      onTap: () => _selectTime(),
                       child: IgnorePointer(
                         child: TextFormField(
                           controller: TextEditingController(text: TimeUtils.formatToDisplay(_timeController.text)),

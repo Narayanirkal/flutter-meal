@@ -61,11 +61,7 @@ class OfflineQueue {
 
   static const _queueKey = 'offline:queue:v1';
   static const _deadLetterKey = 'offline:dead_letter:v1';
-  static const _secureStorage = FlutterSecureStorage(
-    aOptions: AndroidOptions(
-      encryptedSharedPreferences: true,
-    ),
-  );
+  static const _secureStorage = FlutterSecureStorage();
 
   /// Maximum retry count per item before it is moved to the dead-letter store.
   static const int maxRetries = 3;

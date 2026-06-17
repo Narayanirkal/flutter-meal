@@ -385,7 +385,7 @@ class _CartScreenState extends State<CartScreen> {
             ),
           ),
           FilledButton.tonal(
-            onPressed: cartProvider.isLoading ? null : () => _changeStartDate(context, item, cartProvider),
+            onPressed: cartProvider.isLoading ? null : () => _changeStartDate(item, cartProvider),
             style: FilledButton.styleFrom(
               backgroundColor: AppTheme.primaryColor.withValues(alpha: 0.15),
               foregroundColor: AppTheme.primaryColor,
@@ -407,7 +407,7 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
-  Future<void> _changeStartDate(BuildContext context, CartItem item, CartProvider cartProvider) async {
+  Future<void> _changeStartDate(CartItem item, CartProvider cartProvider) async {
     final first = MealDate.firstSelectableStartDate();
     final last = MealDate.lastSelectableStartDate();
     final initial = MealDate.parseOrTomorrow(item.startDate);
@@ -419,10 +419,10 @@ class _CartScreenState extends State<CartScreen> {
       helpText: 'Select Meal Start Date',
       confirmText: 'SAVE',
     );
-    if (selectedDate == null || !context.mounted) return;
+    if (selectedDate == null || !mounted) return;
     final dateStr = MealDate.formatYmd(selectedDate);
     final ok = await cartProvider.updateItemStartDate(item.id, dateStr);
-    if (!context.mounted) return;
+    if (!mounted) return;
     if (ok) {
       setState(() {
         final invalid = cartProvider.items.where((i) => i.startDate == null || i.startDate!.trim().isEmpty).toList();
@@ -530,7 +530,7 @@ class _CartScreenState extends State<CartScreen> {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: cartProvider.isLoading ? null : () => _handleCheckout(context, cartProvider),
+              onPressed: cartProvider.isLoading ? null : () => _handleCheckout(cartProvider),
               style: ElevatedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18))),
               child: Text(
                 _amountDueNow(cartProvider) <= 0.009 && _useWallet
@@ -545,7 +545,7 @@ class _CartScreenState extends State<CartScreen> {
     );
   }
 
-  void _handleCheckout(BuildContext context, CartProvider cartProvider) async {
+  void _handleCheckout(CartProvider cartProvider) async {
     final invalid = cartProvider.items.where((i) => i.startDate == null || i.startDate!.trim().isEmpty).toList();
     if (invalid.isNotEmpty) {
       setState(() {
@@ -570,12 +570,13 @@ class _CartScreenState extends State<CartScreen> {
       isSandbox: ApiEndpoints.isSandboxPayment,
       useWallet: _useWallet,
     );
-    if (result == null && context.mounted) {
+    if (result == null && mounted) {
       final err = cartProvider.error ?? '';
       if (err.toLowerCase().contains('pending')) {
         await context.read<PaymentProvider>().abandonPendingPayment(cancelPendingCart: true);
-        if (context.mounted) {
+        if (mounted) {
           await cartProvider.fetchCart(force: true);
+          if (!mounted) return;
           result = await cartProvider.checkoutAll(
             isSandbox: ApiEndpoints.isSandboxPayment,
             useWallet: _useWallet,
@@ -583,9 +584,9 @@ class _CartScreenState extends State<CartScreen> {
         }
       }
     }
-    if (context.mounted) Navigator.of(context, rootNavigator: true).pop();
-    if (!context.mounted || result == null) {
-      if (context.mounted && cartProvider.error != null) {
+    if (mounted) Navigator.of(context, rootNavigator: true).pop();
+    if (!mounted || result == null) {
+      if (mounted && cartProvider.error != null) {
         setState(() {
           _localError = cartProvider.error;
         });
@@ -603,6 +604,8 @@ class _CartScreenState extends State<CartScreen> {
     } else {
       await pay.fetchWallet(silent: true);
     }
+
+    if (!mounted) return;
 
     final txnId = result['merchantTransactionId']?.toString() ?? '';
     final orderId = result['orderId']?.toString() ?? '';
@@ -629,22 +632,19 @@ class _CartScreenState extends State<CartScreen> {
             builder: (_) => PaymentWebViewScreen(url: paymentUrl, txnId: txnId, orderId: orderId),
           ),
         );
-        if (context.mounted) {
-          Navigator.pushReplacement(
-            context,
-            CupertinoPageRoute(
-              builder: (_) => PaymentStatusScreen(txnId: txnId, orderId: orderId, orderType: 'cart'),
-            ),
-          );
-        }
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          CupertinoPageRoute(
+            builder: (_) => PaymentStatusScreen(txnId: txnId, orderId: orderId, orderType: 'cart'),
+          ),
+        );
       } else {
-        if (context.mounted) {
-          setState(() {
-            _localError = sdkStatus == 'INTERRUPTED'
-                ? 'Payment cancelled. Wallet balance has been restored.'
-                : (result?['sdkError']?.toString() ?? 'Payment failed or was cancelled.');
-          });
-        }
+        setState(() {
+          _localError = sdkStatus == 'INTERRUPTED'
+              ? 'Payment cancelled. Wallet balance has been restored.'
+              : (result?['sdkError']?.toString() ?? 'Payment failed or was cancelled.');
+        });
       }
     }
   }
