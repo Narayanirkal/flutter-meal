@@ -45,9 +45,9 @@ class _LoginScreenState extends State<LoginScreen> {
       context.read<AuthProvider>().clearTransientState();
       context.read<LookupProvider>().fetchLoginCarousel();
     });
-    _phoneFocusNode.addListener(() => _scrollToFocused(_phoneFocusNode));
-    _usernameFocusNode.addListener(() => _scrollToFocused(_usernameFocusNode));
-    _referralFocusNode.addListener(() => _scrollToFocused(_referralFocusNode));
+    _phoneFocusNode.addListener(_onFocusChanged);
+    _usernameFocusNode.addListener(_onFocusChanged);
+    _referralFocusNode.addListener(_onFocusChanged);
     _phoneController.addListener(() {
       if (mounted) setState(() {});
     });
@@ -90,19 +90,57 @@ class _LoginScreenState extends State<LoginScreen> {
     return true;
   }
 
-  void _scrollToFocused(FocusNode node) {
-    if (!node.hasFocus) return;
-    // Short delay to let the keyboard animation start
-    Future.delayed(const Duration(milliseconds: 300), () {
-      if (!mounted || node.context == null) return;
-      Scrollable.ensureVisible(
-        node.context!,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-        alignmentPolicy: ScrollPositionAlignmentPolicy.explicit,
-        alignment: 0.0, // Position the field at the very top of the visible viewport
-      );
-    });
+  void _onFocusChanged() {
+    final hasFocus = _phoneFocusNode.hasFocus ||
+        _usernameFocusNode.hasFocus ||
+        _referralFocusNode.hasFocus;
+
+    final screenHeight = MediaQuery.sizeOf(context).height;
+    final statusBarHeight = MediaQuery.paddingOf(context).top;
+    final bannerHeight = screenHeight * 0.42;
+
+    // Align card top perfectly 16px below the "Welcome to Buuttii" branding row
+    // Logo bottom is at statusBarHeight + 16 (top padding) + 38 (logo height) = statusBarHeight + 54.
+    // Target position for card top is statusBarHeight + 54 + 16 (margin) = statusBarHeight + 70.
+    // The card starts at bannerHeight - 24.
+    // Therefore target offset = (bannerHeight - 24) - (statusBarHeight + 70) = bannerHeight - statusBarHeight - 94.
+    final targetScrollOffset = (bannerHeight - statusBarHeight - 94.0).clamp(0.0, double.infinity);
+
+    if (hasFocus) {
+      // Use 150ms delay to allow keyboard viewport resize to begin, preventing clamp
+      Future.delayed(const Duration(milliseconds: 150), () {
+        if (!mounted) return;
+        final stillHasFocus = _phoneFocusNode.hasFocus ||
+            _usernameFocusNode.hasFocus ||
+            _referralFocusNode.hasFocus;
+        if (stillHasFocus) {
+          if (_scrollController.hasClients) {
+            _scrollController.animateTo(
+              targetScrollOffset,
+              duration: const Duration(milliseconds: 400),
+              curve: Curves.easeOutCubic,
+            );
+          }
+        }
+      });
+    } else {
+      // Use microtask to verify focus didn't move directly to another field
+      Future.microtask(() {
+        if (!mounted) return;
+        final stillHasFocus = _phoneFocusNode.hasFocus ||
+            _usernameFocusNode.hasFocus ||
+            _referralFocusNode.hasFocus;
+        if (!stillHasFocus) {
+          if (_scrollController.hasClients) {
+            _scrollController.animateTo(
+              0.0,
+              duration: const Duration(milliseconds: 350),
+              curve: Curves.easeOutCubic,
+            );
+          }
+        }
+      });
+    }
   }
 
   @override
@@ -200,445 +238,446 @@ class _LoginScreenState extends State<LoginScreen> {
     final isRegisterMode = authProvider.authMode == AuthMode.register;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final carouselImages = lookupProvider.loginCarouselImages;
-    final keyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
 
     final pageBg = isDark ? AppTheme.backgroundDark : Colors.white;
     final statusBarBg = isDark ? pageBg : const Color(0xFFFF7A00);
+
+    final screenHeight = MediaQuery.sizeOf(context).height;
+    final statusBarHeight = MediaQuery.paddingOf(context).top;
+    final bottomPadding = MediaQuery.paddingOf(context).bottom;
+
+    // Use a stable, beautifully proportioned banner height (e.g. 42% of screen height)
+    final bannerHeight = screenHeight * 0.42;
+
+    // Calculate remaining card minHeight to fill the rest of the screen (card overlaps banner by 24px)
+    final cardMinHeight = screenHeight - bannerHeight + 24;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: AppTheme.overlayFor(background: statusBarBg, isDark: isDark),
       child: Scaffold(
         resizeToAvoidBottomInset: true,
         backgroundColor: pageBg,
-        body: LayoutBuilder(
-          builder: (context, constraints) {
-            return CustomScrollView(
-              controller: _scrollController,
-              physics: keyboardOpen
-                  ? const BouncingScrollPhysics()
-                  : const NeverScrollableScrollPhysics(),
-              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              slivers: [
-                SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-              // Top Carousel Banner – fixed animated height, collapses when keyboard opens
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 250),
-                curve: Curves.easeInOut,
-                height: keyboardOpen ? 0 : MediaQuery.of(context).size.height * 0.50,
-                width: double.infinity,
-                clipBehavior: Clip.hardEdge,
-                decoration: const BoxDecoration(),
-                child: keyboardOpen
-                    ? const SizedBox.shrink()
-                    : Stack(
-                        children: [
-                        // PageView for dynamic / fallback images
-                        PageView.builder(
-                          controller: _pageController,
-                          onPageChanged: (index) {
-                            setState(() {
-                              _currentPage = index;
-                            });
-                            _startCarouselTimer();
-                          },
-                          itemCount: carouselImages.isNotEmpty ? carouselImages.length : 5,
-                          itemBuilder: (context, index) {
-                            if (carouselImages.isNotEmpty) {
-                              final img = carouselImages[index];
-                              return Image.network(
-                                img.imageUrl,
-                                fit: BoxFit.cover,
-                                loadingBuilder: (context, child, loadingProgress) {
-                                  if (loadingProgress == null) return child;
-                                  return Container(
-                                    decoration: const BoxDecoration(
-                                      gradient: LinearGradient(
-                                        colors: [Color(0xFFFF8C00), Color(0xFFFF5E00)],
-                                        begin: Alignment.topCenter,
-                                        end: Alignment.bottomCenter,
-                                      ),
-                                    ),
-                                    child: const Center(
-                                      child: CircularProgressIndicator(
-                                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white70),
-                                      ),
-                                    ),
-                                  );
-                                },
-                                errorBuilder: (context, error, stackTrace) => Container(
-                                  decoration: const BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: [Color(0xFFFF8C00), Color(0xFFFF5E00)],
-                                      begin: Alignment.topCenter,
-                                      end: Alignment.bottomCenter,
-                                    ),
-                                  ),
-                                  child: const Center(
-                                    child: Icon(Icons.broken_image, color: Colors.white, size: 48),
-                                  ),
-                                ),
-                              );
-                            }
-                            return _buildCarouselPlaceholder(index);
-                          },
-                        ),
-                        if (carouselImages.isNotEmpty)
-                          // Soft dark gradient overlay for branding text contrast
-                          Positioned.fill(
-                            child: DecoratedBox(
-                              decoration: BoxDecoration(
+        body: Stack(
+          children: [
+            // Background Layer: Top Carousel Banner
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              height: bannerHeight,
+              child: Stack(
+                children: [
+                  // PageView for dynamic / fallback images
+                  PageView.builder(
+                    controller: _pageController,
+                    onPageChanged: (index) {
+                      setState(() {
+                        _currentPage = index;
+                      });
+                      _startCarouselTimer();
+                    },
+                    itemCount: carouselImages.isNotEmpty ? carouselImages.length : 5,
+                    itemBuilder: (context, index) {
+                      if (carouselImages.isNotEmpty) {
+                        final img = carouselImages[index];
+                        return Image.network(
+                          img.imageUrl,
+                          fit: BoxFit.cover,
+                          loadingBuilder: (context, child, loadingProgress) {
+                            if (loadingProgress == null) return child;
+                            return Container(
+                              decoration: const BoxDecoration(
                                 gradient: LinearGradient(
-                                  colors: [
-                                    Colors.black.withValues(alpha: 0.15),
-                                    Colors.black.withValues(alpha: 0.45),
-                                  ],
+                                  colors: [Color(0xFFFF8C00), Color(0xFFFF5E00)],
                                   begin: Alignment.topCenter,
                                   end: Alignment.bottomCenter,
                                 ),
                               ),
-                            ),
-                          ),
-                        // Logo & Brand overlay
-                        Positioned(
-                          top: MediaQuery.paddingOf(context).top + 16,
-                          left: 20,
-                          right: 20,
-                          child: Row(
-                            children: [
-                              const AppLogo(height: 38),
-                              const SizedBox(width: 8),
-                              const Text(
-                                'Welcome to Buuttii',
-                                style: TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.w900,
-                                  color: Colors.white,
-                                  letterSpacing: -0.5,
+                              child: const Center(
+                                child: CircularProgressIndicator(
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white70),
                                 ),
                               ),
+                            );
+                          },
+                          errorBuilder: (context, error, stackTrace) => Container(
+                            decoration: const BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [Color(0xFFFF8C00), Color(0xFFFF5E00)],
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                              ),
+                            ),
+                            child: const Center(
+                              child: Icon(Icons.broken_image, color: Colors.white, size: 48),
+                            ),
+                          ),
+                        );
+                      }
+                      return _buildCarouselPlaceholder(index);
+                    },
+                  ),
+                  if (carouselImages.isNotEmpty)
+                    // Soft dark gradient overlay for branding text contrast
+                    Positioned.fill(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.black.withValues(alpha: 0.15),
+                              Colors.black.withValues(alpha: 0.45),
                             ],
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
                           ),
                         ),
-                        // Page dots
-                        Positioned(
-                          bottom: 30,
-                          left: 0,
-                          right: 0,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: List.generate(
-                              carouselImages.isNotEmpty ? carouselImages.length : 5,
-                              (index) => AnimatedContainer(
-                                duration: const Duration(milliseconds: 300),
-                                margin: const EdgeInsets.symmetric(horizontal: 4),
-                                height: 8,
-                                width: _currentPage == index ? 22 : 8,
-                                decoration: BoxDecoration(
-                                  color: _currentPage == index ? Colors.white : Colors.white.withValues(alpha: 0.5),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                              ),
-                            ),
+                      ),
+                    ),
+                  // Logo & Brand overlay
+                  Positioned(
+                    top: statusBarHeight + 16,
+                    left: 20,
+                    right: 20,
+                    child: Row(
+                      children: [
+                        const AppLogo(height: 38),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Welcome to Buuttii',
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white,
+                            letterSpacing: -0.5,
                           ),
                         ),
                       ],
                     ),
+                  ),
+                  // Page dots (positioned higher to prevent card overlap)
+                  Positioned(
+                    bottom: 40,
+                    left: 0,
+                    right: 0,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: List.generate(
+                        carouselImages.isNotEmpty ? carouselImages.length : 5,
+                        (index) => AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          margin: const EdgeInsets.symmetric(horizontal: 4),
+                          height: 8,
+                          width: _currentPage == index ? 22 : 8,
+                          decoration: BoxDecoration(
+                            color: _currentPage == index ? Colors.white : Colors.white.withValues(alpha: 0.5),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
+            ),
 
-              // Bottom Card – Expanded so it always fills remaining space, never scrollable
-              Expanded(
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 250),
-                  curve: Curves.easeInOut,
-                  transform: Matrix4.translationValues(0, keyboardOpen ? 0 : -20, 0),
-                  decoration: BoxDecoration(
-                    color: pageBg,
-                    borderRadius: keyboardOpen
-                        ? BorderRadius.zero
-                        : const BorderRadius.vertical(top: Radius.circular(28)),
-                    boxShadow: keyboardOpen
-                        ? null
-                        : [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.08),
-                              blurRadius: 16,
-                              offset: const Offset(0, -6),
-                            ),
-                          ],
-                  ),
-                  padding: EdgeInsets.fromLTRB(
-                    20,
-                    keyboardOpen ? MediaQuery.paddingOf(context).top + 16 : 24,
-                    20,
-                    20 + (keyboardOpen ? 0 : kBottomNavigationBarHeight) + MediaQuery.viewPaddingOf(context).bottom,
-                  ),
+            // Foreground Layer: Scrollable white card
+            Positioned.fill(
+              child: SingleChildScrollView(
+                controller: _scrollController,
+                physics: const AlwaysScrollableScrollPhysics(),
+                keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                child: Form(
+                  key: _formKey,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // Heading/Subtitle section inside the card
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            isRegisterMode ? 'Create account' : 'Welcome back',
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: -0.4,
-                              color: isDark ? AppTheme.textPrimaryDark : const Color(0xFF1B1C1C),
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            isRegisterMode
-                                ? 'Enter your WhatsApp number and username to continue with your healthy meal journey.'
-                                : 'Enter your WhatsApp number to continue with your healthy meal journey.',
-                            style: TextStyle(
-                              fontSize: 14,
-                              height: 1.35,
-                              fontWeight: FontWeight.w500,
-                              color: isDark ? AppTheme.textSecondaryDark : const Color(0xFF6B7280),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
+                      // Transparent top spacer (banner height minus the 24px overlap)
+                      SizedBox(height: bannerHeight - 24),
 
-                      // Form fields
-                      if (isRegisterMode) ...[
-                        _buildMaterialInput(
-                          controller: _usernameController,
-                          label: 'Username',
-                          icon: Icons.person_outline,
-                          focusNode: _usernameFocusNode,
-                          keyboardType: TextInputType.name,
-                          textInputAction: TextInputAction.next,
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Please enter your username';
-                            }
-                            return null;
-                          },
+                      // Bottom Card – Uses stable ConstrainedBox with stable minHeight
+                      ConstrainedBox(
+                        constraints: BoxConstraints(
+                          minHeight: cardMinHeight,
                         ),
-                        const SizedBox(height: 16),
-                      ],
-                      _buildPhoneInput(),
-                      const SizedBox(height: 16),
-
-                      // Referral Section (Register Mode)
-                      if (isRegisterMode) ...[
-                        if (!_showReferralField)
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: TextButton.icon(
-                              onPressed: () {
-                                setState(() {
-                                  _showReferralField = true;
-                                });
-                              },
-                              style: TextButton.styleFrom(
-                                padding: EdgeInsets.zero,
-                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: pageBg,
+                            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.08),
+                                blurRadius: 16,
+                                offset: const Offset(0, -6),
                               ),
-                              icon: Icon(Icons.redeem, size: 16, color: isDark ? AppTheme.primaryColor : const Color(0xFFFF7A00)),
-                              label: Text(
-                                'Have a referral code?',
-                                style: TextStyle(
-                                  color: isDark ? AppTheme.primaryColor : const Color(0xFFFF7A00),
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ),
-                          )
-                        else ...[
-                          _buildMaterialInput(
-                            controller: _referralController,
-                            label: 'Referral Code',
-                            icon: Icons.card_giftcard,
-                            focusNode: _referralFocusNode,
-                            textCapitalization: TextCapitalization.characters,
-                            inputFormatters: [
-                              LengthLimitingTextInputFormatter(15),
-                              FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9]')),
                             ],
-                            validator: (value) {
-                              return null;
-                            },
                           ),
-                        ],
-                        const SizedBox(height: 16),
-                      ],
-
-                      // Terms and Conditions checkbox
-                      if (isRegisterMode) ...[
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          padding: EdgeInsets.fromLTRB(
+                            20,
+                            24,
+                            20,
+                            20 + kBottomNavigationBarHeight + bottomPadding,
+                          ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            Checkbox(
-                              value: _consentAccepted,
-                              onChanged: (val) {
-                                setState(() {
-                                  _consentAccepted = val ?? false;
-                                });
-                              },
-                              activeColor: const Color(0xFFFF7A00),
-                              visualDensity: VisualDensity.compact,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                            // Heading/Subtitle section inside the card
+                            Text(
+                              isRegisterMode ? 'Create account' : 'Welcome back',
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: -0.4,
+                                color: isDark ? AppTheme.textPrimaryDark : const Color(0xFF1B1C1C),
+                              ),
                             ),
-                            Expanded(
-                              child: Padding(
-                                padding: const EdgeInsets.only(top: 8.0),
-                                child: RichText(
-                                  text: TextSpan(
-                                    style: TextStyle(
-                                      color: isDark ? AppTheme.textSecondaryDark : const Color(0xFF6B7280),
-                                      fontSize: 12.5,
-                                      height: 1.45,
-                                      fontWeight: FontWeight.w500,
+                            const SizedBox(height: 6),
+                            Text(
+                              isRegisterMode
+                                  ? 'Enter your WhatsApp number and username to continue with your healthy meal journey.'
+                                  : 'Enter your WhatsApp number to continue with your healthy meal journey.',
+                              style: TextStyle(
+                                fontSize: 14,
+                                height: 1.35,
+                                fontWeight: FontWeight.w500,
+                                color: isDark ? AppTheme.textSecondaryDark : const Color(0xFF6B7280),
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+
+                            // Form fields
+                            if (isRegisterMode) ...[
+                              _buildMaterialInput(
+                                controller: _usernameController,
+                                label: 'Username',
+                                icon: Icons.person_outline,
+                                focusNode: _usernameFocusNode,
+                                keyboardType: TextInputType.name,
+                                textInputAction: TextInputAction.next,
+                                validator: (value) {
+                                  if (value == null || value.trim().isEmpty) {
+                                    return 'Please enter your username';
+                                  }
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 16),
+                            ],
+                            _buildPhoneInput(),
+                            const SizedBox(height: 16),
+
+                            // Referral Section (Register Mode)
+                            if (isRegisterMode) ...[
+                              if (!_showReferralField)
+                                Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: TextButton.icon(
+                                    onPressed: () {
+                                      setState(() {
+                                        _showReferralField = true;
+                                      });
+                                    },
+                                    style: TextButton.styleFrom(
+                                      padding: EdgeInsets.zero,
+                                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                     ),
-                                    children: [
-                                      const TextSpan(text: 'I agree to the '),
-                                      TextSpan(
-                                        text: 'Terms & Conditions',
-                                        style: TextStyle(
-                                          color: isDark ? AppTheme.primaryColor : const Color(0xFFFF7A00),
-                                          fontWeight: FontWeight.bold,
-                                          decoration: TextDecoration.underline,
-                                        ),
-                                        recognizer: TapGestureRecognizer()
-                                          ..onTap = () {
-                                            Navigator.push(
-                                              context,
-                                              CupertinoPageRoute(
-                                                builder: (_) =>
-                                                    const LegalScreen(initialTabIndex: 0),
-                                              ),
-                                            );
-                                          },
+                                    icon: Icon(Icons.redeem, size: 16, color: isDark ? AppTheme.primaryColor : const Color(0xFFFF7A00)),
+                                    label: Text(
+                                      'Have a referral code?',
+                                      style: TextStyle(
+                                        color: isDark ? AppTheme.primaryColor : const Color(0xFFFF7A00),
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 14,
                                       ),
-                                      const TextSpan(text: ' and '),
-                                      TextSpan(
-                                        text: 'Privacy Policy',
-                                        style: TextStyle(
-                                          color: isDark ? AppTheme.primaryColor : const Color(0xFFFF7A00),
-                                          fontWeight: FontWeight.bold,
-                                          decoration: TextDecoration.underline,
-                                        ),
-                                        recognizer: TapGestureRecognizer()
-                                          ..onTap = () {
-                                            Navigator.push(
-                                              context,
-                                              CupertinoPageRoute(
-                                                builder: (_) =>
-                                                    const LegalScreen(initialTabIndex: 1),
-                                              ),
-                                            );
-                                          },
-                                      ),
-                                    ],
+                                    ),
                                   ),
+                                )
+                              else ...[
+                                _buildMaterialInput(
+                                  controller: _referralController,
+                                  label: 'Referral Code',
+                                  icon: Icons.card_giftcard,
+                                  focusNode: _referralFocusNode,
+                                  textCapitalization: TextCapitalization.characters,
+                                  inputFormatters: [
+                                    LengthLimitingTextInputFormatter(15),
+                                    FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9]')),
+                                  ],
+                                  validator: (value) {
+                                    return null;
+                                  },
+                                ),
+                              ],
+                              const SizedBox(height: 16),
+                            ],
+
+                            // Terms and Conditions checkbox
+                            if (isRegisterMode) ...[
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Checkbox(
+                                    value: _consentAccepted,
+                                    onChanged: (val) {
+                                      setState(() {
+                                        _consentAccepted = val ?? false;
+                                      });
+                                    },
+                                    activeColor: const Color(0xFFFF7A00),
+                                    visualDensity: VisualDensity.compact,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                                  ),
+                                  Expanded(
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(top: 8.0),
+                                      child: RichText(
+                                        text: TextSpan(
+                                          style: TextStyle(
+                                            color: isDark ? AppTheme.textSecondaryDark : const Color(0xFF6B7280),
+                                            fontSize: 12.5,
+                                            height: 1.45,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                          children: [
+                                            const TextSpan(text: 'I agree to the '),
+                                            TextSpan(
+                                              text: 'Terms & Conditions',
+                                              style: TextStyle(
+                                                color: isDark ? AppTheme.primaryColor : const Color(0xFFFF7A00),
+                                                fontWeight: FontWeight.bold,
+                                                decoration: TextDecoration.underline,
+                                              ),
+                                              recognizer: TapGestureRecognizer()
+                                                ..onTap = () {
+                                                  Navigator.push(
+                                                    context,
+                                                    CupertinoPageRoute(
+                                                      builder: (_) =>
+                                                          const LegalScreen(initialTabIndex: 0),
+                                                    ),
+                                                  );
+                                                },
+                                            ),
+                                            const TextSpan(text: ' and '),
+                                            TextSpan(
+                                              text: 'Privacy Policy',
+                                              style: TextStyle(
+                                                color: isDark ? AppTheme.primaryColor : const Color(0xFFFF7A00),
+                                                fontWeight: FontWeight.bold,
+                                                decoration: TextDecoration.underline,
+                                              ),
+                                              recognizer: TapGestureRecognizer()
+                                                ..onTap = () {
+                                                  Navigator.push(
+                                                    context,
+                                                    CupertinoPageRoute(
+                                                      builder: (_) =>
+                                                          const LegalScreen(initialTabIndex: 1),
+                                                    ),
+                                                  );
+                                                },
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 18),
+                            ],
+
+                            // Submit Action Button
+                            SizedBox(
+                              height: 52,
+                              child: ElevatedButton(
+                                onPressed: _canSubmit
+                                    ? (isRegisterMode ? _submitRegister : _submitLogin)
+                                    : null,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFFFF7A00),
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                  ),
+                                  elevation: 2,
+                                  shadowColor: const Color(0xFFFF7A00).withValues(alpha: 0.35),
+                                ),
+                                child: isLoading
+                                    ? const SizedBox(
+                                        height: 20,
+                                        width: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                        ),
+                                      )
+                                    : Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            isRegisterMode ? 'Create Account' : 'Get OTP',
+                                            style: const TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          const Icon(Icons.arrow_forward, size: 20),
+                                        ],
+                                      ),
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        // Spacing before footer
+                        const SizedBox(height: 32),
+
+                        // Mode Switch footer
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              isRegisterMode ? 'Already have an account? ' : 'New to Buuttii? ',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: isDark ? AppTheme.textSecondaryDark : const Color(0xFF6B7280),
+                              ),
+                            ),
+                            GestureDetector(
+                              onTap: () => _setMode(
+                                isRegisterMode ? AuthMode.login : AuthMode.register,
+                              ),
+                              child: Text(
+                                isRegisterMode ? 'Login' : 'Register',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: isDark ? AppTheme.primaryColor : const Color(0xFFFF7A00),
+                                  fontWeight: FontWeight.w800,
                                 ),
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 18),
                       ],
-
-                      // Submit Action Button
-                      SizedBox(
-                        height: 52,
-                        child: ElevatedButton(
-                          onPressed: _canSubmit
-                              ? (isRegisterMode ? _submitRegister : _submitLogin)
-                              : null,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFFFF7A00),
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            elevation: 2,
-                            shadowColor: const Color(0xFFFF7A00).withValues(alpha: 0.35),
-                          ),
-                          child: isLoading
-                              ? const SizedBox(
-                                  height: 20,
-                                  width: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                  ),
-                                )
-                              : Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      isRegisterMode ? 'Create Account' : 'Get OTP',
-                                      style: const TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    const Icon(Icons.arrow_forward, size: 20),
-                                  ],
-                                ),
-                        ),
-                      ),
-
-                      // Spacer pushes footer to the bottom of available space
-                      const Spacer(),
-
-                      // Mode Switch footer – always visible at bottom
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            isRegisterMode ? 'Already have an account? ' : 'New to Buuttii? ',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: isDark ? AppTheme.textSecondaryDark : const Color(0xFF6B7280),
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: () => _setMode(
-                              isRegisterMode ? AuthMode.login : AuthMode.register,
-                            ),
-                            child: Text(
-                              isRegisterMode ? 'Login' : 'Register',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: isDark ? AppTheme.primaryColor : const Color(0xFFFF7A00),
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
     ],
-  );
-  },
+  ),
 ),
-      ),
-    );
-  }
+);
+}
 
   Widget _buildCarouselPlaceholder(int index) {
     final titles = [
@@ -674,7 +713,7 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24.0),
+        padding: const EdgeInsets.only(left: 24.0, right: 24.0, bottom: 32.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [

@@ -76,7 +76,6 @@ class ApiEndpoints {
   static const String cities = '/api/common/lookup/cities';
   static const String companies = '/api/common/lookup/companies';
   static const String allowedAddresses = '/api/common/lookup/allowed-addresses';
-  static const String minimumAppVersion = '/api/common/lookup/minimum-app-version';
 
   // Common Menu
   static const String commonMenuToday = '/api/common/menu/today';

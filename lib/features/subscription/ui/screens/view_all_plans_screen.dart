@@ -17,27 +17,23 @@ class ViewAllPlansScreen extends StatefulWidget {
 }
 
 class _ViewAllPlansScreenState extends State<ViewAllPlansScreen> {
-  final ScrollController _scrollController = ScrollController();
-  final Map<int, GlobalKey> _sectionKeys = {};
+  late PageController _pageController;
   int _selectedSizeIndex = 0;
-  bool _programmaticScroll = false;
 
   @override
   void initState() {
     super.initState();
-    _scrollController.addListener(_syncSelectedSegmentFromScroll);
+    _pageController = PageController(initialPage: _selectedSizeIndex);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       context.read<SubscriptionProvider>().fetchSubscriptions(force: true, silent: false);
       context.read<LookupProvider>().fetchInitialData(force: true);
-      _syncSelectedSegmentFromScroll();
     });
   }
 
   @override
   void dispose() {
-    _scrollController.removeListener(_syncSelectedSegmentFromScroll);
-    _scrollController.dispose();
+    _pageController.dispose();
     super.dispose();
   }
 
@@ -56,77 +52,14 @@ class _ViewAllPlansScreenState extends State<ViewAllPlansScreen> {
         .toList();
   }
 
-  GlobalKey _keyForSection(int mealSizeId) =>
-      _sectionKeys.putIfAbsent(mealSizeId, GlobalKey.new);
-
-  Future<void> _scrollToSection(int index, List<_MealSizeSegment> segments) async {
+  void _onSegmentChanged(int index, List<_MealSizeSegment> segments) {
     if (index < 0 || index >= segments.length) return;
-    _programmaticScroll = true;
     setState(() => _selectedSizeIndex = index);
-    final ctx = _keyForSection(segments[index].id).currentContext;
-    if (ctx != null) {
-      await Scrollable.ensureVisible(
-        ctx,
-        duration: const Duration(milliseconds: 320),
-        curve: Curves.easeOutCubic,
-        alignment: 0.0,
-      );
-    }
-    if (mounted) {
-      setState(() => _selectedSizeIndex = index);
-    }
-    await Future.delayed(const Duration(milliseconds: 360));
-    _programmaticScroll = false;
-  }
-
-  void _syncSelectedSegmentFromScroll() {
-    if (!mounted || _programmaticScroll || !_scrollController.hasClients) return;
-
-    final lookup = context.read<LookupProvider>();
-    final plans = [...context.read<SubscriptionProvider>().subscriptions]
-      ..sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
-    final segments = _segments(plans, lookup);
-
-    if (segments.isEmpty) return;
-
-    final scrollableCtx = _scrollController.position.context.notificationContext;
-    if (scrollableCtx == null) return;
-    final scrollRender = scrollableCtx.findRenderObject();
-    if (scrollRender is! RenderBox) return;
-
-    final viewportHeight = scrollRender.size.height;
-    final middleOfScreen = viewportHeight / 2;
-    int nearestIndex = _selectedSizeIndex;
-    double nearestDistance = double.infinity;
-
-    for (var i = 0; i < segments.length; i++) {
-      final ctx = _keyForSection(segments[i].id).currentContext;
-      if (ctx == null) continue;
-
-      final renderBox = ctx.findRenderObject();
-      if (renderBox is! RenderBox || !renderBox.hasSize) continue;
-
-      final top = renderBox.localToGlobal(Offset.zero, ancestor: scrollRender).dy;
-      final bottom = top + renderBox.size.height;
-
-      double distance;
-      if (top <= middleOfScreen && bottom >= middleOfScreen) {
-        distance = 0.0;
-      } else if (bottom < middleOfScreen) {
-        distance = middleOfScreen - bottom;
-      } else {
-        distance = top - middleOfScreen;
-      }
-
-      if (distance < nearestDistance) {
-        nearestDistance = distance;
-        nearestIndex = i;
-      }
-    }
-
-    if (_selectedSizeIndex != nearestIndex) {
-      setState(() => _selectedSizeIndex = nearestIndex);
-    }
+    _pageController.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOutCubic,
+    );
   }
 
   @override
@@ -139,8 +72,11 @@ class _ViewAllPlansScreenState extends State<ViewAllPlansScreen> {
 
     final segments = _segments(plans, lookup);
     if (segments.isNotEmpty && _selectedSizeIndex >= segments.length) {
+      _selectedSizeIndex = segments.length - 1;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) setState(() => _selectedSizeIndex = 0);
+        if (_pageController.hasClients) {
+          _pageController.jumpToPage(_selectedSizeIndex);
+        }
       });
     }
 
@@ -178,7 +114,7 @@ class _ViewAllPlansScreenState extends State<ViewAllPlansScreen> {
                 child: MealSizeSegmentedControl(
                   options: segments.map((s) => s.label).toList(),
                   selectedIndex: _selectedSizeIndex.clamp(0, segments.length - 1),
-                  onChanged: (i) => _scrollToSection(i, segments),
+                  onChanged: (i) => _onSegmentChanged(i, segments),
                 ),
               ),
             Expanded(
@@ -201,51 +137,77 @@ class _ViewAllPlansScreenState extends State<ViewAllPlansScreen> {
                             ),
                           ),
                         ))
-                  : RefreshIndicator(
-                      onRefresh: () async {
-                        await Future.wait([
-                          context.read<SubscriptionProvider>().fetchSubscriptions(force: true, silent: false),
-                          context.read<LookupProvider>().fetchInitialData(force: true),
-                        ]);
-                      },
-                      child: SingleChildScrollView(
-                        controller: _scrollController,
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: segments.isEmpty
-                              ? plans.map((p) => Padding(
+                  : segments.isEmpty
+                      ? RefreshIndicator(
+                          onRefresh: () async {
+                            await Future.wait([
+                              context.read<SubscriptionProvider>().fetchSubscriptions(force: true, silent: false),
+                              context.read<LookupProvider>().fetchInitialData(force: true),
+                            ]);
+                          },
+                          child: SingleChildScrollView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: plans.map((p) => Padding(
                                   padding: const EdgeInsets.only(bottom: 12),
                                   child: _PlanCatalogTile(plan: p, isDark: isDark),
-                                )).toList()
-                              : segments.expand((seg) {
-                                  final sectionPlans = plans
-                                      .where((p) => p.mealSizeId == seg.id)
-                                      .toList()
-                                    ..sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
-                                  if (sectionPlans.isEmpty) return <Widget>[];
-                                  return [
-                                    KeyedSubtree(
-                                      key: _keyForSection(seg.id),
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                                        children: [
-                                          if (seg != segments.first) const SizedBox(height: 16),
-                                          ...sectionPlans.map(
-                                            (p) => Padding(
-                                              padding: const EdgeInsets.only(bottom: 12),
-                                              child: _PlanCatalogTile(plan: p, isDark: isDark),
+                                )).toList(),
+                            ),
+                          ),
+                        )
+                      : PageView.builder(
+                          controller: _pageController,
+                          onPageChanged: (index) {
+                            setState(() {
+                              _selectedSizeIndex = index;
+                            });
+                          },
+                          itemCount: segments.length,
+                          itemBuilder: (context, pageIndex) {
+                            final seg = segments[pageIndex];
+                            final sectionPlans = plans
+                                .where((p) => p.mealSizeId == seg.id)
+                                .toList()
+                              ..sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
+
+                            return RefreshIndicator(
+                              onRefresh: () async {
+                                await Future.wait([
+                                  context.read<SubscriptionProvider>().fetchSubscriptions(force: true, silent: false),
+                                  context.read<LookupProvider>().fetchInitialData(force: true),
+                                ]);
+                              },
+                              child: SingleChildScrollView(
+                                physics: const AlwaysScrollableScrollPhysics(),
+                                padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: sectionPlans.isEmpty
+                                      ? [
+                                          const SizedBox(height: 48),
+                                          Center(
+                                            child: Text(
+                                              'No plans available for this size.',
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.w600,
+                                                color: isDark ? Colors.white70 : AppTheme.textSecondaryLight,
+                                              ),
                                             ),
                                           ),
-                                        ],
-                                      ),
-                                    ),
-                                  ];
-                                }).toList(),
+                                        ]
+                                      : sectionPlans.map(
+                                          (p) => Padding(
+                                            padding: const EdgeInsets.only(bottom: 12),
+                                            child: _PlanCatalogTile(plan: p, isDark: isDark),
+                                          ),
+                                        ).toList(),
+                                ),
+                              ),
+                            );
+                          },
                         ),
-                      ),
-                    ),
             ),
           ],
         ),
