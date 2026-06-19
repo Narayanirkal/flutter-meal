@@ -48,6 +48,7 @@ dependencies:
   shared_preferences: ^2.5.3
   in_app_update: ^4.2.3
   google_fonts: ^6.2.1
+  package_info_plus: ^10.1.0
   cached_network_image: ^3.4.1
   flutter_cache_manager: ^3.4.1
 

@@ -181,4 +181,17 @@ class LookupRepository {
       return null;
     }
   }
+
+  Future<List<LoginCarouselImageModel>> getLoginCarouselImages() async {
+    try {
+      final response = await _dioClient.dio.get(ApiEndpoints.loginCarousel);
+      if (response.data['success'] == true) {
+        final List data = response.data['data'];
+        return data.map((img) => LoginCarouselImageModel.fromJson(img)).toList();
+      }
+      return [];
+    } catch (e) {
+      return [];
+    }
+  }
 }

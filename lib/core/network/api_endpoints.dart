@@ -36,6 +36,7 @@ class ApiEndpoints {
   // Auth - Login (existing user)
   static const String loginSendOtp = '/api/client/auth/login/send-otp';
   static const String loginVerifyOtp = '/api/client/auth/login/verify-otp';
+  static const String loginCarousel = '/api/client/auth/login-carousel';
 
   // Auth - Register (new user)
   static const String registerSendOtp = '/api/client/auth/register/send-otp';
@@ -75,6 +76,7 @@ class ApiEndpoints {
   static const String cities = '/api/common/lookup/cities';
   static const String companies = '/api/common/lookup/companies';
   static const String allowedAddresses = '/api/common/lookup/allowed-addresses';
+  static const String minimumAppVersion = '/api/common/lookup/minimum-app-version';
 
   // Common Menu
   static const String commonMenuToday = '/api/common/menu/today';
@@ -93,6 +95,7 @@ class ApiEndpoints {
   static const String initiateMealSizeUpgrade = '/api/client/payment/meal-size-upgrade/initiate';
   static const String mealSizeUpgradeOptions = '/api/client/payment/meal-size-upgrade/options';
   static const String applyMealSizeDowngrade = '/api/client/payment/meal-size-downgrade/apply';
+  static const String cancelPendingMealSizeUpgrade = '/api/client/payment/meal-size-upgrade/cancel-pending';
   static const String mealSizeUpgradePrices = '/api/client/meals/meal-size-upgrade-prices';
   static const String wallet = '/api/client/wallet';
   static const String walletPreview = '/api/client/wallet/preview';

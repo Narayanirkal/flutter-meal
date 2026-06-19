@@ -224,7 +224,7 @@ class _OneDayLunchCard extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(
                   'Choose today or tomorrow, size, time, and address.',
-                  style: TextStyle(fontSize: 11, height: 1.35, color: subtitleColor),
+                  style: TextStyle(fontSize: 13, height: 1.35, color: subtitleColor),
                 ),
                 const Spacer(),
                 const SizedBox(height: 16),
@@ -325,7 +325,7 @@ class _SpecialsCard extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(
                   'Special dishes with categories, prices & quantities.',
-                  style: TextStyle(fontSize: 11, height: 1.35, color: subtitleColor),
+                  style: TextStyle(fontSize: 13, height: 1.35, color: subtitleColor),
                 ),
                 const Spacer(),
                 const SizedBox(height: 16),

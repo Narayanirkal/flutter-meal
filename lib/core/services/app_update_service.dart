@@ -1,43 +1,53 @@
 import 'dart:developer' as developer;
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:in_app_update/in_app_update.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:meal_app/core/network/api_endpoints.dart';
 
-/// Wraps Google Play's native In-App Update API (Play Core library).
+/// Backend-controlled in-app update service.
 ///
-/// Uses the same immediate / flexible update flows shown in the Android
-/// documentation and most tutorial videos, but via the `in_app_update`
-/// Flutter package.
+/// The update is only triggered when you set a higher `minimum_build_number`
+/// in the `app_settings` table on your backend.  Regular Play Store releases
+/// won't bother users unless you explicitly flip the switch.
 class AppUpdateService {
   AppUpdateService._();
 
-  /// Number of days an update must be available before we force an
-  /// immediate (blocking) update.  Below this threshold we use a
-  /// flexible (background) update instead.
-  static const int _immediateStalenessDays = 5;
-
   /// Call once from the home screen after the widget tree is ready.
-  /// Silently returns on any error — we never want the update check
-  /// to crash the app or block the user.
   static Future<void> checkForUpdate(BuildContext context) async {
     try {
-      final info = await InAppUpdate.checkForUpdate();
+      // 1. Get the minimum required build number from backend.
+      final minimumBuild = await _fetchMinimumBuildNumber();
+      debugPrint('[AppUpdate] Backend minimum_build_number: $minimumBuild');
 
-      // ── DEBUG: remove these prints after testing ──
-      debugPrint('[AppUpdate] updateAvailability: ${info.updateAvailability}');
-      debugPrint('[AppUpdate] immediateAllowed: ${info.immediateUpdateAllowed}');
-      debugPrint('[AppUpdate] availableVersionCode: ${info.availableVersionCode}');
-      debugPrint('[AppUpdate] stalenessDays: ${info.clientVersionStalenessDays}');
-      // ── END DEBUG ──
+      if (minimumBuild <= 0) {
+        debugPrint('[AppUpdate] No minimum version set, skipping.');
+        return; // No minimum set — no forced update.
+      }
 
-      if (info.updateAvailability != UpdateAvailability.updateAvailable) {
-        debugPrint('[AppUpdate] No update available, skipping.');
+      // 2. Get current app's build number.
+      final packageInfo = await PackageInfo.fromPlatform();
+      final currentBuild = int.tryParse(packageInfo.buildNumber) ?? 0;
+      debugPrint('[AppUpdate] Current build number: $currentBuild');
+
+      // 3. Compare: only force update if current build is below minimum.
+      if (currentBuild >= minimumBuild) {
+        debugPrint('[AppUpdate] App is up to date, no action needed.');
         return;
       }
 
-      // Always use immediate (mandatory) update — user must update to continue.
-      if (info.immediateUpdateAllowed) {
-        debugPrint('[AppUpdate] Triggering IMMEDIATE (mandatory) update.');
-        await _performImmediateUpdate();
+      debugPrint('[AppUpdate] App is outdated ($currentBuild < $minimumBuild). Triggering mandatory update.');
+
+      // 4. Use Play Store's native immediate update.
+      final info = await InAppUpdate.checkForUpdate();
+      debugPrint('[AppUpdate] Play Store updateAvailability: ${info.updateAvailability}');
+      debugPrint('[AppUpdate] Play Store immediateAllowed: ${info.immediateUpdateAllowed}');
+
+      if (info.updateAvailability == UpdateAvailability.updateAvailable &&
+          info.immediateUpdateAllowed) {
+        await InAppUpdate.performImmediateUpdate();
+      } else {
+        debugPrint('[AppUpdate] Play Store update not available yet.');
       }
     } catch (e) {
       debugPrint('[AppUpdate] ERROR: $e');
@@ -48,57 +58,25 @@ class AppUpdateService {
     }
   }
 
-  /// Full-screen blocking update — user must update to continue.
-  static Future<void> _performImmediateUpdate() async {
+  /// Fetches the minimum required build number from the backend.
+  /// Returns 0 if not set or on any error.
+  static Future<int> _fetchMinimumBuildNumber() async {
     try {
-      await InAppUpdate.performImmediateUpdate();
-    } catch (e) {
-      developer.log(
-        'Immediate update failed: $e',
-        name: 'AppUpdateService',
+      final dio = Dio(BaseOptions(
+        connectTimeout: const Duration(seconds: 5),
+        receiveTimeout: const Duration(seconds: 5),
+      ));
+      final response = await dio.get(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.minimumAppVersion}',
       );
-    }
-  }
-
-  /// Background download — user can keep using the app.
-  /// Shows a SnackBar when the download completes to prompt restart.
-  static Future<void> _performFlexibleUpdate(BuildContext context) async {
-    try {
-      final result = await InAppUpdate.startFlexibleUpdate();
-      // Only show restart prompt if the update was actually downloaded.
-      if (result != AppUpdateResult.success) {
-        debugPrint('[AppUpdate] Flexible update not completed: $result');
-        return;
+      final data = response.data;
+      if (data is Map && data['success'] == true) {
+        return data['data']?['minimum_build_number'] ?? 0;
       }
-      if (!context.mounted) return;
-      _showUpdateReadySnackBar(context);
+      return 0;
     } catch (e) {
-      developer.log(
-        'Flexible update failed: $e',
-        name: 'AppUpdateService',
-      );
+      debugPrint('[AppUpdate] Failed to fetch minimum version: $e');
+      return 0;
     }
-  }
-
-  /// Snackbar shown after a flexible update finishes downloading.
-  /// Tapping "Restart" installs the update and relaunches the app.
-  static void _showUpdateReadySnackBar(BuildContext context) {
-    final messenger = ScaffoldMessenger.maybeOf(context);
-    if (messenger == null) return;
-
-    messenger.showSnackBar(
-      SnackBar(
-        content: const Text('Update downloaded. Restart to apply.'),
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 10),
-        action: SnackBarAction(
-          label: 'RESTART',
-          textColor: Colors.white,
-          onPressed: () {
-            InAppUpdate.completeFlexibleUpdate();
-          },
-        ),
-      ),
-    );
   }
 }

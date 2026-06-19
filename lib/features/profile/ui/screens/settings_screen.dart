@@ -516,18 +516,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
       onPressed: () {
         showCupertinoDialog(
           context: context,
-          builder: (context) => CupertinoAlertDialog(
+          builder: (dialogContext) => CupertinoAlertDialog(
             title: const Text('Logout'),
             content: const Text('Are you sure you want to logout?'),
             actions: [
               CupertinoDialogAction(
                 child: const Text('Cancel'),
-                onPressed: () => Navigator.pop(context),
+                onPressed: () => Navigator.pop(dialogContext),
               ),
               CupertinoDialogAction(
                 isDestructiveAction: true,
                 onPressed: () async {
-                  Navigator.of(context).pop();
+                  Navigator.of(dialogContext).pop();
                   OfflineCacheBootstrap.clearMemory(context);
                   await CacheStore.clearAll();
                   OfflineCacheBootstrap.resetSession();

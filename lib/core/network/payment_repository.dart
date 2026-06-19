@@ -111,6 +111,27 @@ class PaymentRepository {
     }
   }
 
+  Future<Map<String, dynamic>> cancelPendingMealSizeUpgrade({
+    required String entityType,
+    required String entityId,
+  }) async {
+    try {
+      final response = await _dioClient.dio.post(
+        ApiEndpoints.cancelPendingMealSizeUpgrade,
+        data: {
+          'entityType': entityType,
+          'entityId': entityId,
+        },
+      );
+      if (response.data['success'] == true) {
+        return Map<String, dynamic>.from(response.data as Map);
+      }
+      throw response.data['message']?.toString() ?? 'Failed to cancel pending upgrade';
+    } catch (e) {
+      rethrow;
+    }
+  }
+
   Future<Map<String, dynamic>> applyMealSizeDowngrade({
     required String entityType,
     required String entityId,

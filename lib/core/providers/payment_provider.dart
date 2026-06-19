@@ -190,6 +190,31 @@ class PaymentProvider with ChangeNotifier {
     }
   }
 
+  Future<Map<String, dynamic>> cancelPendingMealSizeUpgrade({
+    required String entityType,
+    required String entityId,
+  }) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+    try {
+      final result = await _repository.cancelPendingMealSizeUpgrade(
+        entityType: entityType,
+        entityId: entityId,
+      );
+      await fetchWallet(silent: true);
+      await fetchPaymentHistory(silent: true);
+      await fetchActiveSubscriptions(silent: true, force: true);
+      return result;
+    } catch (e) {
+      _error = ErrorHandler.getErrorMessage(e);
+      rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   Future<Map<String, dynamic>?> applyMealSizeDowngrade({
     required String entityType,
     required String entityId,

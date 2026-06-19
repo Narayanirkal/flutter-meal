@@ -94,7 +94,8 @@ class _ViewAllPlansScreenState extends State<ViewAllPlansScreen> {
     final scrollRender = scrollableCtx.findRenderObject();
     if (scrollRender is! RenderBox) return;
 
-    const headerInset = 88.0;
+    final viewportHeight = scrollRender.size.height;
+    final middleOfScreen = viewportHeight / 2;
     int nearestIndex = _selectedSizeIndex;
     double nearestDistance = double.infinity;
 
@@ -106,7 +107,17 @@ class _ViewAllPlansScreenState extends State<ViewAllPlansScreen> {
       if (renderBox is! RenderBox || !renderBox.hasSize) continue;
 
       final top = renderBox.localToGlobal(Offset.zero, ancestor: scrollRender).dy;
-      final distance = (top - headerInset).abs();
+      final bottom = top + renderBox.size.height;
+
+      double distance;
+      if (top <= middleOfScreen && bottom >= middleOfScreen) {
+        distance = 0.0;
+      } else if (bottom < middleOfScreen) {
+        distance = middleOfScreen - bottom;
+      } else {
+        distance = top - middleOfScreen;
+      }
+
       if (distance < nearestDistance) {
         nearestDistance = distance;
         nearestIndex = i;
@@ -300,7 +311,7 @@ class _PlanCatalogTile extends StatelessWidget {
                   Expanded(
                     child: _priceLine(
                       isDark,
-                      'With Saturday',
+                      'Including Sat',
                       '₹${plan.priceWithSaturday}',
                       plan.durationDaysWithSaturday ?? plan.durationDays,
                     ),
@@ -310,7 +321,7 @@ class _PlanCatalogTile extends StatelessWidget {
                     Expanded(
                       child: _priceLine(
                         isDark,
-                        'Without Saturday',
+                        'Excluding Sat',
                         '₹${plan.priceWithoutSaturday}',
                         plan.durationDaysWithoutSaturday ?? plan.durationDays,
                       ),

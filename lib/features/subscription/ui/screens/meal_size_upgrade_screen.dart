@@ -252,11 +252,16 @@ class _MealSizeUpgradeScreenState extends State<MealSizeUpgradeScreen> {
       final toName = _trim(m['to_display_name']);
       if (t == null || toName.isEmpty) continue;
       final isDowngrade = direction == 'downgrade';
+      final baseText = isDowngrade ? 'Credit to wallet' : 'One-time fee';
+      final flatPrice = _trim(m['flat_price']);
+      final subtitle = baseText;
+
       out.add({
         'to_id': t,
         'label': toName,
-        'subtitle': isDowngrade ? 'Credit to wallet' : 'One-time fee',
+        'subtitle': subtitle,
         'price': MoneyFormat.display(m['price']),
+        'flat_price': MoneyFormat.display(flatPrice),
         'direction': direction,
       });
     }
@@ -487,6 +492,7 @@ class _MealSizeUpgradeScreenState extends State<MealSizeUpgradeScreen> {
       await _runPayment();
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -838,58 +844,64 @@ class _MealSizeUpgradeScreenState extends State<MealSizeUpgradeScreen> {
                                         width: 1.5,
                                       ),
                                     ),
-                                    child: Row(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Expanded(
-                                          child: Row(
-                                            children: [
-                                              Text(
-                                                currentSize,
-                                                style: TextStyle(
-                                                  fontSize: 15,
-                                                  fontWeight: FontWeight.w900,
-                                                  color: isDark ? Colors.white : AppTheme.textPrimaryLight,
-                                                ),
-                                              ),
-                                              const SizedBox(width: 10),
-                                              Icon(
-                                                isDowngrade ? CupertinoIcons.left_chevron : CupertinoIcons.right_chevron,
-                                                color: isDowngrade ? const Color(0xFF22C55E) : AppTheme.primaryColor,
-                                                size: 16,
-                                              ),
-                                              const SizedBox(width: 10),
-                                              Text(
-                                                toName,
-                                                style: TextStyle(
-                                                  fontSize: 16,
-                                                  fontWeight: FontWeight.w900,
-                                                  color: isDowngrade ? const Color(0xFF22C55E) : AppTheme.primaryColor,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        Column(
-                                          crossAxisAlignment: CrossAxisAlignment.end,
+                                        Row(
                                           children: [
-                                            Text(
-                                              isDowngrade ? 'Refund Credit' : 'Payment Due',
-                                              style: TextStyle(
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.w800,
-                                                color: isDowngrade ? const Color(0xFF16A34A) : AppTheme.primaryColor,
+                                            Expanded(
+                                              child: Row(
+                                                children: [
+                                                  Text(
+                                                    currentSize,
+                                                    style: TextStyle(
+                                                      fontSize: 15,
+                                                      fontWeight: FontWeight.w900,
+                                                      color: isDark ? Colors.white : AppTheme.textPrimaryLight,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(width: 10),
+                                                  Icon(
+                                                    isDowngrade ? CupertinoIcons.left_chevron : CupertinoIcons.right_chevron,
+                                                    color: isDowngrade ? const Color(0xFF22C55E) : AppTheme.primaryColor,
+                                                    size: 16,
+                                                  ),
+                                                  const SizedBox(width: 10),
+                                                  Text(
+                                                    toName,
+                                                    style: TextStyle(
+                                                      fontSize: 16,
+                                                      fontWeight: FontWeight.w900,
+                                                      color: isDowngrade ? const Color(0xFF22C55E) : AppTheme.primaryColor,
+                                                    ),
+                                                  ),
+                                                ],
                                               ),
                                             ),
-                                            Text(
-                                              isDowngrade ? '+₹$price' : '₹$price',
-                                              style: TextStyle(
-                                                fontSize: 18,
-                                                fontWeight: FontWeight.w900,
-                                                color: isDowngrade ? const Color(0xFF22C55E) : AppTheme.primaryColor,
-                                              ),
+                                            Column(
+                                              crossAxisAlignment: CrossAxisAlignment.end,
+                                              children: [
+                                                Text(
+                                                  isDowngrade ? 'Refund Credit' : 'Payment Due',
+                                                  style: TextStyle(
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.w800,
+                                                    color: isDowngrade ? const Color(0xFF16A34A) : AppTheme.primaryColor,
+                                                  ),
+                                                ),
+                                                Text(
+                                                  isDowngrade ? '+₹$price' : '₹$price',
+                                                  style: TextStyle(
+                                                    fontSize: 18,
+                                                    fontWeight: FontWeight.w900,
+                                                    color: isDowngrade ? const Color(0xFF22C55E) : AppTheme.primaryColor,
+                                                  ),
+                                                ),
+                                              ],
                                             ),
                                           ],
                                         ),
+
                                       ],
                                     ),
                                   );

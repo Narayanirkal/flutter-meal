@@ -301,12 +301,12 @@ class _PlanPickerSheetState extends State<_PlanPickerSheet> {
     if (plan.saturdayOptionEnabled) {
       variants.add(_VariantSpec(
         includeSaturday: true,
-        label: 'With Saturday',
+        label: 'Including Sat',
         hint: 'Includes Saturday deliveries',
       ));
       variants.add(_VariantSpec(
         includeSaturday: false,
-        label: 'Without Saturday',
+        label: 'Excluding Sat',
         hint: 'Saturday meals excluded',
       ));
     } else {
