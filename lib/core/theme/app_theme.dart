@@ -74,7 +74,7 @@ class AppTheme {
     required Color border,
   }) {
     final isDark = brightness == Brightness.dark;
-    final baseTextTheme = GoogleFonts.plusJakartaSansTextTheme(
+    final baseTextTheme = GoogleFonts.poppinsTextTheme(
       isDark ? ThemeData.dark().textTheme : ThemeData.light().textTheme,
     );
     
@@ -95,7 +95,7 @@ class AppTheme {
         backgroundColor: background,
         elevation: 0,
         centerTitle: false,
-        titleTextStyle: GoogleFonts.plusJakartaSans(
+        titleTextStyle: GoogleFonts.poppins(
           color: textPrimary,
           fontSize: 20,
           fontWeight: FontWeight.w800,
@@ -110,8 +110,12 @@ class AppTheme {
         displayLarge: baseTextTheme.displayLarge?.copyWith(color: textPrimary, fontWeight: FontWeight.w900),
         displayMedium: baseTextTheme.displayMedium?.copyWith(color: textPrimary, fontWeight: FontWeight.w800),
         titleLarge: baseTextTheme.titleLarge?.copyWith(color: textPrimary, fontWeight: FontWeight.w700),
-        bodyLarge: baseTextTheme.bodyLarge?.copyWith(color: textPrimary),
-        bodyMedium: baseTextTheme.bodyMedium?.copyWith(color: textSecondary),
+        titleMedium: baseTextTheme.titleMedium?.copyWith(color: textPrimary, fontWeight: FontWeight.w600),
+        titleSmall: baseTextTheme.titleSmall?.copyWith(color: textPrimary, fontWeight: FontWeight.w600),
+        bodyLarge: baseTextTheme.bodyLarge?.copyWith(color: textPrimary, fontWeight: FontWeight.w500),
+        bodyMedium: baseTextTheme.bodyMedium?.copyWith(color: textSecondary, fontWeight: FontWeight.w500),
+        bodySmall: baseTextTheme.bodySmall?.copyWith(color: textSecondary, fontWeight: FontWeight.w500),
+        labelLarge: baseTextTheme.labelLarge?.copyWith(color: textPrimary, fontWeight: FontWeight.w600),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
@@ -120,7 +124,7 @@ class AppTheme {
           elevation: 0,
           padding: const EdgeInsets.symmetric(vertical: 12),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          textStyle: GoogleFonts.plusJakartaSans(fontSize: 16, fontWeight: FontWeight.w700),
+          textStyle: GoogleFonts.poppins(fontSize: 16, fontWeight: FontWeight.w700),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(

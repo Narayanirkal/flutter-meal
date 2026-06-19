@@ -22,6 +22,7 @@ import 'package:meal_app/features/bulk_order/ui/screens/bulk_order_cart_screen.d
 import 'package:meal_app/features/bulk_order/ui/screens/bulk_order_hub_screen.dart';
 import 'package:meal_app/features/subscription/ui/screens/cart_screen.dart';
 import 'package:meal_app/core/widgets/image_preview_dialog.dart';
+import 'package:meal_app/core/widgets/app_logo.dart';
 import 'package:meal_app/features/subscription/ui/screens/subscription_management_screen.dart';
 import 'package:meal_app/features/home/ui/widgets/bottom_footer_nav.dart';
 import 'package:meal_app/features/profile/providers/referral_provider.dart';
@@ -248,6 +249,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 context.read<BulkOrderProvider>().loadCartFromServer(),
                 context.read<QuickServiceProvider>().loadOneDayConfig(force: true),
                 context.read<QuickServiceProvider>().loadSpecialConfig(force: true),
+                context.read<LookupProvider>().fetchContactUsInfo(),
+                context.read<LookupProvider>().fetchInitialData(force: true),
               ]);
               if (!mounted) return;
               await _refreshMealDataBundle(force: true);
@@ -1438,11 +1441,11 @@ class AboutBuuttiiCard extends StatelessWidget {
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
             ),
+            padding: const EdgeInsets.all(8),
             child: const Center(
-              child: Icon(
-                CupertinoIcons.heart_fill,
-                color: AppTheme.primaryColor,
-                size: 36,
+              child: AppLogo(
+                height: 48,
+                showFallbackText: false,
               ),
             ),
           ),

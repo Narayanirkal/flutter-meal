@@ -256,7 +256,7 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
                 _buildMetaRow('Start Date', DateFormat('dd MMM yyyy').format(startDate), isDark),
               if (amountPaid.isNotEmpty)
                 _buildMetaRow('Amount Paid', '₹$amountPaid', isDark),
-              _buildMetaRow('Variant', includeSaturday ? 'With Saturday' : 'Without Saturday', isDark),
+              _buildMetaRow('Variant', includeSaturday ? 'Including Sat' : 'Excluding Sat', isDark),
               if (mealSizeName.isNotEmpty)
                 _buildMetaRow('Meal Size', mealSizeName, isDark),
               if (mealTiming.isNotEmpty)
@@ -485,7 +485,7 @@ class _SubscriptionManagementScreenState extends State<SubscriptionManagementScr
             orderType != 'meal_size_downgrade';
 
         final metaList = [
-          if (showSaturday) includeSaturday ? 'With Saturday' : 'Without Saturday',
+          if (showSaturday) includeSaturday ? 'Including Sat' : 'Excluding Sat',
           if (mealSizeName.isNotEmpty) mealSizeName,
           if (mealTimingRaw.isNotEmpty) TimeUtils.formatToDisplay(mealTimingRaw),
         ];

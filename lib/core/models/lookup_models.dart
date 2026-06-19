@@ -412,3 +412,31 @@ class AllowedAddressModel {
     };
   }
 }
+
+class LoginCarouselImageModel {
+  final int id;
+  final String imageUrl;
+  final int displayOrder;
+
+  LoginCarouselImageModel({
+    required this.id,
+    required this.imageUrl,
+    required this.displayOrder,
+  });
+
+  factory LoginCarouselImageModel.fromJson(Map<String, dynamic> json) {
+    return LoginCarouselImageModel(
+      id: json['id'] is String ? int.parse(json['id']) : json['id'],
+      imageUrl: json['image_url'] ?? '',
+      displayOrder: json['display_order'] is String ? int.parse(json['display_order']) : (json['display_order'] ?? 0),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'image_url': imageUrl,
+      'display_order': displayOrder,
+    };
+  }
+}

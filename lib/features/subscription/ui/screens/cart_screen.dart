@@ -364,7 +364,7 @@ class _CartScreenState extends State<CartScreen> {
             ),
             const Divider(height: 24),
             _buildDetailRow('Plan', item.planName, isDark),
-            _buildDetailRow('Variant', item.includeSaturday ? 'With Saturday' : 'Without Saturday', isDark),
+            _buildDetailRow('Variant', item.includeSaturday ? 'Including Sat' : 'Excluding Sat', isDark),
             if (_durationDaysForCartLine(item, matchedPlan) != null)
               _buildDetailRow(
                 'Plan length',

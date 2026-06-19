@@ -3,6 +3,7 @@ import 'package:meal_app/core/models/announcement_model.dart';
 import 'package:meal_app/core/network/announcement_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:meal_app/core/storage/cache_store.dart';
+import 'package:meal_app/core/storage/secure_storage.dart';
 
 class AnnouncementProvider with ChangeNotifier {
   final AnnouncementRepository _repository;
@@ -18,6 +19,7 @@ class AnnouncementProvider with ChangeNotifier {
   bool _isLoading = false;
   DateTime? _lastFetchedAt;
   Set<String> _readAnnouncementIds = {};
+  String? _currentUserPhone;
 
   List<AnnouncementModel> get announcements => _announcements;
   bool get isLoading => _isLoading;
@@ -41,9 +43,63 @@ class AnnouncementProvider with ChangeNotifier {
     return getUnreadAnnouncementsForLocation(location).length;
   }
 
+  Future<void> _ensureUserLoaded() async {
+    try {
+      final secureStorage = SecureStorage();
+      final phone = await secureStorage.getPhoneNumber();
+      if (phone != _currentUserPhone) {
+        _currentUserPhone = phone;
+        if (phone != null && phone.isNotEmpty) {
+          final prefs = await SharedPreferences.getInstance();
+          final key = 'read_announcements_$phone';
+          final hasKey = prefs.containsKey(key);
+          final readIds = prefs.getStringList(key);
+          if (readIds != null) {
+            _readAnnouncementIds = readIds.toSet();
+          } else {
+            _readAnnouncementIds = {};
+          }
+
+          // Smart Fallback for fresh login / reinstall:
+          // If the user-specific key doesn't exist in SharedPreferences,
+          // mark currently fetched announcements older than 24 hours as read
+          // to prevent showing a massive unread badge for historical items.
+          if (!hasKey && _announcements.isNotEmpty) {
+            final now = DateTime.now();
+            for (final a in _announcements) {
+              final time = a.createdAt ?? a.startDate;
+              if (now.difference(time).inHours >= 24) {
+                _readAnnouncementIds.add(a.id);
+              }
+            }
+            await prefs.setStringList(key, _readAnnouncementIds.toList());
+          }
+          notifyListeners();
+        } else {
+          _readAnnouncementIds = {};
+          notifyListeners();
+        }
+      }
+    } catch (_) {}
+  }
+
   Future<void> _loadReadAnnouncements() async {
     try {
+      final secureStorage = SecureStorage();
+      final phone = await secureStorage.getPhoneNumber();
+      _currentUserPhone = phone;
       final prefs = await SharedPreferences.getInstance();
+      if (phone != null && phone.isNotEmpty) {
+        final key = 'read_announcements_$phone';
+        final readIds = prefs.getStringList(key);
+        if (readIds != null) {
+          _readAnnouncementIds = readIds.toSet();
+          notifyListeners();
+          return;
+        }
+      }
+      
+      // Fallback to legacy/generic key if any
       final readIds = prefs.getStringList('read_announcement_ids');
       if (readIds != null) {
         _readAnnouncementIds = readIds.toSet();
@@ -67,14 +123,23 @@ class AnnouncementProvider with ChangeNotifier {
   Future<void> _saveReadAnnouncements() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setStringList(
-        'read_announcement_ids',
-        _readAnnouncementIds.toList(),
-      );
+      if (_currentUserPhone != null && _currentUserPhone!.isNotEmpty) {
+        final key = 'read_announcements_$_currentUserPhone';
+        await prefs.setStringList(
+          key,
+          _readAnnouncementIds.toList(),
+        );
+      } else {
+        await prefs.setStringList(
+          'read_announcement_ids',
+          _readAnnouncementIds.toList(),
+        );
+      }
     } catch (_) {}
   }
 
   Future<void> markAsRead(String announcementId) async {
+    await _ensureUserLoaded();
     if (!_readAnnouncementIds.contains(announcementId)) {
       _readAnnouncementIds.add(announcementId);
       await _saveReadAnnouncements();
@@ -83,6 +148,7 @@ class AnnouncementProvider with ChangeNotifier {
   }
 
   Future<void> markAllAsRead() async {
+    await _ensureUserLoaded();
     final before = _readAnnouncementIds.length;
     for (final a in _announcements) {
       _readAnnouncementIds.add(a.id);
@@ -96,6 +162,9 @@ class AnnouncementProvider with ChangeNotifier {
   /// Fetches announcements. Pass [force] = true to always hit the network
   /// (e.g. when the user opens the bell or when a new announcement may exist).
   Future<void> fetchAnnouncements({String? location, bool force = false}) async {
+    // Ensure we load the user's read state first in case they just logged in
+    await _ensureUserLoaded();
+
     // Skip if recently fetched and not forced — avoids hammering the API
     if (!force && !shouldRefresh()) return;
 
@@ -103,9 +172,6 @@ class AnnouncementProvider with ChangeNotifier {
     notifyListeners();
 
     try {
-      // MEDIUM-03: Removed redundant _loadReadAnnouncements() call here.
-      // _readAnnouncementIds is already loaded in the constructor; re-reading
-      // SharedPreferences on every fetch is unnecessary disk I/O.
       final fetched = await _repository.getAnnouncements(location: location);
       _sortAnnouncements(fetched);
       _announcements = fetched;
@@ -115,6 +181,22 @@ class AnnouncementProvider with ChangeNotifier {
       // when temporary token refreshes or partial fetches happen.
       final serialized = fetched.map((a) => a.toJson()).toList();
       await CacheStore.setJson('announcements_v1', serialized, ttl: const Duration(hours: 6));
+
+      // After fetching, if the user-specific key does not exist yet, initialize it
+      if (_currentUserPhone != null && _currentUserPhone!.isNotEmpty) {
+        final prefs = await SharedPreferences.getInstance();
+        final key = 'read_announcements_$_currentUserPhone';
+        if (!prefs.containsKey(key)) {
+          final now = DateTime.now();
+          for (final a in _announcements) {
+            final time = a.createdAt ?? a.startDate;
+            if (now.difference(time).inHours >= 24) {
+              _readAnnouncementIds.add(a.id);
+            }
+          }
+          await prefs.setStringList(key, _readAnnouncementIds.toList());
+        }
+      }
     } catch (_) {
       // Keep old data on error — announcements are non-critical
     } finally {

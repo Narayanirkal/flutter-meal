@@ -84,6 +84,7 @@ class LookupProvider with ChangeNotifier {
   List<AllowedAddressModel> _allowedAddresses = [];
   ContactUsModel? _contactUsInfo;
   DeliveryTimeSettingsModel? _deliveryTimeSettings;
+  List<LoginCarouselImageModel> _loginCarouselImages = [];
 
   bool _isLoading = false;
   DateTime? _lastFetchedAt;
@@ -101,6 +102,7 @@ class LookupProvider with ChangeNotifier {
   List<AllowedAddressModel> get allowedAddresses => _allowedAddresses;
   ContactUsModel? get contactUsInfo => _contactUsInfo;
   DeliveryTimeSettingsModel? get deliveryTimeSettings => _deliveryTimeSettings;
+  List<LoginCarouselImageModel> get loginCarouselImages => _loginCarouselImages;
   bool get isLoading => _isLoading;
 
 
@@ -234,5 +236,14 @@ class LookupProvider with ChangeNotifier {
     await _persistCache();
     notifyListeners();
     return info;
+  }
+
+  Future<void> fetchLoginCarousel() async {
+    try {
+      _loginCarouselImages = await _repository.getLoginCarouselImages();
+      notifyListeners();
+    } catch (_) {
+      // ignore errors during login screen initialization
+    }
   }
 }
