@@ -39,9 +39,8 @@ import 'package:meal_app/core/widgets/app_skeleton.dart';
 import 'package:meal_app/core/providers/announcement_provider.dart';
 import 'package:meal_app/features/quick_service/ui/widgets/quick_order_section.dart';
 import 'package:meal_app/features/quick_service/providers/quick_service_provider.dart';
-import 'package:meal_app/features/quick_service/ui/screens/special_dishes_cart_screen.dart';
 import 'package:meal_app/core/services/app_update_service.dart';
-
+import 'package:meal_app/features/quick_service/ui/screens/special_dishes_cart_screen.dart';
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -58,7 +57,6 @@ class _HomeScreenState extends State<HomeScreen> {
       _bootstrapHome();
       context.read<LookupProvider>().fetchContactUsInfo();
       context.read<AnnouncementProvider>().fetchAnnouncements(location: 'home', force: true);
-      // Check for app updates from Google Play (fire-and-forget).
       AppUpdateService.checkForUpdate(context);
     });
   }
