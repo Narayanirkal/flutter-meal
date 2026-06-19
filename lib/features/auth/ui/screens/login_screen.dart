@@ -95,6 +95,11 @@ class _LoginScreenState extends State<LoginScreen> {
         _usernameFocusNode.hasFocus ||
         _referralFocusNode.hasFocus;
 
+    // Trigger state change so build() inserts the bottom spacer
+    if (mounted) {
+      setState(() {});
+    }
+
     final screenHeight = MediaQuery.sizeOf(context).height;
     final statusBarHeight = MediaQuery.paddingOf(context).top;
     final bannerHeight = screenHeight * 0.42;
@@ -107,21 +112,14 @@ class _LoginScreenState extends State<LoginScreen> {
     final targetScrollOffset = (bannerHeight - statusBarHeight - 94.0).clamp(0.0, double.infinity);
 
     if (hasFocus) {
-      // Use 150ms delay to allow keyboard viewport resize to begin, preventing clamp
-      Future.delayed(const Duration(milliseconds: 150), () {
-        if (!mounted) return;
-        final stillHasFocus = _phoneFocusNode.hasFocus ||
-            _usernameFocusNode.hasFocus ||
-            _referralFocusNode.hasFocus;
-        if (stillHasFocus) {
-          if (_scrollController.hasClients) {
-            _scrollController.animateTo(
-              targetScrollOffset,
-              duration: const Duration(milliseconds: 400),
-              curve: Curves.easeOutCubic,
-            );
-          }
-        }
+      // Scroll immediately after layout pass has rebuilt with the bottom spacer
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || !_scrollController.hasClients) return;
+        _scrollController.animateTo(
+          targetScrollOffset,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeOutCubic,
+        );
       });
     } else {
       // Use microtask to verify focus didn't move directly to another field
@@ -668,6 +666,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                 ),
+                // Extra bottom spacer when inputs are focused to allow instant, unclamped scrolling
+                if (_phoneFocusNode.hasFocus || _usernameFocusNode.hasFocus || _referralFocusNode.hasFocus)
+                  const SizedBox(height: 320),
               ],
             ),
           ),
