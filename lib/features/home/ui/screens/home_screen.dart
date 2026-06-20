@@ -417,11 +417,12 @@ class HomeWelcomeHeader extends StatelessWidget {
     final badgeColor = Theme.of(context).colorScheme.error;
 
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
+      onTap: () async {
+        await Navigator.push(
           context,
           CupertinoPageRoute(builder: (_) => const CartScreen()),
         );
+        _refreshMealDataBundle(force: true);
       },
       behavior: HitTestBehavior.opaque,
       child: Padding(
@@ -470,11 +471,12 @@ class HomeWelcomeHeader extends StatelessWidget {
     final badgeColor = Theme.of(context).colorScheme.secondary;
 
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
+      onTap: () async {
+        await Navigator.push(
           context,
           CupertinoPageRoute(builder: (_) => const BulkOrderCartScreen()),
         );
+        _refreshMealDataBundle(force: true);
       },
       behavior: HitTestBehavior.opaque,
       child: Padding(
@@ -570,11 +572,12 @@ class HomeWelcomeHeader extends StatelessWidget {
 
   Widget _buildSpecialsCartActionButton(BuildContext context, bool isDark, int count) {
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
+      onTap: () async {
+        await Navigator.push(
           context,
           CupertinoPageRoute(builder: (_) => const SpecialDishesCartScreen()),
         );
+        _refreshMealDataBundle(force: true);
       },
       behavior: HitTestBehavior.opaque,
       child: Padding(
