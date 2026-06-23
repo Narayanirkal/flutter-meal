@@ -155,9 +155,8 @@ class BulkOrderProvider with ChangeNotifier {
       }
       _error = null;
     } catch (e) {
-      if (_config == null) {
-        _error = ErrorHandler.getErrorMessage(e);
-      }
+      _config = null;
+      _error = ErrorHandler.getErrorMessage(e);
     } finally {
       _loading = false;
       notifyListeners();

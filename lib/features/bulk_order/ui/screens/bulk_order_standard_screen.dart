@@ -84,10 +84,101 @@ class _BulkOrderStandardScreenState extends State<BulkOrderStandardScreen> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final cartTotal = p.bulkCartTotalMeals;
 
-    if (cfg == null) {
+    if (cfg == null || (p.isLoading && !cfg.isStandardActive)) {
       return Scaffold(
-        appBar: AppBar(title: const Text('Standard bulk')),
-        body: const Center(child: Text('Configuration unavailable')),
+        backgroundColor: isDark ? AppTheme.surfaceDark : const Color(0xFFFAF8F5),
+        appBar: AppBar(
+          backgroundColor: isDark ? AppTheme.surfaceDark : const Color(0xFFF3EBE0),
+          elevation: 0,
+          centerTitle: true,
+          title: Text(
+            'Standard Bulk',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              color: isDark ? Colors.white : const Color(0xFF5A4D42),
+            ),
+          ),
+          leading: IconButton(
+            icon: const Icon(CupertinoIcons.back, color: Color(0xFF8B7A66)),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
+        body: Center(
+          child: p.error != null
+              ? Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        CupertinoIcons.exclamationmark_triangle_fill,
+                        size: 48,
+                        color: isDark ? Colors.orangeAccent : Colors.orange.shade700,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        p.error!,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? Colors.white70 : const Color(0xFF5A4D42),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : const CupertinoActivityIndicator(),
+        ),
+      );
+    }
+
+    if (!cfg.isStandardActive) {
+      return Scaffold(
+        backgroundColor: isDark ? AppTheme.surfaceDark : const Color(0xFFFAF8F5),
+        appBar: AppBar(
+          backgroundColor: isDark ? AppTheme.surfaceDark : const Color(0xFFF3EBE0),
+          elevation: 0,
+          centerTitle: true,
+          title: Text(
+            'Standard Bulk',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              color: isDark ? Colors.white : const Color(0xFF5A4D42),
+            ),
+          ),
+          leading: IconButton(
+            icon: const Icon(CupertinoIcons.back, color: Color(0xFF8B7A66)),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  CupertinoIcons.info_circle_fill,
+                  size: 48,
+                  color: isDark ? Colors.white54 : const Color(0xFF8B7A66),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Standard bulk ordering is currently unavailable.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? Colors.white70 : const Color(0xFF5A4D42),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       );
     }
 

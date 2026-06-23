@@ -39,7 +39,105 @@ class _BulkOrderVarietyCategoriesScreenState extends State<BulkOrderVarietyCateg
     final filtered = _filterCategoryId == null
         ? categories
         : categories.where((c) => c.id == _filterCategoryId).toList();
-    final titleText = cfg?.varietyTierTitle?.isNotEmpty == true ? cfg!.varietyTierTitle! : 'Large event bulk';
+    if (cfg == null || (p.isLoading && !cfg.isVarietyActive)) {
+      return Scaffold(
+        backgroundColor: isDark ? AppTheme.surfaceDark : const Color(0xFFFAF8F5),
+        appBar: AppBar(
+          backgroundColor: isDark ? AppTheme.surfaceDark : const Color(0xFFF3EBE0),
+          elevation: 0,
+          centerTitle: true,
+          title: Text(
+            'Large event bulk',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              color: isDark ? Colors.white : const Color(0xFF5A4D42),
+            ),
+          ),
+          leading: IconButton(
+            icon: const Icon(CupertinoIcons.back, color: Color(0xFF8B7A66)),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
+        body: Center(
+          child: p.error != null
+              ? Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        CupertinoIcons.exclamationmark_triangle_fill,
+                        size: 48,
+                        color: isDark ? Colors.orangeAccent : Colors.orange.shade700,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        p.error!,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? Colors.white70 : const Color(0xFF5A4D42),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : const CupertinoActivityIndicator(),
+        ),
+      );
+    }
+
+    if (!cfg.isVarietyActive) {
+      return Scaffold(
+        backgroundColor: isDark ? AppTheme.surfaceDark : const Color(0xFFFAF8F5),
+        appBar: AppBar(
+          backgroundColor: isDark ? AppTheme.surfaceDark : const Color(0xFFF3EBE0),
+          elevation: 0,
+          centerTitle: true,
+          title: Text(
+            'Large event bulk',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              color: isDark ? Colors.white : const Color(0xFF5A4D42),
+            ),
+          ),
+          leading: IconButton(
+            icon: const Icon(CupertinoIcons.back, color: Color(0xFF8B7A66)),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  CupertinoIcons.info_circle_fill,
+                  size: 48,
+                  color: isDark ? Colors.white54 : const Color(0xFF8B7A66),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Large event bulk ordering is currently unavailable.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? Colors.white70 : const Color(0xFF5A4D42),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    final titleText = cfg.varietyTierTitle?.isNotEmpty == true ? cfg.varietyTierTitle! : 'Large event bulk';
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: AppTheme.overlayFor(
@@ -96,9 +194,9 @@ class _BulkOrderVarietyCategoriesScreenState extends State<BulkOrderVarietyCateg
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                          if (cfg?.varietyTierDescription?.isNotEmpty == true)
+                          if (cfg.varietyTierDescription?.isNotEmpty == true)
                             Text(
-                              cfg!.varietyTierDescription!,
+                              cfg.varietyTierDescription!,
                               style: TextStyle(
                                 fontSize: 15,
                                 height: 1.4,
