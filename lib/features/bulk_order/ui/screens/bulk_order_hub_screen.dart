@@ -7,6 +7,7 @@ import 'package:meal_app/features/bulk_order/providers/bulk_order_provider.dart'
 import 'package:meal_app/features/bulk_order/ui/screens/bulk_order_standard_screen.dart';
 import 'package:meal_app/features/bulk_order/ui/screens/bulk_order_variety_categories_screen.dart';
 import 'package:meal_app/features/bulk_order/ui/widgets/bulk_order_widgets.dart';
+import 'package:meal_app/core/widgets/responsive_layout.dart';
 
 /// Entry point: user picks standard (< threshold) or large variety (50+) flow.
 class BulkOrderHubScreen extends StatefulWidget {
@@ -78,11 +79,12 @@ class _BulkOrderHubScreenState extends State<BulkOrderHubScreen> {
                   ? const Center(child: CupertinoActivityIndicator())
                   : cfg == null
                       ? Center(child: Text(p.error ?? 'Bulk ordering is unavailable'))
-                      : SingleChildScrollView(
-                          padding: const EdgeInsets.all(20),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
+                      : ResponsiveContainer(
+                          child: SingleChildScrollView(
+                            padding: const EdgeInsets.all(20),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
                               Text(
                                 cfg.hubIntroText?.isNotEmpty == true
                                     ? cfg.hubIntroText!
@@ -136,6 +138,7 @@ class _BulkOrderHubScreenState extends State<BulkOrderHubScreen> {
                             ],
                           ),
                         ),
+                      ),
             ),
           ],
         ),

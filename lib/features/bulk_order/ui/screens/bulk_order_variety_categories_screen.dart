@@ -8,6 +8,7 @@ import 'package:meal_app/features/bulk_order/data/models/bulk_variety_category.d
 import 'package:meal_app/features/bulk_order/providers/bulk_order_provider.dart';
 import 'package:meal_app/features/bulk_order/ui/screens/bulk_order_cart_screen.dart';
 import 'package:meal_app/features/bulk_order/ui/screens/bulk_order_category_meals_screen.dart';
+import 'package:meal_app/core/widgets/responsive_layout.dart';
 
 /// Large-event bulk: browse categories and build a cart; pay from the cart screen.
 class BulkOrderVarietyCategoriesScreen extends StatefulWidget {
@@ -88,11 +89,13 @@ class _BulkOrderVarietyCategoriesScreenState extends State<BulkOrderVarietyCateg
           child: p.isLoading && p.varietyCategories.isEmpty
 
                   ? const Center(child: CircularProgressIndicator())
-                  : SingleChildScrollView(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
+                  : ResponsiveContainer(
+                      maxWidth: 1000.0,
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
                           if (cfg?.varietyTierDescription?.isNotEmpty == true)
                             Text(
                               cfg!.varietyTierDescription!,
@@ -143,26 +146,74 @@ class _BulkOrderVarietyCategoriesScreenState extends State<BulkOrderVarietyCateg
                             Text(
                               'No categories available yet.',
                               style: TextStyle(color: Colors.orange.shade700),
-                            ),
-                          ...filtered.map((c) => _CategoryCard(
-                                category: c,
-                                isDark: isDark,
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    CupertinoPageRoute(
-                                      builder: (_) => BulkOrderCategoryMealsScreen(
-                                        categoryId: c.id,
-                                        categoryName: c.name,
-                                      ),
-                                    ),
+                            )
+                          else ...[
+                            Builder(
+                              builder: (context) {
+                                final crossAxisCount = ResponsiveHelper.getGridCrossAxisCount(
+                                  context,
+                                  mobileCount: 1,
+                                  tabletCount: 2,
+                                  desktopCount: 3,
+                                );
+                                if (crossAxisCount == 1) {
+                                  return Column(
+                                    children: filtered.map((c) => _CategoryCard(
+                                      category: c,
+                                      isDark: isDark,
+                                      onTap: () {
+                                        Navigator.push(
+                                          context,
+                                          CupertinoPageRoute(
+                                            builder: (_) => BulkOrderCategoryMealsScreen(
+                                              categoryId: c.id,
+                                              categoryName: c.name,
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    )).toList(),
                                   );
-                                },
-                              )),
+                                } else {
+                                  return GridView.builder(
+                                    shrinkWrap: true,
+                                    physics: const NeverScrollableScrollPhysics(),
+                                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: crossAxisCount,
+                                      crossAxisSpacing: 16,
+                                      mainAxisSpacing: 16,
+                                      childAspectRatio: 1.35,
+                                    ),
+                                    itemCount: filtered.length,
+                                    itemBuilder: (context, index) {
+                                      final c = filtered[index];
+                                      return _CategoryCard(
+                                        category: c,
+                                        isDark: isDark,
+                                        useGridMode: true,
+                                        onTap: () {
+                                          Navigator.push(
+                                            context,
+                                            CupertinoPageRoute(
+                                              builder: (_) => BulkOrderCategoryMealsScreen(
+                                                categoryId: c.id,
+                                                categoryName: c.name,
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                      );
+                                    },
+                                  );
+                                }
+                              },
+                            ),
+                          ],
                           // Extra bottom padding for FAB
                           if (sum > 0) const SizedBox(height: 72),
                         ],
                       ),
+                    ),
                     ),
         ),
       ),
@@ -175,16 +226,37 @@ class _CategoryCard extends StatelessWidget {
     required this.category,
     required this.isDark,
     required this.onTap,
+    this.useGridMode = false,
   });
 
   final BulkVarietyCategory category;
   final bool isDark;
   final VoidCallback onTap;
+  final bool useGridMode;
 
   @override
   Widget build(BuildContext context) {
+    final double imageHeight = useGridMode ? 120 : 180;
+
+    final Widget imageWidget = category.imageUrl != null && category.imageUrl!.isNotEmpty
+        ? CachedNetworkImage(
+            imageUrl: category.imageUrl!,
+            fit: BoxFit.cover,
+            placeholder: (context, url) => const Center(
+              child: CircularProgressIndicator(),
+            ),
+            errorWidget: (context, url, error) => Container(
+              color: AppTheme.primaryColor.withValues(alpha: 0.08),
+              child: Icon(CupertinoIcons.square_grid_2x2, color: AppTheme.primaryColor, size: 40),
+            ),
+          )
+        : Container(
+            color: AppTheme.primaryColor.withValues(alpha: 0.08),
+            child: Icon(CupertinoIcons.square_grid_2x2, color: AppTheme.primaryColor, size: 40),
+          );
+
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: EdgeInsets.only(bottom: useGridMode ? 0 : 12),
       child: Material(
         color: isDark ? AppTheme.surfaceDark : Colors.white,
         borderRadius: BorderRadius.circular(14),
@@ -199,28 +271,13 @@ class _CategoryCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                if (category.imageUrl != null && category.imageUrl!.isNotEmpty)
-                  SizedBox(
-                    height: 180,
-                    width: double.infinity,
-                    child: CachedNetworkImage(
-                      imageUrl: category.imageUrl!,
-                      fit: BoxFit.cover,
-                      placeholder: (context, url) => const Center(
-                        child: CircularProgressIndicator(),
+                useGridMode
+                    ? Expanded(child: imageWidget)
+                    : SizedBox(
+                        height: imageHeight,
+                        width: double.infinity,
+                        child: imageWidget,
                       ),
-                      errorWidget: (context, url, error) => Container(
-                        color: AppTheme.primaryColor.withValues(alpha: 0.08),
-                        child: Icon(CupertinoIcons.square_grid_2x2, color: AppTheme.primaryColor, size: 40),
-                      ),
-                    ),
-                  )
-                else
-                  Container(
-                    height: 180,
-                    color: AppTheme.primaryColor.withValues(alpha: 0.08),
-                    child: Icon(CupertinoIcons.square_grid_2x2, color: AppTheme.primaryColor, size: 40),
-                  ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
                   child: Row(
@@ -228,9 +285,12 @@ class _CategoryCard extends StatelessWidget {
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
                               category.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
                             ),
                             const SizedBox(height: 4),

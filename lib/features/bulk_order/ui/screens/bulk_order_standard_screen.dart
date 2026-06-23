@@ -9,6 +9,7 @@ import 'package:meal_app/features/bulk_order/data/models/bulk_order_config.dart'
 import 'package:meal_app/features/bulk_order/providers/bulk_order_provider.dart';
 import 'package:meal_app/features/bulk_order/ui/screens/bulk_order_cart_screen.dart';
 import 'package:meal_app/features/bulk_order/ui/widgets/bulk_order_widgets.dart';
+import 'package:meal_app/core/widgets/responsive_layout.dart';
 
 /// Standard bulk: pick delivery date first, preview that day's menu, then quantity.
 class BulkOrderStandardScreen extends StatefulWidget {
@@ -146,11 +147,12 @@ class _BulkOrderStandardScreenState extends State<BulkOrderStandardScreen> {
           child: Column(
             children: [
             Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
+            child: ResponsiveContainer(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
                   Text(
                     'Select your delivery date first to see the meal for that day, then choose how many meals you need.',
                     style: TextStyle(fontSize: 15, height: 1.4, color: isDark ? Colors.white70 : AppTheme.textSecondaryLight),
@@ -274,6 +276,7 @@ class _BulkOrderStandardScreenState extends State<BulkOrderStandardScreen> {
                 ],
               ),
             ),
+          ),
           ),
           if (canAdd)
             Material(
